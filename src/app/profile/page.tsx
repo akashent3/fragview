@@ -1,15 +1,52 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState , useEffect} from 'react';
 import Link from 'next/link';
 import { Star, Calendar, Award, Edit, Settings, TrendingUp, Heart, MessageSquare } from 'lucide-react';
 import AccordTags from '@/components/ui/AccordTags';
 import UserBadges from '@/components/gamification/UserBadges';
+import { useAuth } from '@/lib/auth-context';
+import { useAuthModal } from '@/components/auth/AuthModal';
+
+type TabId = 'overview' | 'reviews' | 'achievements' | 'settings';
 
 const ProfilePage = () => {
-  const [activeTab, setActiveTab] = useState('overview');
+  // ✅ Hooks first, every render
+  const { user: authUser, loading } = useAuth() as any;
+  const { open } = useAuthModal();
+
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [isEditing, setIsEditing] = useState(false);
 
-  // Mock user data
+  // Open sign-in popup when needed
+  useEffect(() => {
+    if (!loading && !authUser) {
+      open({ mode: 'signin', reason: 'Sign in to view your profile' });
+    }
+  }, [loading, authUser, open]);
+
+  // Loading and unauth states AFTER hooks
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-4xl p-6">
+        <div className="rounded-lg border border-gray-200 p-4 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
+          Loading…
+        </div>
+      </div>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <div className="mx-auto max-w-md p-6">
+        <div className="space-y-3 rounded-xl border border-gray-200 p-6 dark:border-gray-700">
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Sign in required</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-300">A sign-in popup should be visible. After signing in, you’ll see your profile here.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Mock user data (unchanged)
   const user = {
     username: 'akashent3',
     displayName: 'Akash',
@@ -154,7 +191,7 @@ const ProfilePage = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4">
-        {/* Profile Header - FIXED */}
+        {/* Profile Header */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 mb-8 border border-gray-100 dark:border-gray-700 transition-colors duration-300">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
@@ -203,7 +240,7 @@ const ProfilePage = () => {
               </div>
             </div>
 
-            {/* Stats Grid - FIXED */}
+            {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 text-center border border-blue-200 dark:border-blue-800 transition-colors duration-300">
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{user.stats.reviewsCount}</div>
@@ -225,7 +262,7 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {/* Tab Navigation - FIXED */}
+        {/* Tabs */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm mb-8 border border-gray-100 dark:border-gray-700 transition-colors duration-300">
           <div className="border-b border-gray-200 dark:border-gray-700">
             <div className="flex space-x-8 px-8 py-4">
@@ -239,7 +276,7 @@ const ProfilePage = () => {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => setActiveTab(tab.id as TabId)}
                     className={`pb-2 border-b-2 font-medium text-sm transition-colors duration-300 flex items-center ${
                       activeTab === tab.id
                         ? 'border-primary-500 text-primary-600 dark:text-primary-400'
@@ -251,27 +288,40 @@ const ProfilePage = () => {
                   </button>
                 );
               })}
+              {/* Wardrobe button → /wardrobe */}
+              <a href="/wardrobe" className="ml-auto inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Wardrobe</a>
             </div>
           </div>
 
-          {/* Tab Content - FIXED */}
+          {/* Tab Content */}
           <div className="p-8">
             {activeTab === 'overview' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Recent Activity - FIXED */}
+                {/* Recent Activity */}
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 transition-colors duration-300">Recent Activity</h3>
+                  <h3 
+                    className="text-xl font-semibold text-gray-900 dark:text-white mb-6 transition-colors duration-300"
+                  >
+                    Recent Activity
+                  </h3>
                   <div className="space-y-4">
                     {user.recentActivity.map(renderActivityItem)}
                   </div>
                 </div>
 
-                {/* Top Fragrances - FIXED */}
+                {/* Top Fragrances */}
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 transition-colors duration-300">Top Rated Fragrances</h3>
+                  <h3 
+                    className="text-xl font-semibold text-gray-900 dark:text-white mb-6 transition-colors duration-300"
+                  >
+                    Top Rated Fragrances
+                  </h3>
                   <div className="space-y-4">
                     {user.topFragrances.map((fragrance) => (
-                      <div key={fragrance.id} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer border border-gray-100 dark:border-gray-600">
+                      <div 
+                        key={fragrance.id} 
+                        className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer border border-gray-100 dark:border-gray-600"
+                      >
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <h4 className="font-medium text-gray-900 dark:text-white transition-colors duration-300">{fragrance.name}</h4>
@@ -347,7 +397,8 @@ const ProfilePage = () => {
             )}
 
             {activeTab === 'achievements' && (
-              <UserBadges userId={user.username} />
+              // Keep whichever prop shape your UserBadges supports in your project
+              <UserBadges userId={user.username as any} />
             )}
 
             {activeTab === 'settings' && (
@@ -361,7 +412,7 @@ const ProfilePage = () => {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">Display Name</label>
                         <input 
                           type="text" 
-                          value={user.displayName}
+                          defaultValue={user.displayName}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition-colors duration-300"
                         />
                       </div>
@@ -369,7 +420,7 @@ const ProfilePage = () => {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">Location</label>
                         <input 
                           type="text" 
-                          value={user.location}
+                          defaultValue={user.location}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition-colors duration-300"
                         />
                       </div>
@@ -377,7 +428,7 @@ const ProfilePage = () => {
                     <div className="mt-4">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">Bio</label>
                       <textarea 
-                        value={user.bio}
+                        defaultValue={user.bio}
                         rows={3}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition-colors duration-300"
                       />

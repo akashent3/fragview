@@ -1,22 +1,23 @@
 'use client';
 
-import * as React from 'react';
-
-// ⬇️ keep your existing providers
-import { AuthProvider } from '@/lib/auth-context';
+import React from 'react';
+import { SessionProvider } from 'next-auth/react';
 import { AuthModalProvider } from '@/components/auth/AuthModal';
+import { MarketProvider } from '@/lib/market-context';
 
-// ⬇️ ADD THIS: wrap the app in MarketProvider so useMarket() works
-import { MarketProvider } from '@/lib/market-context'; // if your file exports default, change to: import MarketProvider from '@/lib/market-context';
-
-export default function RootProviders({ children }: { children: React.ReactNode }) {
+// Accept the server session passed from layout so initial client state is correct.
+export default function RootProviders({
+  children,
+  session,
+}: {
+  children: React.ReactNode;
+  session: any;
+}) {
   return (
     <MarketProvider>
-      <AuthProvider>
-        <AuthModalProvider>
-          {children}
-        </AuthModalProvider>
-      </AuthProvider>
+      <SessionProvider session={session}>
+        <AuthModalProvider>{children}</AuthModalProvider>
+      </SessionProvider>
     </MarketProvider>
   );
 }

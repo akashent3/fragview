@@ -42,7 +42,7 @@ function toUser(email: string, name?: string): User {
     email,
     username,
     displayName: name || username,
-    verified: true, // mock-verified so VerifiedGate paths work during dev
+    verified: true,
   };
 }
 
@@ -50,7 +50,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // bootstrap session from localStorage (mock auth)
   useEffect(() => {
     const raw = typeof window !== 'undefined' ? localStorage.getItem(SESSION_KEY) : null;
     if (raw) {
@@ -88,7 +87,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
 
       async signInWithGoogle() {
-        // mock OAuth success
         const email = 'google_user@example.com';
         const users = readUsers();
         if (!users[email]) {
@@ -102,7 +100,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
 
       async signInWithApple() {
-        // mock OAuth success
         const email = 'apple_user@example.com';
         const users = readUsers();
         if (!users[email]) {

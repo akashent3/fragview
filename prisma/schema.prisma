@@ -1,0 +1,477 @@
+// Prisma Schema for FragView PostgreSQL Database
+// Updated for 2025 with Supabase best practices
+// Version: 6.19.0+
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_DIRECT") // For migrations
+  extensions = [uuidOssp(map: "uuid-ossp")] // UUID support
+}
+
+// ============================================
+// USER AUTHENTICATION & PROFILES
+// ============================================
+
+model User {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username      String    @unique @db.VarChar(50)
+  email         String    @unique @db.VarChar(255)
+  emailVerified DateTime? @db.Timestamptz
+  password      String?   @db.VarChar(255) // null for OAuth users
+  image         String?   @db.Text
+  bio           String?   @db.Text
+  location      String?   @db.VarChar(100)
+  
+  // Account type
+  role          UserRole  @default(USER)
+  
+  // Experience & Badges
+  experiencePoints Int    @default(0)
+  badges        String[] @db.VarChar(50)
+  
+  // Social
+  followers     Follow[]  @relation("Following")
+  following     Follow[]  @relation("Follower")
+  
+  // User Content
+  reviews       Review[]
+  ratings       Rating[]
+  wardrobe      WardrobeEntry[]
+  similarVotes  SimilarPerfumeVote[]
+  
+  // Notifications
+  notifications Notification[]
+  
+  // Submissions
+  communitySubmissions  CommunitySubmission[]
+  
+  // Timestamps
+  createdAt     DateTime  @default(now()) @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @db.Timestamptz
+  
+  // NextAuth fields
+  accounts      Account[]
+  sessions      Session[]
+  
+  @@index([email])
+  @@index([username])
+  @@index([createdAt])
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+// ============================================
+// NEXTAUTH TABLES (Compatible with NextAuth v5)
+// ============================================
+
+model Account {
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String  @db.Uuid
+  type              String  @db.VarChar(50)
+  provider          String  @db.VarChar(50)
+  providerAccountId String  @db.VarChar(255)
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String? @db.VarChar(50)
+  scope             String? @db.Text
+  id_token          String? @db.Text
+  session_state     String? @db.Text
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionToken String   @unique @db.VarChar(255)
+  userId       String   @db.Uuid
+  expires      DateTime @db.Timestamptz
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String   @db.VarChar(255)
+  token      String   @unique @db.VarChar(255)
+  expires    DateTime @db.Timestamptz
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================
+// REVIEWS & RATINGS
+// ============================================
+
+model Review {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @db.Uuid
+  perfumeId   String   @db.VarChar(255) // References MongoDB perfume
+  
+  // Review content
+  rating      Int      @db.SmallInt // 1-5 stars
+  title       String?  @db.VarChar(200)
+  text        String   @db.Text
+  photos      String[] @db.Text
+  tags        String[] @db.VarChar(50)
+  
+  // Engagement
+  helpfulCount Int     @default(0)
+  likeCount    Int     @default(0)
+  
+  // Metadata
+  isEdited    Boolean  @default(false)
+  editedAt    DateTime? @db.Timestamptz
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  helpful     ReviewHelpful[]
+  
+  @@index([perfumeId])
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@index([rating])
+  @@map("reviews")
+}
+
+model ReviewHelpful {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reviewId  String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz
+  
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  
+  @@unique([reviewId, userId])
+  @@index([reviewId])
+  @@map("review_helpful")
+}
+
+model Rating {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid
+  perfumeId String   @db.VarChar(255) // References MongoDB perfume
+  rating    Int      @db.SmallInt // 1-5 stars
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, perfumeId])
+  @@index([perfumeId])
+  @@index([rating])
+  @@map("ratings")
+}
+
+// ============================================
+// SIMILAR PERFUMES (USER VOTES)
+// ============================================
+
+model SimilarPerfumeVote {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String   @db.Uuid
+  sourcePerfumeId  String   @db.VarChar(255)
+  similarPerfumeId String   @db.VarChar(255)
+  createdAt        DateTime @default(now()) @db.Timestamptz
+  
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, sourcePerfumeId, similarPerfumeId])
+  @@index([sourcePerfumeId])
+  @@index([similarPerfumeId])
+  @@map("similar_perfume_votes")
+}
+
+// ============================================
+// USER WARDROBE
+// ============================================
+
+model WardrobeEntry {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @db.Uuid
+  perfumeId   String   @db.VarChar(255)
+  
+  // Organization
+  subcategory String   @db.VarChar(100)
+  status      WardrobeStatus
+  notes       String?  @db.Text
+  
+  // Metadata
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, perfumeId])
+  @@index([userId])
+  @@index([status])
+  @@map("wardrobe")
+}
+
+enum WardrobeStatus {
+  CURRENTLY_USING
+  WISH_LIST
+  USED_UP
+  IN_COLLECTION
+  GIFTED
+  DECANT
+}
+
+// ============================================
+// SOCIAL FEATURES
+// ============================================
+
+model Follow {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  followerId  String   @db.Uuid
+  followingId String   @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid
+  type      NotificationType
+  message   String   @db.Text
+  link      String?  @db.Text
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, read])
+  @@index([createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  NEW_FOLLOWER
+  REVIEW_HELPFUL
+  REVIEW_LIKE
+  SUBMISSION_APPROVED
+  SUBMISSION_REJECTED
+  SYSTEM_ANNOUNCEMENT
+}
+
+// ============================================
+// COLLECTIONS (for Discover page)
+// ============================================
+
+model Category {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String       @unique @db.VarChar(100)
+  slug        String       @unique @db.VarChar(100)
+  description String?      @db.Text
+  displayOrder Int         @default(0)
+  createdAt   DateTime     @default(now()) @db.Timestamptz
+  updatedAt   DateTime     @updatedAt @db.Timestamptz
+  
+  collections Collection[]
+  
+  @@index([slug])
+  @@map("categories")
+}
+
+model Collection {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @db.VarChar(200)
+  slug        String   @unique @db.VarChar(200)
+  description String?  @db.Text
+  categoryId  String?  @db.Uuid
+  
+  // Array of MongoDB perfume IDs
+  perfumeIds  String[] @db.VarChar(255)
+  
+  // Display
+  thumbnailUrl String? @db.Text
+  displayOrder Int     @default(0)
+  
+  // Metadata
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+  
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  
+  @@index([slug])
+  @@index([categoryId])
+  @@map("collections")
+}
+
+// ============================================
+// PRICES (Geographic)
+// ============================================
+
+model Price {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  perfumeId   String   @db.VarChar(255)
+  retailerName String  @db.VarChar(100)
+  price       Decimal  @db.Decimal(10, 2)
+  currency    String   @db.VarChar(3) // INR, USD, EUR
+  region      String   @db.VarChar(50)
+  bottleSize  String   @db.VarChar(20)
+  url         String?  @db.Text
+  lastUpdated DateTime @default(now()) @db.Timestamptz
+  
+  @@index([perfumeId])
+  @@index([region])
+  @@index([lastUpdated])
+  @@map("prices")
+}
+
+// ============================================
+// COMMUNITY SUBMISSIONS
+// ============================================
+
+model CommunitySubmission {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @db.Uuid
+  type        SubmissionType
+  
+  // Submitted data (JSON)
+  data        Json     @db.JsonB
+  
+  // Admin review
+  status      SubmissionStatus @default(PENDING)
+  adminNotes  String?  @db.Text
+  
+  // Timestamps
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  processedAt DateTime? @db.Timestamptz
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@index([userId])
+  @@map("community_submissions")
+}
+
+enum SubmissionType {
+  BRAND
+  PERFUME
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ============================================
+// BRAND OWNER SUBMISSIONS
+// ============================================
+
+model BrandOwnerSubmission {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  
+  // Company info
+  brandName     String   @db.VarChar(200)
+  companyName   String   @db.VarChar(200)
+  country       String   @db.VarChar(100)
+  website       String?  @db.Text
+  
+  // Contact
+  contactName   String   @db.VarChar(100)
+  contactEmail  String   @db.VarChar(255)
+  contactPhone  String?  @db.VarChar(20)
+  position      String?  @db.VarChar(100)
+  
+  // Data (JSON: brand details + perfumes array)
+  brandData     Json     @db.JsonB
+  perfumesData  Json     @db.JsonB
+  
+  // Verification
+  verificationDocs String[] @db.Text
+  
+  // Admin review
+  status        SubmissionStatus @default(PENDING)
+  adminNotes    String?  @db.Text
+  
+  // Timestamps
+  createdAt     DateTime @default(now()) @db.Timestamptz
+  processedAt   DateTime? @db.Timestamptz
+  
+  @@index([status])
+  @@index([contactEmail])
+  @@index([createdAt(sort: Desc)])
+  @@map("brand_owner_submissions")
+}
+
+// ============================================
+// AUTO-UPDATE QUEUE
+// ============================================
+
+model AutoUpdateQueue {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type            String   @db.VarChar(50)
+  source          String   @db.Text
+  
+  // Extracted data
+  data            Json     @db.JsonB
+  
+  // AI confidence
+  confidenceScore Decimal  @db.Decimal(5, 2)
+  flaggedReason   String?  @db.Text
+  
+  // Status
+  status          SubmissionStatus @default(PENDING)
+  adminNotes      String?  @db.Text
+  
+  // Timestamps
+  createdAt       DateTime @default(now()) @db.Timestamptz
+  processedAt     DateTime? @db.Timestamptz
+  
+  @@index([status])
+  @@index([type])
+  @@index([createdAt(sort: Desc)])
+  @@map("auto_update_queue")
+}
+
+// ============================================
+// ADMIN ACTIVITY LOG
+// ============================================
+
+model AdminActivityLog {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  adminId   String   @db.Uuid
+  action    String   @db.VarChar(100)
+  target    String   @db.VarChar(255)
+  details   Json?    @db.JsonB
+  createdAt DateTime @default(now()) @db.Timestamptz
+  
+  @@index([adminId])
+  @@index([createdAt(sort: Desc)])
+  @@index([action])
+  @@map("admin_activity_logs")
+}

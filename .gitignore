@@ -1,1 +1,9 @@
 .vercel
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+out/
+*.log
+.cache/

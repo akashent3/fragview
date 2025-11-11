@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import Image from 'next/image';
+import { getNoteImageUrl } from '@/lib/note-images';
 
 interface Note {
   name: string;
@@ -13,8 +14,7 @@ interface NotesPyramidProps {
 }
 
 const NotesPyramid: React.FC<NotesPyramidProps> = ({ topNotes, middleNotes, baseNotes }) => {
-  
-  // Dynamic color generator based on note name
+  // Dynamic color generator based on note name (unchanged)
   const generateNoteColor = (noteName: string, noteType: 'top' | 'middle' | 'base') => {
     const hash = noteName.toLowerCase().split('').reduce((acc, char) => {
       return char.charCodeAt(0) + ((acc << 5) - acc);
@@ -51,18 +51,50 @@ const NotesPyramid: React.FC<NotesPyramidProps> = ({ topNotes, middleNotes, base
     return baseColors[noteType][colorIndex];
   };
 
-  // Generate note image path
-  const getNoteImagePath = (noteName: string) => {
-    const cleanName = noteName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    return `/images/notes/${cleanName}.jpg`;
+  // Slugify helper (kept local to preserve behavior)
+  const slugify = (name: string) =>
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+  // Resolve note image URL with Blob map + partial-token fallback.
+  // Behavior:
+  // 1) Try getNoteImageUrl (Blob map with partial matching).
+  // 2) If not found, try local exact: /images/notes/<full-slug>.jpg
+  // 3) Then try local token fallback: first meaningful token in the slug.
+  // 4) Let onError handler swap to default image if still missing.
+  const resolveNoteImageUrl = (noteName: string) => {
+    const blobOrMapped = getNoteImageUrl(noteName);
+    if (blobOrMapped) return blobOrMapped;
+
+    const slug = slugify(noteName);
+    const exactLocal = `/images/notes/${slug}.jpg`;
+
+    const parts = slug.split('-').filter((p) => p.length > 1);
+    if (parts.length > 0) {
+      const tokenLocal = `/images/notes/${parts[0]}.jpg`;
+      // Prefer a token-based local image if it likely exists; if not, onError will handle default.
+      return tokenLocal;
+    }
+
+    return exactLocal;
   };
 
-  // Fallback image handler
+  // Fallback image handler (unchanged)
   const handleImageError = (e: any) => {
-    e.target.src = '/images/notes/default-note.jpg'; // Create a default note image
+    e.target.src = '/images/notes/default-note.jpg';
   };
 
-  const renderNoteSection = (notes: Note[], title: string, noteType: 'top' | 'middle' | 'base', bgGradient: string) => (
+  const renderNoteSection = (
+    notes: Note[],
+    title: string,
+    noteType: 'top' | 'middle' | 'base',
+    bgGradient: string
+  ) => (
     <div className="mb-4">
       <div className="flex items-center mb-3">
         <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${bgGradient} mr-3`}></div>
@@ -83,7 +115,7 @@ const NotesPyramid: React.FC<NotesPyramidProps> = ({ topNotes, middleNotes, base
                 {/* Note Image */}
                 <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white/20 flex-shrink-0">
                   <Image
-                    src={getNoteImagePath(note.name)}
+                    src={resolveNoteImageUrl(note.name)}
                     alt={note.name}
                     width={32}
                     height={32}

@@ -20,7 +20,7 @@ export async function sendVerificationEmail(
 
   try {
     const { data: result } = await resend.emails.send({
-      from: 'FragView <onboarding@resend.dev>',
+      from: 'FragView <noreply@fragview.com>',
       to: email,
       subject: 'Verify your FragView account',
       html: getVerificationEmailTemplate(username, verificationUrl),
@@ -121,7 +121,7 @@ function getVerificationEmailTemplate(username: string, verificationUrl: string)
 export async function sendWelcomeEmail(email: string, username: string) {
   try {
     await resend.emails.send({
-      from: 'FragView <onboarding@resend.dev>',
+      from: 'FragView <noreply@fragview.com>',
       to: email,
       subject: 'Welcome to FragView!',
       html: getWelcomeEmailTemplate(username),

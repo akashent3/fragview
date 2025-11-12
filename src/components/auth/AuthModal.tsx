@@ -58,17 +58,17 @@ function AuthModalUI({
   const [showPw, setShowPw] = useState(false);
 
   async function doRegister() {
-    const v = registerSchema.safeParse({ email, username: name || email.split('@')[0], password: pw });
-    if (!v.success) throw new Error(v.error.issues[0]?.message ?? 'Invalid input');
-    const res = await fetch('/api/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, username: name || email.split('@')[0], password: pw }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.error || 'Registration failed');
-    return data;
-  }
+  const v = registerSchema.safeParse({ email, username: name || email.split('@')[0], password: pw });
+  if (!v.success) throw new Error(v.error.issues[0]?.message ?? 'Invalid input');
+  const res = await fetch('/api/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, username: name || email.split('@')[0], password: pw }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || 'Registration failed');
+  return data;
+}
 
   async function doSignIn() {
     const v = loginSchema.safeParse({ email, password: pw });

@@ -3,14 +3,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Search, Menu, X, User, ShoppingBag, Sparkles } from 'lucide-react';
 
-// Robust imports: work for default OR named exports
-import * as ThemeToggleMod from '@/components/ui/ThemeToggle';
-const ThemeToggle =
-  (ThemeToggleMod as any).default ?? (ThemeToggleMod as any).ThemeToggle ?? (() => null);
-
-import * as TopbarActionsMod from '@/components/layout/TopbarActions';
-const TopbarActions =
-  (TopbarActionsMod as any).default ?? (TopbarActionsMod as any).TopbarActions ?? (() => null);
+import ThemeToggle from '@/components/ui/ThemeToggle';
+import TopbarActions from '@/components/layout/TopbarActions';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -50,18 +44,18 @@ const Navbar = () => {
           </div>
 
           {/* Desktop search */}
-          <div className="mx-8 hidden w-full max-w-md flex-1 md:flex">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-gray-400 dark:text-gray-500" />
-              <input
-                type="text"
-                placeholder="Search fragrances, brands..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-full border border-gray-300 bg-white px-10 py-2 text-gray-900 transition-colors duration-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-              />
+            <div className="mx-8 hidden w-full max-w-md flex-1 md:flex">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-gray-400 dark:text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Search fragrances, brands..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-full border border-gray-300 bg-white px-10 py-2 text-gray-900 transition-colors duration-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                />
+              </div>
             </div>
-          </div>
 
           {/* Right side */}
           <div className="hidden items-center space-x-4 md:flex">
@@ -80,6 +74,7 @@ const Navbar = () => {
             >
               <User className="h-5 w-5" />
             </Link>
+            {/* Topbar actions (sign in/out, market switch). If it fails, fallback link */}
             <TopbarActions />
           </div>
 

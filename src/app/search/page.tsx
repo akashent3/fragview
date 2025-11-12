@@ -46,29 +46,29 @@ const SearchPage = () => {
     }
   ];
 
-  const addFilter = (type: string, value: string) => {
-    if (type === 'notes' || type === 'accords') {
-      setFilters(prev => ({
-        ...prev,
-        [type]: prev[type as keyof typeof prev].includes(value) 
-          ? (prev[type as keyof typeof prev] as string[]).filter(item => item !== value)
-          : [...(prev[type as keyof typeof prev] as string[]), value]
-      }));
-    } else {
-      setFilters(prev => ({ ...prev, [type]: value }));
-    }
-  };
+  const addFilter = (type: 'brand' | 'perfumer' | 'gender' | 'notes' | 'accords', value: string) => {
+  if (type === 'notes' || type === 'accords') {
+    setFilters((prev) => {
+      const list = prev[type] as string[];
+      const next = list.includes(value) ? list.filter((i) => i !== value) : [...list, value];
+      return { ...prev, [type]: next };
+    });
+  } else {
+    setFilters((prev) => ({ ...prev, [type]: value }));
+  }
+};
 
-  const removeFilter = (type: string, value?: string) => {
-    if (type === 'notes' || type === 'accords') {
-      setFilters(prev => ({
-        ...prev,
-        [type]: value ? (prev[type as keyof typeof prev] as string[]).filter(item => item !== value) : []
-      }));
-    } else {
-      setFilters(prev => ({ ...prev, [type]: type === 'gender' ? 'all' : '' }));
-    }
-  };
+  const removeFilter = (type: 'brand' | 'perfumer' | 'gender' | 'notes' | 'accords', value?: string) => {
+  if (type === 'notes' || type === 'accords') {
+    setFilters((prev) => {
+      const list = prev[type] as string[];
+      const next = value ? list.filter((i) => i !== value) : [];
+      return { ...prev, [type]: next };
+    });
+  } else {
+    setFilters((prev) => ({ ...prev, [type]: type === 'gender' ? 'all' : '' }));
+  }
+};
 
   const getActiveFiltersCount = () => {
     let count = 0;

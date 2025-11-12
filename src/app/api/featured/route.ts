@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ObjectId } from 'mongodb';
 import prisma from '@/lib/prisma';
 import clientPromise from '@/lib/mongodb';
 
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
   if (manual.length) {
     const ids = manual.map((m) => m.mongoId);
     const docs = await col
-      .find({ _id: { $in: ids.map((id) => convertId(id)) } })
+      .find({ _id: { $in: ids.map((id) => new ObjectId(id)) } })
       .project({ _id: 1, brand_name: 1, variant_name: 1, slug: 1, image: 1 })
       .toArray();
     return NextResponse.json({ source: 'manual', items: docs });
@@ -43,12 +44,4 @@ export async function GET(req: NextRequest) {
     .toArray();
 
   return NextResponse.json({ source: 'auto', items: docs });
-}
-
-function convertId(id: string) {
-  // For normal ObjectId strings, we can attempt conversion.
-  // If your _id is a standard ObjectId string length 24, use:
-  // new ObjectId(id)
-  // Otherwise just return the original (e.g., if already object).
-  return id;
 }

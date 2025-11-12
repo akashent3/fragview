@@ -59,7 +59,7 @@ function AuthModalUI({
 
   async function doRegister() {
     const v = registerSchema.safeParse({ email, username: name || email.split('@')[0], password: pw });
-    if (!v.success) throw new Error(v.error.errors[0].message);
+    if (!v.success) throw new Error(v.error.issues[0]?.message ?? 'Invalid input');
     const res = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -72,7 +72,7 @@ function AuthModalUI({
 
   async function doSignIn() {
     const v = loginSchema.safeParse({ email, password: pw });
-    if (!v.success) throw new Error(v.error.errors[0].message);
+    if (!v.success) throw new Error(v.error.issues[0]?.message ?? 'Invalid input');
     const res = await signIn('credentials', { email, password: pw, redirect: false });
     if (res?.error) {
       if (res.error.toLowerCase().includes('verify')) throw new Error('Please verify your email first.');

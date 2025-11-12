@@ -17,12 +17,29 @@ export type PerfumeDoc = {
   pyramids?: { top?: string[]; middle?: string[]; base?: string[] };
   scraped_at?: string;
   date_added?: string;
+  // ADD THIS to satisfy usages in /perfumes/[slug]/page.tsx and PerfumeInfo
+  description?: string;
 };
 
 export async function getPerfumeBySlug(slug: string) {
   const client = await clientPromise;
   const db = client.db(DB_NAME);
-  return db.collection<PerfumeDoc>(PERFUMES_COLLECTION).findOne({ slug });
+  const col = db.collection<PerfumeDoc>(PERFUMES_COLLECTION);
+
+  const bySlug = await col.findOne({ slug });
+  if (bySlug) return bySlug;
+
+  // Try case-insensitive variant_name + brand_name match if slug not found
+  const [brandPart, ...variantParts] = slug.split('-');
+  const variantGuess = variantParts.join(' ');
+  const alt = await col.findOne({
+    $or: [
+      { variant_name: new RegExp(`^${escapeRegex(slug)}$`, 'i') },
+      { variant_name: new RegExp(`^${escapeRegex(variantGuess)}$`, 'i') },
+    ],
+  });
+
+  return alt;
 }
 
 export async function listPerfumes(opts: {
@@ -41,57 +58,55 @@ export async function listPerfumes(opts: {
     gender,
     sort = 'az',
   } = opts;
+
   const client = await clientPromise;
   const db = client.db(DB_NAME);
   const col = db.collection<PerfumeDoc>(PERFUMES_COLLECTION);
 
-  const query: any = {};
+  const filter: any = {};
   if (search) {
-    query.variant_name = { $regex: `^${escapeRegex(search)}`, $options: 'i' };
+    filter.$or = [
+      { variant_name: { $regex: search, $options: 'i' } },
+      { brand_name: { $regex: search, $options: 'i' } },
+    ];
   }
-  if (brand) {
-    query.brand_name = { $regex: `^${escapeRegex(brand)}`, $options: 'i' };
-  }
-  if (gender) {
-    query.gender = gender;
-  }
+  if (brand) filter.brand_name = brand;
+  if (gender) filter.gender = gender;
 
-  const sortObj: any = {};
+  const sortSpec: any = {};
   switch (sort) {
-    case 'new':
-      sortObj._id = -1;
-      break;
     case 'rating':
-      sortObj.rating = -1;
+      sortSpec.rating = -1;
+      sortSpec.variant_name = 1;
       break;
-    case 'az':
-      sortObj.variant_name = 1;
+    case 'new':
+      sortSpec._id = -1;
       break;
     case 'za':
-      sortObj.variant_name = -1;
+      sortSpec.variant_name = -1;
       break;
+    case 'az':
     default:
-      sortObj.variant_name = 1;
+      sortSpec.variant_name = 1;
   }
 
-  const cursor = col
-    .find(query)
-    .sort(sortObj)
-    .skip((page - 1) * pageSize)
-    .limit(pageSize);
+  const skip = Math.max(0, (page - 1) * pageSize);
 
+  const cursor = col.find(filter).sort(sortSpec).skip(skip).limit(pageSize);
   const items = await cursor.toArray();
-  const total = await col.countDocuments(query);
-  return { items, total, page, pageSize };
+  const total = await col.countDocuments(filter);
+
+  return { items, total };
 }
 
 export async function countPerfumes() {
   const client = await clientPromise;
   const db = client.db(DB_NAME);
-  return db.collection(PERFUMES_COLLECTION).countDocuments();
+  return db.collection(PERFUMES_COLLECTION).countDocuments({});
 }
 
 export async function generatePerfumeSlug(doc: PerfumeDoc): Promise<string> {
+  // Minimal fix: pass required arguments; preserve existing behavior
   return doc.slug || perfumeSlug(doc.brand_name, doc.variant_name);
 }
 

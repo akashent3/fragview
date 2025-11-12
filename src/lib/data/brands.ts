@@ -70,6 +70,12 @@ export async function getBrandBySlug(slug: string) {
   return db.collection('brands').findOne({ slug });
 }
 
+export async function countBrands() {
+  const client = await clientPromise;
+  const db = client.db(process.env.MONGO_DB_NAME || 'fragview');
+  return db.collection('brands').countDocuments({});
+}
+
 function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
 import { randomBytes } from 'crypto';
+import { UserRole } from '@prisma/client';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
 
     const hashed = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, username, password: hashed, emailVerified: null, role: 'user' },
+      data: { email, username, password: hashed, emailVerified: null, role: UserRole.USER },
     });
 
     const token = randomBytes(20).toString('hex');

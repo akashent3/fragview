@@ -81,8 +81,8 @@ export default function PerfumeDetailClient({
     id: perfume._id,
     name: perfume.variant_name,
     brand: perfume.brand_name,
-    year: undefined,
-    perfumer: perfume.perfumers?.join(', ') || undefined,
+    year: 0,
+    perfumer: perfume.perfumers?.join(', ') || '',
     gender: perfume.gender || '—',
     rating,
     reviewCount,
@@ -103,7 +103,7 @@ export default function PerfumeDetailClient({
   const reviewsSummary = {
     totalReviews: reviewCount,
     averageRating: rating,
-    sentiment: 'neutral' as const,
+    sentiment: 'mixed' as const, // FIX: must be 'positive' | 'mixed' | 'negative'
     keyPoints: [] as string[],
     commonWords: [] as { word: string; frequency: number }[],
     ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },

@@ -2,24 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-
-type BrandDoc = {
-  _id: string;
-  name: string;
-  slug?: string;
-  country?: string;
-  description?: string;
-};
-
-type PerfumeDoc = {
-  _id: string;
-  brand_name: string;
-  variant_name: string;
-  slug?: string;
-  image?: string;
-  gender?: string;
-  rating?: number;
-};
+import type { BrandDoc, PerfumeDoc } from './loaders';
 
 interface Props {
   brand: BrandDoc;
@@ -35,17 +18,17 @@ export default function BrandDetailClient({ brand, perfumes, meta, filters, page
   const page = meta.page;
 
   function updateParam(key: string, value: string) {
-    const qs = new URLSearchParams(searchParams.toString());
-    if (value) qs.set(key, value);
-    else qs.delete(key);
-    qs.set('page', '1');
-    router.replace(`/brands/${brand.slug || brand.name.toLowerCase().replace(/\s+/g, '-') }?${qs.toString()}`);
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) params.set(key, value);
+    else params.delete(key);
+    params.set('page', '1');
+    router.replace(`?${params.toString()}`);
   }
 
   function gotoPage(newPage: number) {
-    const qs = new URLSearchParams(searchParams.toString());
-    qs.set('page', String(newPage));
-    router.replace(`/brands/${brand.slug || brand.name.toLowerCase().replace(/\s+/g, '-') }?${qs.toString()}`);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', String(newPage));
+    router.replace(`?${params.toString()}`);
   }
 
   return (
@@ -65,37 +48,37 @@ export default function BrandDetailClient({ brand, perfumes, meta, filters, page
       </div>
 
       {/* Filters */}
-      <div className="mb-4 flex flex-col sm:flex-row gap-4">
-        <select
-          value={filters.sort}
-          onChange={(e) => updateParam('sort', e.target.value)}
-          className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
-        >
-          <option value="az">Sort A–Z</option>
-          <option value="za">Sort Z–A</option>
-          <option value="rating">Sort by Rating</option>
-          <option value="new">Newest</option>
-        </select>
-
+      <div className="mb-6 flex flex-wrap gap-4 items-center">
         <select
           value={filters.gender}
           onChange={(e) => updateParam('gender', e.target.value)}
-          className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm"
         >
           <option value="">All Genders</option>
           <option value="men">Men</option>
           <option value="women">Women</option>
           <option value="unisex">Unisex</option>
         </select>
+
+        <select
+          value={filters.sort}
+          onChange={(e) => updateParam('sort', e.target.value)}
+          className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm"
+        >
+          <option value="az">A–Z</option>
+          <option value="za">Z–A</option>
+          <option value="rating">Rating</option>
+          <option value="new">New</option>
+        </select>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      {/* Perfumes Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-5">
         {perfumes.map((p) => (
           <Link
-            key={String(p._id)}
-            href={`/perfumes/${p.slug}`}
-            className="group block rounded-xl border border-gray-200 dark:border-gray-800 p-3 hover:shadow-sm transition"
+            key={p._id}
+            href={`/perfumes/${p.slug || p._id}`}
+            className="group"
           >
             <div className="aspect-[3/4] w-full overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
               {p.image ? (
@@ -135,7 +118,7 @@ export default function BrandDetailClient({ brand, perfumes, meta, filters, page
           <span>
             Page {page} of {meta.totalPages}
           </span>
-          {page < meta.totalPages && (
+            {page < meta.totalPages && (
             <button
               onClick={() => gotoPage(page + 1)}
               className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"

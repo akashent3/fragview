@@ -1,6 +1,6 @@
 import Typesense from 'typesense';
 
-let client: Typesense.Client | null = null;
+let client: any | null = null;
 
 export function getTypesenseClient() {
   if (

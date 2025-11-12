@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Star, Trending, Users, Award, Sparkles } from 'lucide-react';
+import { Star, TrendingUp as Trending, Users, Award, Sparkles } from 'lucide-react';
 import AccordTags from '@/components/ui/AccordTags';
 
 const HomePage = () => {

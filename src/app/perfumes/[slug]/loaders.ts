@@ -12,12 +12,19 @@ export async function loadPerfumeDetail(slug: string) {
     new Set([slug, (perfume as any)._id, (perfume as any).slug].filter(Boolean).map(String))
   );
 
-  const reviews = await prisma.review.findMany({
+  const prismaReviews = await prisma.review.findMany({
     where: { OR: perfumeIdCandidates.map((v) => ({ perfumeId: v })) },
     select: { rating: true, text: true, createdAt: true },
     orderBy: { createdAt: 'desc' },
     take: 20,
   });
+
+  // Serialize Date -> string (ISO) to satisfy ReviewLite typing
+  const reviews = prismaReviews.map((r) => ({
+    rating: r.rating,
+    text: r.text,
+    createdAt: r.createdAt.toISOString(),
+  }));
 
   const reviewCount = reviews.length;
   const avgRating = reviewCount

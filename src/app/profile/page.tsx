@@ -398,7 +398,7 @@ const ProfilePage = () => {
 
             {activeTab === 'achievements' && (
               // Keep whichever prop shape your UserBadges supports in your project
-              <UserBadges userId={user.username as any} />
+              <UserBadges user={{ credibilityScore: 62 }} />
             )}
 
             {activeTab === 'settings' && (

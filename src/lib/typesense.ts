@@ -1,4 +1,4 @@
-import Typesense, { SearchParameters } from 'typesense';
+import Typesense from 'typesense';
 
 const apiKey = process.env.TYPESENSE_API_KEY || '';
 const host = process.env.TYPESENSE_HOST || '';
@@ -17,12 +17,12 @@ export const typesenseClient = (apiKey && host)
 
 export async function safeTypesenseSearch<T = any>(
   collection: string,
-  params: SearchParameters
+  params: any
 ): Promise<{ hits: T[]; found: number; tookMs: number; aborted: boolean } | null> {
   if (!typesenseClient) return null;
   const start = performance.now();
   try {
-    const resp: any = await typesenseClient.collections(collection).documents().search(params);
+    const resp: any = await (typesenseClient as any).collections(collection).documents().search(params);
     const tookMs = performance.now() - start;
     if (tookMs > FALLBACK_LATENCY_MS) {
       // Consider this too slow → prefer fallback; return null to trigger Mongo route

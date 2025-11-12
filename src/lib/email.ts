@@ -19,7 +19,7 @@ export async function sendVerificationEmail(
   console.log('   API Key exists:', !!process.env.RESEND_API_KEY);
 
   try {
-    const result = await resend.emails.send({
+    const { data: result } = await resend.emails.send({
       from: 'FragView <onboarding@resend.dev>',
       to: email,
       subject: 'Verify your FragView account',
@@ -27,15 +27,15 @@ export async function sendVerificationEmail(
     });
     
     console.log('✅ Email sent successfully!');
-    console.log('   Email ID:', result.id);
+    console.log('   Email ID:', result?.id);
     console.log('   Data:', result);
     
     return result;
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ FAILED to send verification email!');
-    console.error('   Error type:', error.constructor.name);
-    console.error('   Error message:', error.message);
+    console.error('   Error type:', error?.constructor?.name);
+    console.error('   Error message:', error?.message);
     console.error('   Full error:', error);
     
     // Re-throw so registration API knows it failed

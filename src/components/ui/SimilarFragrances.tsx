@@ -130,7 +130,7 @@ const SimilarFragrances: React.FC<SimilarFragrancesProps> = ({
               <div className="flex items-center">
                 <h4 className="font-medium text-gray-900 dark:text-white">{fragrance.name}</h4>
                 {fragrance.isVerified && (
-                  <Check className="w-4 h-4 text-green-500 ml-2" title="Verified by community" />
+                  <Check className="w-4 h-4 text-green-500 ml-2" aria-label="Verified by community" />
                 )}
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400">{fragrance.brand}</p>

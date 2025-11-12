@@ -6,10 +6,42 @@ import { sanitizeSingleDoc, sanitizePerfumeDocs } from '@/lib/sanitize';
 
 const PAGE_SIZE = 25;
 
-export async function loadBrandDetail(slug: string, searchParams: Record<string, string | string[] | undefined>) {
+// Export shared types so the client component consumes the SAME definitions.
+export interface BrandDoc {
+  _id: any;
+  name: string;
+  slug?: string;
+  country?: string;
+  description?: string;
+  [key: string]: any;
+}
+
+export interface PerfumeDoc {
+  _id: any;
+  brand_name: string;
+  variant_name: string;
+  slug?: string;
+  image?: string;
+  gender?: string;
+  rating?: number;
+  [key: string]: any;
+}
+
+export interface BrandDetailResult {
+  brand: BrandDoc;
+  perfumes: PerfumeDoc[];
+  meta: { page: number; totalPages: number; total: number };
+  filters: { gender: string; sort: string };
+  pageSize: number;
+}
+
+export async function loadBrandDetail(
+  slug: string,
+  searchParams: Record<string, string | string[] | undefined>
+): Promise<BrandDetailResult | null> {
   const brandRaw = await getBrandBySlug(slug);
   if (!brandRaw) return null;
-  const brand = sanitizeSingleDoc(brandRaw);
+  const brand = sanitizeSingleDoc(brandRaw) as BrandDoc;
 
   const rawPage = searchParams.page;
   const page = (() => {
@@ -30,7 +62,8 @@ export async function loadBrandDetail(slug: string, searchParams: Record<string,
     sort,
   });
 
-  const perfumes = sanitizePerfumeDocs(items);
+  // Cast to the shared PerfumeDoc type (types only; data unchanged).
+  const perfumes = sanitizePerfumeDocs(items) as PerfumeDoc[];
   const meta = pageMeta(total, page, PAGE_SIZE);
 
   return {

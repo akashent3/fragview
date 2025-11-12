@@ -26,8 +26,8 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json({
         query: q,
-        perfumes: perfRes.hits?.map((h) => h.document) || [],
-        brands: brandRes.hits?.map((h) => h.document) || [],
+        perfumes: (perfRes.hits as Array<{ document: any }> | undefined)?.map((h) => h.document) || [],
+        brands: (brandRes.hits as Array<{ document: any }> | undefined)?.map((h) => h.document) || [],
         source: 'typesense',
       });
     } catch (e: any) {

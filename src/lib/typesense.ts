@@ -5,7 +5,7 @@ const host = process.env.TYPESENSE_HOST || '';
 const port = parseInt(process.env.TYPESENSE_PORT || '443', 10);
 const protocol = process.env.TYPESENSE_PROTOCOL || 'https';
 const timeoutMs = parseInt(process.env.TYPESENSE_TIMEOUT_MS || '5000', 10);
-// 🔧 CHANGED: Increased fallback threshold from 700ms to 1000ms for large datasets
+// Increased fallback threshold from 700ms to 1000ms for large datasets
 export const FALLBACK_LATENCY_MS = parseInt(process.env.TYPESENSE_FALLBACK_LATENCY_MS || '1000', 10);
 
 export const typesenseClient = (apiKey && host)
@@ -13,13 +13,13 @@ export const typesenseClient = (apiKey && host)
       nodes: [{ host, port, protocol }],
       apiKey,
       connectionTimeoutSeconds: Math.ceil(timeoutMs / 1000),
-      // 🔧 NEW: Add caching and retry logic
+      // Add caching and retry logic
       numRetries: 2,
       retryIntervalSeconds: 0.5,
     })
   : null;
 
-// 🔧 NEW: In-memory cache for autocomplete results (5 min TTL)
+// In-memory cache for autocomplete results (5 min TTL)
 const autocompleteCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -43,7 +43,7 @@ export async function safeTypesenseSearch<T = any>(
   }
 }
 
-// 🔧 NEW: Fast autocomplete search with caching
+// Fast autocomplete search with caching
 export async function typesenseAutocomplete<T = any>(
   collection: string,
   query: string,
@@ -70,7 +70,7 @@ export async function typesenseAutocomplete<T = any>(
         per_page: limit,
         prefix: 'true',
         typo_tokens_threshold: 1,
-        // 🔧 Optimize for speed
+        // Optimize for speed
         exhaustive_search: false,
         drop_tokens_threshold: 1,
       });
@@ -80,10 +80,12 @@ export async function typesenseAutocomplete<T = any>(
     // Cache the result
     autocompleteCache.set(cacheKey, { data: hits, timestamp: Date.now() });
     
-    // Clean old cache entries (simple LRU)
+    // 🔧 FIXED: Clean old cache entries (simple LRU) - check if firstKey exists
     if (autocompleteCache.size > 100) {
       const firstKey = autocompleteCache.keys().next().value;
-      autocompleteCache.delete(firstKey);
+      if (firstKey !== undefined) {  // ✅ Type guard to ensure firstKey is not undefined
+        autocompleteCache.delete(firstKey);
+      }
     }
 
     return hits;
@@ -93,7 +95,7 @@ export async function typesenseAutocomplete<T = any>(
   }
 }
 
-// 🔧 NEW: Clear cache utility (call when data updates)
+// Clear cache utility (call when data updates)
 export function clearTypesenseCache() {
   autocompleteCache.clear();
 }

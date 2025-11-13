@@ -103,7 +103,7 @@ export default function PerfumeDetailClient({
   const reviewsSummary = {
     totalReviews: reviewCount,
     averageRating: rating,
-    sentiment: 'mixed' as const, // FIX: must be 'positive' | 'mixed' | 'negative'
+    sentiment: 'mixed' as const,
     keyPoints: [] as string[],
     commonWords: [] as { word: string; frequency: number }[],
     ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
@@ -122,7 +122,6 @@ export default function PerfumeDetailClient({
     setErrorMessage(null);
     setSuccessMessage(null);
     startTransition(async () => {
-      // Only overall persists (schema limitation)
       formData.set('rating', String(overall));
       const result = await submitReview(slug, formData);
       if (!result.ok) setErrorMessage(result.error || 'Failed to submit review.');
@@ -136,18 +135,22 @@ export default function PerfumeDetailClient({
   return (
     <div className="min-h-screen bg-gray-50 py-4 text-gray-900 transition-colors duration-300 dark:bg-gray-900 dark:text-gray-100">
       <div className="mx-auto max-w-4xl space-y-5 px-4">
-        {/* Header Card (unchanged) */}
+        {/* Header Card - FIXED IMAGE OPACITY */}
         <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800">
           <div className="flex flex-col gap-6 md:flex-row">
-            <div className="h-64 w-full rounded-2xl bg-gradient-to-br from-pastel-blue to-pastel-purple opacity-20 dark:opacity-30 md:w-48 overflow-hidden">
-              {perfume.image && (
+            {/* 🔧 FIXED: Image container - removed opacity from parent */}
+            <div className="h-64 w-full rounded-2xl overflow-hidden md:w-48 relative">
+              {perfume.image ? (
                 <img
                   src={perfume.image}
                   alt={`${perfume.variant_name} by ${perfume.brand_name}`}
                   className="h-full w-full object-cover rounded-2xl"
                 />
+              ) : (
+                <div className="h-full w-full rounded-2xl bg-gradient-to-br from-pastel-blue to-pastel-purple opacity-20 dark:opacity-30" />
               )}
             </div>
+            
             <div className="flex-1 space-y-4">
               <div>
                 <h1 className="text-3xl font-bold">{perfume.variant_name}</h1>
@@ -233,7 +236,7 @@ export default function PerfumeDetailClient({
               <p className="mb-3">Please sign in to rate and review.</p>
               <button
                 onClick={() =>
-                  open({ mode: 'signin', reason: 'Sign in to rate & review this perfume' })
+                  open({ mode: 'signin', reason: 'Sign in to rate & review this perfume', callbackUrl: `/perfumes/${slug}` })
                 }
                 className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary-500 to-purple-500 px-4 py-2 font-medium text-white"
               >
@@ -252,7 +255,6 @@ export default function PerfumeDetailClient({
                 <RatingSlider label="Sillage" value={sillage} onChange={setSillage} />
                 <RatingSlider label="Overall" value={overall} onChange={setOverall} />
               </div>
-              {/* Only overall persists */}
               <textarea
                 name="text"
                 value={reviewText}

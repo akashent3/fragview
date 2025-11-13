@@ -116,6 +116,21 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+// 🔧 NEW: Password reset tokens
+model PasswordResetToken {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email      String   @db.VarChar(255)
+  code       String   @db.VarChar(10)
+  expires    DateTime @db.Timestamptz
+  used       Boolean  @default(false)
+  createdAt  DateTime @default(now()) @db.Timestamptz
+
+  @@index([email])
+  @@index([code])
+  @@index([expires])
+  @@map("password_reset_tokens")
+}
+
 // ============================================
 // REVIEWS & RATINGS
 // ============================================

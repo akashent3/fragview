@@ -19,7 +19,7 @@ export const authOptions: NextAuthOptions = {
           emailVerified: new Date(),
           username: profile.email?.split('@')[0] + Math.random().toString(36).slice(2, 6),
           image: profile.picture,
-          role: 'user',
+          role: 'USER', // ✅ FIXED - Uppercase to match Prisma enum
         } as any;
       },
     }),
@@ -43,11 +43,48 @@ export const authOptions: NextAuthOptions = {
   pages: { signIn: '/signin', signOut: '/', error: '/signin', verifyRequest: '/verify-email', newUser: '/' },
 
   callbacks: {
+    // 🔧 NEW: Allow linking Google to existing email accounts
+    async signIn({ user, account, profile }) {
+      if (account?.provider === 'google') {
+        // Check if user with this email already exists
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email! },
+          include: { accounts: true },
+        });
+
+        if (existingUser) {
+          // User exists - check if Google account is already linked
+          const googleAccount = existingUser.accounts.find(
+            (acc) => acc.provider === 'google'
+          );
+
+          if (!googleAccount) {
+            // Link Google account to existing user
+            await prisma.account.create({
+              data: {
+                userId: existingUser.id,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token,
+                expires_at: account.expires_at,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+              },
+            });
+          }
+          return true; // Allow sign in
+        }
+      }
+      return true; // Allow sign in for new users
+    },
+
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = (user as any).id;
         token.username = (user as any).username ?? token.username ?? token.email?.split('@')[0];
-        token.role = (user as any).role ?? 'user';
+        token.role = (user as any).role ?? 'USER';
         token.image = (user as any).image;
       }
       if (trigger === 'update' && session) token = { ...token, ...session };

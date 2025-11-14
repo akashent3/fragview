@@ -19,14 +19,22 @@ export async function generateMetadata({ searchParams }: { searchParams: Record<
 export default async function PerfumesPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
   const data = await loadPerfumes(searchParams);
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <PerfumesClient
-        initialItems={data.items}
-        total={data.total}
-        meta={data.meta}
-        query={data.query}
-        pageSize={data.pageSize}
-      />
+    <div className="min-h-screen relative overflow-hidden py-6" style={{ backgroundColor: '#FAFFF5' }}>
+      {/* Animated Background Elements - ADDED */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-20 left-10 w-96 h-96 bg-green-200/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-200/10 rounded-full blur-3xl animate-pulse animate-delay-2" />
+      </div>
+      
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <PerfumesClient
+          initialItems={data.items}
+          total={data.total}
+          meta={data.meta}
+          query={data.query}
+          pageSize={data.pageSize}
+        />
+      </div>
     </div>
   );
 }

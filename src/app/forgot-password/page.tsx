@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mail, ArrowLeft, Loader2 } from 'lucide-react';
+import { Mail, ArrowLeft, Loader2, Leaf, Flower2 } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -42,35 +42,51 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4 py-12" style={{ backgroundColor: '#FAFFF5' }}>
+      {/* Animated Background Elements - ADDED */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-20 left-10 w-96 h-96 bg-green-200/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-200/10 rounded-full blur-3xl animate-pulse animate-delay-2" />
+        
+        <div className="absolute top-32 right-20 animate-float">
+          <Leaf size={20} className="text-green-300/20" />
+        </div>
+        <div className="absolute bottom-40 left-32 animate-float animate-delay-3">
+          <Flower2 size={18} className="text-orange-300/20" />
+        </div>
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
         {/* Back Button */}
         <Link
           href="/signin"
-          className="inline-flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 mb-8"
+          className="inline-flex items-center text-sm text-gray-600 hover:text-green-600 mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to sign in
         </Link>
 
-        {/* Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-primary-500 to-purple-500 rounded-full mb-4">
+        {/* Card - BOTANICAL THEME */}
+        <div className="glass-card rounded-2xl shadow-lg p-8 border border-green-100/50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 opacity-5">
+            <Flower2 size={150} />
+          </div>
+          <div className="text-center mb-8 relative z-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-green-500 to-orange-500 rounded-full mb-4">
               <Mail className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-orange-500 bg-clip-text text-transparent mb-2">
               Forgot Password?
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600">
               Enter your email and we'll send you a reset code
             </p>
           </div>
 
           {!success ? (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Email Address
                 </label>
                 <input
@@ -79,12 +95,12 @@ export default function ForgotPasswordPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-3 rounded-lg border border-green-200 bg-white/80 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors"
                 />
               </div>
 
               {error && (
-                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-200">
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
                   {error}
                 </div>
               )}
@@ -92,7 +108,7 @@ export default function ForgotPasswordPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-primary-500 to-purple-500 text-white py-3 rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                className="w-full bg-gradient-to-r from-green-500 to-orange-500 text-white py-3 rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {loading ? (
                   <>
@@ -105,16 +121,16 @@ export default function ForgotPasswordPage() {
               </button>
             </form>
           ) : (
-            <div className="text-center space-y-4">
-              <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800">
-                <p className="text-green-700 dark:text-green-200 font-medium">
+            <div className="text-center space-y-4 relative z-10">
+              <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+                <p className="text-green-700 font-medium">
                   ✓ Reset code sent!
                 </p>
-                <p className="text-sm text-green-600 dark:text-green-300 mt-2">
+                <p className="text-sm text-green-600 mt-2">
                   Check your email for the 6-digit code
                 </p>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600">
                 Redirecting to reset page...
               </p>
             </div>
@@ -122,11 +138,11 @@ export default function ForgotPasswordPage() {
         </div>
 
         {/* Help Text */}
-        <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-6">
+        <p className="text-center text-sm text-gray-600 mt-6">
           Remember your password?{' '}
           <Link
             href="/signin"
-            className="text-primary-600 dark:text-primary-400 hover:underline font-medium"
+            className="text-green-600 hover:text-green-700 hover:underline font-medium transition-colors"
           >
             Sign in
           </Link>

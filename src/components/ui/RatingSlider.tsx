@@ -29,7 +29,8 @@ const RatingSlider: React.FC<RatingSliderProps> = ({
 
   const getSliderBackground = () => {
     const percentage = ((value - min) / (max - min)) * 100;
-    return `linear-gradient(to right, #6366f1 0%, #a855f7 ${percentage}%, #e2e8f0 ${percentage}%, #e2e8f0 100%)`;
+    // UPDATED: Green to orange gradient
+    return `linear-gradient(to right, #10b981 0%, #f59e0b ${percentage}%, #e2e8f0 ${percentage}%, #e2e8f0 100%)`;
   };
 
   return (
@@ -38,7 +39,7 @@ const RatingSlider: React.FC<RatingSliderProps> = ({
         <label className="text-sm font-medium text-gray-700">
           {label}
         </label>
-        <span className="text-sm font-semibold text-primary-600 bg-primary-50 px-2 py-1 rounded">
+        <span className="text-sm font-semibold text-green-600 bg-green-50 px-3 py-1 rounded-full">
           {value.toFixed(2)}
         </span>
       </div>

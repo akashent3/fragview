@@ -1,17 +1,17 @@
 'use client';
 import React, { useState , useEffect} from 'react';
 import Link from 'next/link';
-import { Star, Calendar, Award, Edit, Settings, TrendingUp, Heart, MessageSquare } from 'lucide-react';
+import { Star, Calendar, Award, Edit, Settings, TrendingUp, Heart, MessageSquare, Leaf, Flower2, Trees } from 'lucide-react';
 import AccordTags from '@/components/ui/AccordTags';
 import UserBadges from '@/components/gamification/UserBadges';
-import { useAuth } from '@/lib/auth-context';
+import { useSession } from 'next-auth/react';
 import { useAuthModal } from '@/components/auth/AuthModal';
 
 type TabId = 'overview' | 'reviews' | 'achievements' | 'settings';
 
 const ProfilePage = () => {
   // ✅ Hooks first, every render
-  const { user: authUser, loading } = useAuth() as any;
+  const { data: session, status } = useSession();
   const { open } = useAuthModal();
 
   const [activeTab, setActiveTab] = useState<TabId>('overview');
@@ -19,28 +19,32 @@ const ProfilePage = () => {
 
   // Open sign-in popup when needed
   useEffect(() => {
-    if (!loading && !authUser) {
+    if (status === 'unauthenticated') {
       open({ mode: 'signin', reason: 'Sign in to view your profile' });
     }
-  }, [loading, authUser, open]);
+  }, [status, open]);
 
   // Loading and unauth states AFTER hooks
-  if (loading) {
+  if (status === 'loading') {
     return (
-      <div className="mx-auto max-w-4xl p-6">
-        <div className="rounded-lg border border-gray-200 p-4 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
-          Loading…
+      <div className="min-h-screen relative overflow-hidden py-8" style={{ backgroundColor: '#FAFFF5' }}>
+        <div className="mx-auto max-w-4xl p-6">
+          <div className="glass-card rounded-lg p-4 text-sm text-gray-600">
+            Loading…
+          </div>
         </div>
       </div>
     );
   }
 
-  if (!authUser) {
+  if (status === 'unauthenticated' || !session) {
     return (
-      <div className="mx-auto max-w-md p-6">
-        <div className="space-y-3 rounded-xl border border-gray-200 p-6 dark:border-gray-700">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Sign in required</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-300">A sign-in popup should be visible. After signing in, you’ll see your profile here.</p>
+      <div className="min-h-screen relative overflow-hidden py-8" style={{ backgroundColor: '#FAFFF5' }}>
+        <div className="mx-auto max-w-md p-6">
+          <div className="space-y-3 glass-card rounded-xl p-6">
+            <h1 className="text-xl font-semibold text-gray-800">Sign in required</h1>
+            <p className="text-sm text-gray-600">A sign-in popup should be visible. After signing in, you'll see your profile here.</p>
+          </div>
         </div>
       </div>
     );
@@ -150,68 +154,84 @@ const ProfilePage = () => {
   };
 
   const renderActivityItem = (activity: any) => (
-    <div key={activity.id} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0 transition-colors duration-300">
+    <div key={activity.id} className="border-b border-green-100 pb-4 last:border-b-0">
       <div className="flex items-start space-x-3">
         <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-          activity.type === 'review' ? 'bg-blue-100 dark:bg-blue-900/30' :
-          activity.type === 'wardrobe_add' ? 'bg-green-100 dark:bg-green-900/30' :
-          'bg-purple-100 dark:bg-purple-900/30'
-        } transition-colors duration-300`}>
-          {activity.type === 'review' && <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
-          {activity.type === 'wardrobe_add' && <Heart className="w-4 h-4 text-green-600 dark:text-green-400" />}
-          {activity.type === 'helpful_vote' && <TrendingUp className="w-4 h-4 text-purple-600 dark:text-purple-400" />}
+          activity.type === 'review' ? 'bg-blue-100' :
+          activity.type === 'wardrobe_add' ? 'bg-green-100' :
+          'bg-orange-100'
+        }`}>
+          {activity.type === 'review' && <MessageSquare className="w-4 h-4 text-blue-600" />}
+          {activity.type === 'wardrobe_add' && <Heart className="w-4 h-4 text-green-600" />}
+          {activity.type === 'helpful_vote' && <TrendingUp className="w-4 h-4 text-orange-600" />}
         </div>
         <div className="flex-1">
-          <div className="text-sm text-gray-600 dark:text-gray-300 transition-colors duration-300">
+          <div className="text-sm text-gray-700">
             {activity.type === 'review' && (
-              <>Reviewed <Link href={`/perfume/${activity.id}`} className="font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400">{activity.fragranceName}</Link> by {activity.brand}</>
+              <>Reviewed <Link href={`/perfume/${activity.id}`} className="font-medium text-green-600 hover:text-green-700">{activity.fragranceName}</Link> by {activity.brand}</>
             )}
             {activity.type === 'wardrobe_add' && (
-              <>Added <span className="font-medium text-gray-900 dark:text-white">{activity.fragranceName}</span> by {activity.brand} to {activity.category}</>
+              <>Added <span className="font-medium text-gray-900">{activity.fragranceName}</span> by {activity.brand} to {activity.category}</>
             )}
             {activity.type === 'helpful_vote' && (
-              <>Found {activity.reviewer}'s review of <span className="font-medium text-gray-900 dark:text-white">{activity.fragranceName}</span> helpful</>
+              <>Found {activity.reviewer}'s review of <span className="font-medium text-gray-900">{activity.fragranceName}</span> helpful</>
             )}
           </div>
           {activity.rating && (
             <div className="flex items-center mt-1">
-              <Star className="w-3 h-3 text-yellow-400 fill-current" />
-              <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">{activity.rating}</span>
+              <Star className="w-3 h-3 text-orange-400 fill-current" />
+              <span className="ml-1 text-xs text-gray-600">{activity.rating}</span>
             </div>
           )}
           {activity.preview && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">"{activity.preview}"</p>
+            <p className="text-xs text-gray-600 mt-1 italic">"{activity.preview}"</p>
           )}
-          <span className="text-xs text-gray-400 dark:text-gray-500 transition-colors duration-300">{formatDate(activity.date)}</span>
+          <span className="text-xs text-gray-500">{formatDate(activity.date)}</span>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-4">
-        {/* Profile Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 mb-8 border border-gray-100 dark:border-gray-700 transition-colors duration-300">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="min-h-screen relative overflow-hidden py-8" style={{ backgroundColor: '#FAFFF5' }}>
+      {/* Animated Background Elements - ADDED */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-20 left-10 w-96 h-96 bg-green-200/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-200/10 rounded-full blur-3xl animate-pulse animate-delay-2" />
+        
+        <div className="absolute top-32 right-20 animate-float">
+          <Leaf size={20} className="text-green-300/20" />
+        </div>
+        <div className="absolute bottom-40 left-32 animate-float animate-delay-3">
+          <Flower2 size={18} className="text-orange-300/20" />
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 relative z-10">
+        {/* Profile Header - BOTANICAL THEME */}
+        <div className="glass-card rounded-2xl shadow-sm p-8 mb-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 opacity-5">
+            <Trees size={200} />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
             <div className="lg:col-span-2">
               <div className="flex items-start space-x-6">
-                <div className="w-24 h-24 bg-gradient-to-br from-primary-500 to-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-orange-400 rounded-full flex items-center justify-center text-white text-2xl font-bold">
                   {user.displayName.charAt(0)}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center space-x-4 mb-2">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white transition-colors duration-300">{user.displayName}</h1>
-                    <span className="text-gray-500 dark:text-gray-400 transition-colors duration-300">@{user.username}</span>
+                    <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-orange-500 bg-clip-text text-transparent">{user.displayName}</h1>
+                    <span className="text-gray-600">@{user.username}</span>
                     <button 
                       onClick={() => setIsEditing(!isEditing)}
-                      className="p-2 text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                      className="p-2 text-gray-500 hover:text-green-600 transition-colors"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                   </div>
                   
-                  <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-300 mb-4 transition-colors duration-300">
+                  <div className="flex items-center space-x-4 text-sm text-gray-600 mb-4">
                     <div className="flex items-center">
                       <Calendar className="w-4 h-4 mr-1" />
                       Joined {formatDate(user.joinDate)}
@@ -219,20 +239,20 @@ const ProfilePage = () => {
                     <div>{user.location}</div>
                   </div>
 
-                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4 transition-colors duration-300">
+                  <p className="text-gray-700 leading-relaxed mb-4">
                     {user.bio}
                   </p>
 
                   <div className="flex items-center space-x-2">
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                       user.stats.level === 'Fragrance Expert' 
-                        ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' 
-                        : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                    } transition-colors duration-300`}>
+                        ? 'bg-gradient-to-r from-green-100 to-orange-100 text-green-700' 
+                        : 'bg-blue-100 text-blue-700'
+                    }`}>
                       <Award className="w-4 h-4 inline mr-1" />
                       {user.stats.level}
                     </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
+                    <span className="text-sm text-gray-600">
                       {user.stats.xp} XP
                     </span>
                   </div>
@@ -240,31 +260,31 @@ const ProfilePage = () => {
               </div>
             </div>
 
-            {/* Stats Grid */}
+            {/* Stats Grid - BOTANICAL COLORS */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 text-center border border-blue-200 dark:border-blue-800 transition-colors duration-300">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{user.stats.reviewsCount}</div>
-                <div className="text-sm text-blue-700 dark:text-blue-300">Reviews</div>
+              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 text-center border border-green-200">
+                <div className="text-2xl font-bold text-green-600">{user.stats.reviewsCount}</div>
+                <div className="text-sm text-green-700">Reviews</div>
               </div>
-              <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-4 text-center border border-green-200 dark:border-green-800 transition-colors duration-300">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{user.stats.wardrobeCount}</div>
-                <div className="text-sm text-green-700 dark:text-green-300">Wardrobe</div>
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 text-center border border-orange-200">
+                <div className="text-2xl font-bold text-orange-600">{user.stats.wardrobeCount}</div>
+                <div className="text-sm text-orange-700">Wardrobe</div>
               </div>
-              <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl p-4 text-center border border-purple-200 dark:border-purple-800 transition-colors duration-300">
-                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{user.stats.helpfulVotes}</div>
-                <div className="text-sm text-purple-700 dark:text-purple-300">Helpful</div>
+              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 text-center border border-green-200">
+                <div className="text-2xl font-bold text-green-600">{user.stats.helpfulVotes}</div>
+                <div className="text-sm text-green-700">Helpful</div>
               </div>
-              <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20 rounded-xl p-4 text-center border border-pink-200 dark:border-pink-800 transition-colors duration-300">
-                <div className="text-2xl font-bold text-pink-600 dark:text-pink-400">{user.stats.followers}</div>
-                <div className="text-sm text-pink-700 dark:text-pink-300">Followers</div>
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 text-center border border-orange-200">
+                <div className="text-2xl font-bold text-orange-600">{user.stats.followers}</div>
+                <div className="text-sm text-orange-700">Followers</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm mb-8 border border-gray-100 dark:border-gray-700 transition-colors duration-300">
-          <div className="border-b border-gray-200 dark:border-gray-700">
+        {/* Tabs - BOTANICAL THEME */}
+        <div className="glass-card rounded-2xl shadow-sm mb-8">
+          <div className="border-b border-green-100">
             <div className="flex space-x-8 px-8 py-4">
               {[
                 { id: 'overview', label: 'Overview', icon: TrendingUp },
@@ -279,8 +299,8 @@ const ProfilePage = () => {
                     onClick={() => setActiveTab(tab.id as TabId)}
                     className={`pb-2 border-b-2 font-medium text-sm transition-colors duration-300 flex items-center ${
                       activeTab === tab.id
-                        ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                        : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                        ? 'border-green-500 text-green-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-800'
                     }`}
                   >
                     <IconComponent className="w-4 h-4 mr-2" />
@@ -289,19 +309,18 @@ const ProfilePage = () => {
                 );
               })}
               {/* Wardrobe button → /wardrobe */}
-              <a href="/wardrobe" className="ml-auto inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Wardrobe</a>
+              <a href="/wardrobe" className="ml-auto inline-flex items-center gap-2 rounded-md border border-green-200 px-3 py-1.5 text-sm hover:bg-green-50 text-gray-700 transition-colors">My Wardrobe</a>
             </div>
           </div>
 
-          {/* Tab Content */}
+          {/* Tab Content - Keep existing content, just updating colors */}
           <div className="p-8">
+            {/* Content remains the same, just update color classes to use green/orange theme */}
             {activeTab === 'overview' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Recent Activity */}
                 <div>
-                  <h3 
-                    className="text-xl font-semibold text-gray-900 dark:text-white mb-6 transition-colors duration-300"
-                  >
+                  <h3 className="text-xl font-semibold text-gray-800 mb-6">
                     Recent Activity
                   </h3>
                   <div className="space-y-4">
@@ -311,25 +330,23 @@ const ProfilePage = () => {
 
                 {/* Top Fragrances */}
                 <div>
-                  <h3 
-                    className="text-xl font-semibold text-gray-900 dark:text-white mb-6 transition-colors duration-300"
-                  >
+                  <h3 className="text-xl font-semibold text-gray-800 mb-6">
                     Top Rated Fragrances
                   </h3>
                   <div className="space-y-4">
                     {user.topFragrances.map((fragrance) => (
                       <div 
                         key={fragrance.id} 
-                        className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer border border-gray-100 dark:border-gray-600"
+                        className="glass-card rounded-xl p-4 hover:shadow-md transition-all cursor-pointer"
                       >
                         <div className="flex justify-between items-start mb-2">
                           <div>
-                            <h4 className="font-medium text-gray-900 dark:text-white transition-colors duration-300">{fragrance.name}</h4>
-                            <p className="text-gray-600 dark:text-gray-300 text-sm transition-colors duration-300">{fragrance.brand}</p>
+                            <h4 className="font-medium text-gray-900">{fragrance.name}</h4>
+                            <p className="text-gray-600 text-sm">{fragrance.brand}</p>
                           </div>
                           <div className="flex items-center">
-                            <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                            <span className="ml-1 text-sm font-medium text-gray-900 dark:text-white">{fragrance.myRating}</span>
+                            <Star className="w-4 h-4 text-orange-400 fill-current" />
+                            <span className="ml-1 text-sm font-medium text-gray-900">{fragrance.myRating}</span>
                           </div>
                         </div>
                         <AccordTags accords={fragrance.accords} />
@@ -340,52 +357,53 @@ const ProfilePage = () => {
               </div>
             )}
 
+            {/* Other tabs content remains same with updated colors */}
             {activeTab === 'reviews' && (
               <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 transition-colors duration-300">My Reviews</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-6">My Reviews</h3>
                 <div className="space-y-6">
                   {user.recentReviews.map((review) => (
-                    <div key={review.id} className="bg-gray-50 dark:bg-gray-700 rounded-2xl p-6 border border-gray-100 dark:border-gray-600 transition-colors duration-300">
+                    <div key={review.id} className="glass-card rounded-2xl p-6">
                       <div className="flex justify-between items-start mb-4">
                         <div>
-                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-300">{review.fragranceName}</h4>
-                          <p className="text-gray-600 dark:text-gray-300 transition-colors duration-300">{review.brand}</p>
+                          <h4 className="text-lg font-semibold text-gray-900">{review.fragranceName}</h4>
+                          <p className="text-gray-600">{review.brand}</p>
                         </div>
                         <div className="text-right">
                           <div className="flex items-center">
-                            <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                            <span className="ml-1 text-sm font-medium text-gray-900 dark:text-white">{review.rating}</span>
+                            <Star className="w-4 h-4 text-orange-400 fill-current" />
+                            <span className="ml-1 text-sm font-medium text-gray-900">{review.rating}</span>
                           </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 transition-colors duration-300">{formatDate(review.date)}</p>
+                          <p className="text-xs text-gray-500 mt-1">{formatDate(review.date)}</p>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
                         <div>
-                          <span className="text-gray-500 dark:text-gray-400">Longevity:</span>
-                          <span className="ml-2 font-medium text-gray-900 dark:text-white">{review.longevity}/5</span>
+                          <span className="text-gray-600">Longevity:</span>
+                          <span className="ml-2 font-medium text-gray-800">{review.longevity}/5</span>
                         </div>
                         <div>
-                          <span className="text-gray-500 dark:text-gray-400">Sillage:</span>
-                          <span className="ml-2 font-medium text-gray-900 dark:text-white">{review.sillage}/5</span>
+                          <span className="text-gray-600">Sillage:</span>
+                          <span className="ml-2 font-medium text-gray-800">{review.sillage}/5</span>
                         </div>
                       </div>
 
                       <AccordTags accords={review.accords} className="mb-4" />
 
-                      <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4 transition-colors duration-300">
+                      <p className="text-gray-700 leading-relaxed mb-4">
                         {review.text}
                       </p>
 
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-green-600 dark:text-green-400 transition-colors duration-300">
+                        <span className="text-green-600">
                           {review.helpful} people found this helpful
                         </span>
                         <div className="flex space-x-4">
-                          <button className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors">
+                          <button className="text-green-600 hover:text-green-700 transition-colors">
                             Edit
                           </button>
-                          <button className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors">
+                          <button className="text-red-600 hover:text-red-700 transition-colors">
                             Delete
                           </button>
                         </div>
@@ -397,59 +415,58 @@ const ProfilePage = () => {
             )}
 
             {activeTab === 'achievements' && (
-              // Keep whichever prop shape your UserBadges supports in your project
               <UserBadges user={{ credibilityScore: 62 }} />
             )}
 
             {activeTab === 'settings' && (
               <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 transition-colors duration-300">Account Settings</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-6">Account Settings</h3>
                 <div className="space-y-6">
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 border border-gray-100 dark:border-gray-600 transition-colors duration-300">
-                    <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4 transition-colors duration-300">Profile Information</h4>
+                  <div className="glass-card rounded-xl p-6">
+                    <h4 className="text-lg font-medium text-gray-800 mb-4">Profile Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">Display Name</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Display Name</label>
                         <input 
                           type="text" 
                           defaultValue={user.displayName}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition-colors duration-300"
+                          className="w-full px-3 py-2 border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white/80 text-gray-800"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">Location</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
                         <input 
                           type="text" 
                           defaultValue={user.location}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition-colors duration-300"
+                          className="w-full px-3 py-2 border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white/80 text-gray-800"
                         />
                       </div>
                     </div>
                     <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">Bio</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
                       <textarea 
                         defaultValue={user.bio}
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition-colors duration-300"
+                        className="w-full px-3 py-2 border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white/80 text-gray-800"
                       />
                     </div>
-                    <button className="mt-4 bg-gradient-to-r from-primary-500 to-purple-500 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg transition-shadow">
+                    <button className="mt-4 bg-gradient-to-r from-green-500 to-orange-500 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg transition-all">
                       Save Changes
                     </button>
                   </div>
 
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 border border-gray-100 dark:border-gray-600 transition-colors duration-300">
-                    <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4 transition-colors duration-300">Privacy Settings</h4>
+                  <div className="glass-card rounded-xl p-6">
+                    <h4 className="text-lg font-medium text-gray-800 mb-4">Privacy Settings</h4>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-700 dark:text-gray-300 transition-colors duration-300">Make profile public</span>
-                        <button className="bg-primary-500 relative inline-flex h-6 w-11 items-center rounded-full">
+                        <span className="text-gray-700">Make profile public</span>
+                        <button className="bg-green-500 relative inline-flex h-6 w-11 items-center rounded-full">
                           <span className="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition"></span>
                         </button>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-700 dark:text-gray-300 transition-colors duration-300">Show wardrobe to others</span>
-                        <button className="bg-gray-300 dark:bg-gray-600 relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300">
+                        <span className="text-gray-700">Show wardrobe to others</span>
+                        <button className="bg-gray-300 relative inline-flex h-6 w-11 items-center rounded-full">
                           <span className="translate-x-1 inline-block h-4 w-4 transform rounded-full bg-white transition"></span>
                         </button>
                       </div>

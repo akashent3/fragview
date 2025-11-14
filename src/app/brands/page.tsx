@@ -18,8 +18,14 @@ export default async function BrandsPage({
 }) {
   const data = await loadBrands(searchParams);
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-4">
+    <div className="min-h-screen relative overflow-hidden py-8" style={{ backgroundColor: '#FAFFF5' }}>
+      {/* Animated Background Elements - ADDED */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-20 left-10 w-96 h-96 bg-green-200/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-200/10 rounded-full blur-3xl animate-pulse animate-delay-2" />
+      </div>
+      
+      <div className="max-w-7xl mx-auto px-4 relative z-10">
         <BrandsClient
           initialItems={data.items as BrandItem[]}
           total={data.total}

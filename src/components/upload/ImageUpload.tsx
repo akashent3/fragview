@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
+import { Upload } from 'lucide-react';
 
 interface ImageUploadProps {
   onUploadComplete: (url: string) => void;
@@ -70,7 +71,7 @@ export default function ImageUpload({
   return (
     <div className="space-y-3">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label className="block text-sm font-medium text-gray-700">
           {label}
         </label>
       )}
@@ -86,8 +87,8 @@ export default function ImageUpload({
 
       <div
         className={`relative flex w-full flex-col items-center justify-center overflow-hidden rounded-xl border ${
-          preview ? 'border-gray-200 dark:border-gray-700' : 'border-dashed border-gray-300 dark:border-gray-600'
-        } bg-white p-4 shadow-sm transition-colors duration-300 dark:bg-gray-900`}
+          preview ? 'border-green-200' : 'border-dashed border-green-300'
+        } bg-white/80 p-4 shadow-sm transition-colors duration-300`}
       >
         {preview ? (
           <div className="relative w-full">
@@ -109,7 +110,7 @@ export default function ImageUpload({
                 type="button"
                 onClick={pick}
                 disabled={isUploading}
-                className="w-full rounded-full bg-gradient-to-r from-primary-500 to-purple-500 px-4 py-2 text-center text-sm font-medium text-white transition-shadow hover:shadow-md disabled:opacity-50"
+                className="w-full rounded-full bg-gradient-to-r from-green-500 to-orange-500 px-4 py-2 text-center text-sm font-medium text-white transition-shadow hover:shadow-md disabled:opacity-50"
               >
                 {isUploading ? 'Uploading…' : 'Change Image'}
               </button>
@@ -120,7 +121,7 @@ export default function ImageUpload({
                   setError('');
                 }}
                 disabled={isUploading}
-                className="w-full rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-primary-500 hover:text-primary-600 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-primary-400 dark:hover:text-primary-400"
+                className="w-full rounded-full border border-green-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-green-50 disabled:opacity-50"
               >
                 Remove
               </button>
@@ -128,28 +129,21 @@ export default function ImageUpload({
           </div>
         ) : (
           <div className="flex w-full flex-col items-center justify-center space-y-4 py-6">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-              <svg
-                className="h-8 w-8 text-gray-400 dark:text-gray-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+              <Upload className="h-8 w-8 text-green-600" />
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-gray-600">
               Upload an image (JPEG, PNG, WebP)
             </p>
             <button
               type="button"
               onClick={pick}
               disabled={isUploading}
-              className="w-full rounded-full bg-gradient-to-r from-primary-500 to-purple-500 px-4 py-2 text-center text-sm font-medium text-white transition-shadow hover:shadow-md disabled:opacity-50"
+              className="w-full rounded-full bg-gradient-to-r from-green-500 to-orange-500 px-4 py-2 text-center text-sm font-medium text-white transition-shadow hover:shadow-md disabled:opacity-50"
             >
               {isUploading ? 'Uploading…' : 'Select File'}
             </button>
-            <p className="text-xs text-gray-500 dark:text-gray-500">
+            <p className="text-xs text-gray-500">
               Max size {maxSizeMB}MB
             </p>
           </div>
@@ -157,7 +151,7 @@ export default function ImageUpload({
       </div>
 
       {error && (
-        <p className="text-xs text-red-600 dark:text-red-400">
+        <p className="text-xs text-red-600">
           {error}
         </p>
       )}

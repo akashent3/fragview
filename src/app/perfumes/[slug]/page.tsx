@@ -76,20 +76,28 @@ export default async function PerfumeDetailPage({ params }: { params: { slug: st
   }
 
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <PerfumeDetailClient
-        perfume={data.perfume}
-        rating={data.rating}
-        isSignedIn={isSignedIn}
-        canRate={canRate}
-        reviews={data.reviews}
-        reviewCount={data.reviewCount}
-        slug={params.slug}
-      />
-    </>
+    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#FAFFF5' }}>
+      {/* Animated Background Elements - ADDED */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-20 left-10 w-96 h-96 bg-green-200/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-200/10 rounded-full blur-3xl animate-pulse animate-delay-2" />
+      </div>
+      
+      <div className="relative z-10">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <PerfumeDetailClient
+          perfume={data.perfume}
+          rating={data.rating}
+          isSignedIn={isSignedIn}
+          canRate={canRate}
+          reviews={data.reviews}
+          reviewCount={data.reviewCount}
+          slug={params.slug}
+        />
+      </div>
+    </div>
   );
 }

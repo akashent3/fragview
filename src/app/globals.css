@@ -3,18 +3,27 @@
 @tailwind utilities;
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap');
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  /* Your existing variables */
+  --foreground-rgb: 44, 62, 44;
+  --background-start-rgb: 250, 255, 245;
+  --background-end-rgb: 250, 255, 245;
+  
+  /* Botanical Garden Theme Colors */
+  --botanical-primary: #E8F3E8;
+  --botanical-secondary: #D4E4BC;
+  --botanical-accent: #F2C6A0;
+  --botanical-background: #FAFFF5;
+  --botanical-text: #2C3E2C;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+    --foreground-rgb: 232, 243, 232;
+    --background-start-rgb: 26, 31, 26;
+    --background-end-rgb: 26, 31, 26;
   }
 }
 
@@ -33,12 +42,11 @@ body {
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  background: var(--botanical-background);
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Playfair Display', serif;
 }
 
 a {
@@ -52,7 +60,64 @@ a {
   }
 }
 
-/* Custom slider styles */
+/* Glass morphism utilities */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(212, 228, 188, 0.3);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+}
+
+/* Glass buttons */
+.glass-button-primary {
+  @apply px-8 py-3 rounded-full font-semibold shadow-lg transition-all duration-300 transform hover:scale-105;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #2C3E2C;
+}
+
+.glass-button-primary:hover {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.glass-button-secondary {
+  @apply px-8 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105;
+  background: transparent;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(44, 62, 44, 0.5);
+  color: #2C3E2C;
+}
+
+.glass-button-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Animation utilities */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-delay-2 {
+  animation-delay: 2s;
+}
+
+.animate-delay-3 {
+  animation-delay: 3s;
+}
+
+.animate-delay-4 {
+  animation-delay: 4s;
+}
+
+/* Keep your existing custom slider styles */
 .rating-slider {
   -webkit-appearance: none;
   appearance: none;
@@ -74,7 +139,7 @@ a {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  background: linear-gradient(135deg, #22c55e, #f97316);
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -83,7 +148,7 @@ a {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  background: linear-gradient(135deg, #22c55e, #f97316);
   cursor: pointer;
   border: none;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);

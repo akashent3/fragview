@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useTransition } from 'react';
-import { Star, Heart, Share, Plus, MessageSquare, LogIn } from 'lucide-react';
+import { Star, Heart, Share, Plus, MessageSquare, LogIn, Leaf, Flower2, Droplets, Wind, Sparkles } from 'lucide-react';
 import NotesPyramid from '@/components/ui/NotesPyramid';
 import AccordTags from '@/components/ui/AccordTags';
 import RatingSlider from '@/components/ui/RatingSlider';
@@ -133,13 +133,26 @@ export default function PerfumeDetailClient({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 text-gray-900 transition-colors duration-300 dark:bg-gray-900 dark:text-gray-100">
-      <div className="mx-auto max-w-4xl space-y-5 px-4">
-        {/* Header Card - FIXED IMAGE OPACITY */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800">
-          <div className="flex flex-col gap-6 md:flex-row">
-            {/* 🔧 FIXED: Image container - removed opacity from parent */}
-            <div className="h-64 w-full rounded-2xl overflow-hidden md:w-48 relative">
+    <div className="py-4 text-gray-900">
+      {/* Floating Botanical Elements - ADDED */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-32 right-20 animate-float">
+          <Leaf size={20} className="text-green-300/20" />
+        </div>
+        <div className="absolute bottom-40 left-32 animate-float animate-delay-3">
+          <Flower2 size={18} className="text-orange-300/20" />
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-4xl space-y-5 px-4 relative z-10">
+        {/* Header Card - BOTANICAL THEME */}
+        <div className="glass-card rounded-2xl p-6 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 opacity-5">
+            <Droplets size={150} />
+          </div>
+          <div className="flex flex-col gap-6 md:flex-row relative z-10">
+            {/* Image container */}
+            <div className="h-64 w-full rounded-2xl overflow-hidden md:w-48 relative bg-gradient-to-br from-green-50/50 to-orange-50/50">
               {perfume.image ? (
                 <img
                   src={perfume.image}
@@ -147,109 +160,126 @@ export default function PerfumeDetailClient({
                   className="h-full w-full object-cover rounded-2xl"
                 />
               ) : (
-                <div className="h-full w-full rounded-2xl bg-gradient-to-br from-pastel-blue to-pastel-purple opacity-20 dark:opacity-30" />
+                <div className="h-full w-full flex items-center justify-center">
+                  <Sparkles className="w-16 h-16 text-green-300" />
+                </div>
               )}
+              <div className="absolute top-2 right-2 opacity-30">
+                <Leaf size={30} className="text-green-500" />
+              </div>
             </div>
             
             <div className="flex-1 space-y-4">
               <div>
-                <h1 className="text-3xl font-bold">{perfume.variant_name}</h1>
-                <p className="text-xl font-semibold text-primary-600 dark:text-primary-400">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-orange-500 bg-clip-text text-transparent">
+                  {perfume.variant_name}
+                </h1>
+                <p className="text-xl font-semibold text-gray-700">
                   {perfume.brand_name}
                 </p>
                 <div className="mt-2 flex items-center space-x-4">
                   <div className="flex items-center">
-                    <Star className="h-5 w-5 fill-current text-yellow-400" />
-                    <span className="ml-1 text-lg font-semibold">{rating.toFixed(2)}</span>
+                    <Star className="h-5 w-5 fill-current text-orange-400" />
+                    <span className="ml-1 text-lg font-semibold text-gray-800">{rating.toFixed(2)}</span>
                   </div>
-                  <span className="text-gray-500 dark:text-gray-400">
+                  <span className="text-gray-600">
                     ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
                   </span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">Gender:</span>{' '}
-                  <span className="ml-2 font-medium">{perfume.gender || '—'}</span>
+                  <span className="text-gray-600">Gender:</span>{' '}
+                  <span className="ml-2 font-medium text-gray-800">{perfume.gender || '—'}</span>
+                </div>
+                <div className="flex items-center">
+                  <Wind className="w-4 h-4 mr-1 text-green-600" />
+                  <span className="text-gray-600">Longevity:</span>{' '}
+                  <span className="ml-2 font-medium text-gray-800">{(perfume.longevity ?? 0).toFixed(2)}</span>
+                </div>
+                <div className="flex items-center">
+                  <Droplets className="w-4 h-4 mr-1 text-orange-600" />
+                  <span className="text-gray-600">Sillage:</span>{' '}
+                  <span className="ml-2 font-medium text-gray-800">{(perfume.sillage ?? 0).toFixed(2)}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">Longevity:</span>{' '}
-                  <span className="ml-2 font-medium">{(perfume.longevity ?? 0).toFixed(2)}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 dark:text-gray-400">Sillage:</span>{' '}
-                  <span className="ml-2 font-medium">{(perfume.sillage ?? 0).toFixed(2)}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 dark:text-gray-400">Perfumer(s):</span>{' '}
-                  <span className="ml-2 font-medium">
+                  <span className="text-gray-600">Perfumer(s):</span>{' '}
+                  <span className="ml-2 font-medium text-gray-800">
                     {perfume.perfumers?.join(', ') || '—'}
                   </span>
                 </div>
               </div>
               <div className="flex gap-2">
-                <button className="flex-1 rounded-lg bg-gradient-to-r from-primary-500 to-purple-500 px-4 py-2 font-semibold text-white">
+                <button className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-orange-500 px-4 py-2 font-semibold text-white hover:shadow-lg transition-all">
                   <Plus className="mr-2 inline h-4 w-4" />
                   Add to Wardrobe
                 </button>
-                <button className="rounded-lg border border-gray-300 p-2 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
-                  <Heart className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                <button className="rounded-lg border border-green-200 p-2 transition-all hover:bg-green-50">
+                  <Heart className="h-5 w-5 text-gray-600" />
                 </button>
-                <button className="rounded-lg border border-gray-300 p-2 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
-                  <Share className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                <button className="rounded-lg border border-green-200 p-2 transition-all hover:bg-green-50">
+                  <Share className="h-5 w-5 text-gray-600" />
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Perfume Info */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800">
+        {/* Perfume Info - BOTANICAL THEME */}
+        <div className="glass-card rounded-2xl p-6 shadow-sm">
           <PerfumeInfo perfume={perfumeInfo} />
         </div>
 
-        {/* Accords */}
+        {/* Accords - BOTANICAL THEME */}
         {transformedAccords.length > 0 && (
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800">
-            <h3 className="mb-4 text-lg font-semibold">Main Accords</h3>
-            <AccordTags accords={transformedAccords} />
+          <div className="glass-card rounded-2xl p-6 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 opacity-5">
+              <Flower2 size={80} />
+            </div>
+            <h3 className="mb-4 text-lg font-semibold text-gray-800 relative z-10">Main Accords</h3>
+            <div className="relative z-10">
+              <AccordTags accords={transformedAccords} />
+            </div>
           </div>
         )}
 
-        {/* Notes Pyramid */}
+        {/* Notes Pyramid - BOTANICAL THEME */}
         {(topNotes.length || middleNotes.length || baseNotes.length) > 0 && (
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800">
+          <div className="glass-card rounded-2xl p-6 shadow-sm">
             <NotesPyramid topNotes={topNotes} middleNotes={middleNotes} baseNotes={baseNotes} />
           </div>
         )}
 
-        {/* AI Reviews Summary */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800">
+        {/* AI Reviews Summary - BOTANICAL THEME */}
+        <div className="glass-card rounded-2xl p-6 shadow-sm">
           <ReviewsSummary summary={reviewsSummary} />
         </div>
 
-        {/* Rate & Review */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800">
-          <h3 className="mb-4 text-lg font-semibold">Rate This Fragrance</h3>
+        {/* Rate & Review - BOTANICAL THEME */}
+        <div className="glass-card rounded-2xl p-6 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 opacity-5">
+            <Leaf size={100} style={{ transform: 'rotate(-30deg)' }} />
+          </div>
+          <h3 className="mb-4 text-lg font-semibold text-gray-800 relative z-10">Rate This Fragrance</h3>
           {!isSignedIn ? (
-            <div className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300">
+            <div className="rounded-xl border-2 border-dashed border-green-300 bg-green-50/50 p-4 text-sm text-gray-700 relative z-10">
               <p className="mb-3">Please sign in to rate and review.</p>
               <button
                 onClick={() =>
                   open({ mode: 'signin', reason: 'Sign in to rate & review this perfume', callbackUrl: `/perfumes/${slug}` })
                 }
-                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary-500 to-purple-500 px-4 py-2 font-medium text-white"
+                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-orange-500 px-4 py-2 font-medium text-white hover:shadow-lg transition-all"
               >
                 <LogIn className="h-4 w-4" />
                 Sign in to continue
               </button>
             </div>
           ) : !canRate ? (
-            <div className="rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-900 dark:border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200">
+            <div className="rounded-xl border border-orange-300 bg-orange-50 p-4 text-sm text-orange-900 relative z-10">
               Your account is not allowed to rate/review yet.
             </div>
           ) : (
-            <form action={(fd) => handleSubmit(fd)} className="space-y-4">
+            <form action={(fd) => handleSubmit(fd)} className="space-y-4 relative z-10">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 <RatingSlider label="Longevity" value={longevity} onChange={setLongevity} />
                 <RatingSlider label="Sillage" value={sillage} onChange={setSillage} />
@@ -260,18 +290,18 @@ export default function PerfumeDetailClient({
                 value={reviewText}
                 onChange={(e) => setReviewText(e.target.value)}
                 placeholder="Write your review..."
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                className="w-full rounded-lg border border-green-200 px-4 py-3 transition-colors focus:outline-none focus:ring-2 focus:ring-green-400 bg-white/80 text-gray-800"
                 rows={3}
               />
               {errorMessage && (
-                <div className="text-sm text-red-600 dark:text-red-400">{errorMessage}</div>
+                <div className="text-sm text-red-600">{errorMessage}</div>
               )}
               {successMessage && (
-                <div className="text-sm text-green-600 dark:text-green-400">{successMessage}</div>
+                <div className="text-sm text-green-600">{successMessage}</div>
               )}
               <button
                 disabled={pending}
-                className="mt-2 rounded-lg bg-gradient-to-r from-primary-500 to-purple-500 px-6 py-2 font-semibold text-white disabled:opacity-60"
+                className="mt-2 rounded-lg bg-gradient-to-r from-green-500 to-orange-500 px-6 py-2 font-semibold text-white disabled:opacity-60 hover:shadow-lg transition-all"
               >
                 {pending ? 'Submitting...' : 'Submit Review'}
               </button>
@@ -279,31 +309,31 @@ export default function PerfumeDetailClient({
           )}
         </div>
 
-        {/* Similar Fragrances */}
+        {/* Similar Fragrances - BOTANICAL THEME */}
         <SimilarFragrances
           fragrances={similarPerfumes}
           currentPerfumeId={numericId}
           userIsVerified={canRate}
         />
 
-        {/* Reviews List */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800">
-          <h3 className="mb-4 text-lg font-semibold">
-            <MessageSquare className="mr-2 inline h-5 w-5" />
+        {/* Reviews List - BOTANICAL THEME */}
+        <div className="glass-card rounded-2xl p-6 shadow-sm">
+          <h3 className="mb-4 text-lg font-semibold text-gray-800">
+            <MessageSquare className="mr-2 inline h-5 w-5 text-green-600" />
             Latest Reviews
           </h3>
           {reviews.length === 0 && (
-            <p className="text-sm text-gray-600 dark:text-gray-300">No reviews yet.</p>
+            <p className="text-sm text-gray-600">No reviews yet.</p>
           )}
           <div className="space-y-4">
             {reviews.map((r, i) => (
-              <div key={i} className="border-b border-gray-200 pb-4 last:border-0 dark:border-gray-700">
-                <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
-                  <Star className="h-4 w-4 fill-current text-yellow-400" />
+              <div key={i} className="border-b border-green-100 pb-4 last:border-0">
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <Star className="h-4 w-4 fill-current text-orange-400" />
                   {r.rating.toFixed(1)}
                 </div>
-                {r.text && <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{r.text}</p>}
-                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {r.text && <p className="mt-1 text-sm text-gray-700">{r.text}</p>}
+                <div className="mt-1 text-xs text-gray-500">
                   {new Date(r.createdAt).toLocaleDateString()}
                 </div>
               </div>

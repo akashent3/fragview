@@ -2,6 +2,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { getNoteImageUrl } from '@/lib/note-images';
+import { Leaf } from 'lucide-react';
 
 interface Note {
   name: string;
@@ -20,30 +21,31 @@ const NotesPyramid: React.FC<NotesPyramidProps> = ({ topNotes, middleNotes, base
       return char.charCodeAt(0) + ((acc << 5) - acc);
     }, 0);
     
+    // UPDATED: More botanical-themed gradients
     const baseColors = {
       top: [
-        'from-amber-400 to-orange-500',
-        'from-yellow-400 to-amber-500', 
-        'from-lime-400 to-green-500',
+        'from-green-400 to-emerald-500',
+        'from-lime-400 to-green-500', 
         'from-emerald-400 to-teal-500',
-        'from-cyan-400 to-blue-500',
-        'from-orange-400 to-red-500'
+        'from-teal-400 to-cyan-500',
+        'from-yellow-400 to-amber-500',
+        'from-amber-400 to-orange-500'
       ],
       middle: [
-        'from-pink-400 to-rose-500',
+        'from-orange-400 to-rose-500',
+        'from-rose-400 to-pink-500',
+        'from-pink-400 to-fuchsia-500',
         'from-purple-400 to-pink-500',
-        'from-fuchsia-400 to-purple-500',
-        'from-violet-400 to-purple-500',
-        'from-indigo-400 to-blue-500',
-        'from-rose-400 to-pink-500'
+        'from-amber-400 to-orange-500',
+        'from-green-400 to-teal-500'
       ],
       base: [
-        'from-purple-500 to-indigo-600',
-        'from-indigo-500 to-purple-600',
-        'from-violet-500 to-purple-600',
-        'from-blue-500 to-indigo-600',
-        'from-slate-500 to-gray-600',
-        'from-gray-500 to-slate-600'
+        'from-green-600 to-emerald-700',
+        'from-emerald-600 to-teal-700',
+        'from-teal-600 to-cyan-700',
+        'from-orange-600 to-amber-700',
+        'from-amber-600 to-orange-700',
+        'from-slate-600 to-gray-700'
       ]
     };
     
@@ -62,11 +64,6 @@ const NotesPyramid: React.FC<NotesPyramidProps> = ({ topNotes, middleNotes, base
       .replace(/^-+|-+$/g, '');
 
   // Resolve note image URL with Blob map + partial-token fallback.
-  // Behavior:
-  // 1) Try getNoteImageUrl (Blob map with partial matching).
-  // 2) If not found, try local exact: /images/notes/<full-slug>.jpg
-  // 3) Then try local token fallback: first meaningful token in the slug.
-  // 4) Let onError handler swap to default image if still missing.
   const resolveNoteImageUrl = (noteName: string) => {
     const blobOrMapped = getNoteImageUrl(noteName);
     if (blobOrMapped) return blobOrMapped;
@@ -77,7 +74,6 @@ const NotesPyramid: React.FC<NotesPyramidProps> = ({ topNotes, middleNotes, base
     const parts = slug.split('-').filter((p) => p.length > 1);
     if (parts.length > 0) {
       const tokenLocal = `/images/notes/${parts[0]}.jpg`;
-      // Prefer a token-based local image if it likely exists; if not, onError will handle default.
       return tokenLocal;
     }
 
@@ -98,7 +94,7 @@ const NotesPyramid: React.FC<NotesPyramidProps> = ({ topNotes, middleNotes, base
     <div className="mb-4">
       <div className="flex items-center mb-3">
         <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${bgGradient} mr-3`}></div>
-        <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 transition-colors duration-300">
+        <h4 className="text-sm font-semibold text-gray-800">
           {title}
         </h4>
       </div>
@@ -137,15 +133,20 @@ const NotesPyramid: React.FC<NotesPyramidProps> = ({ topNotes, middleNotes, base
   );
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 border border-gray-100 dark:border-gray-700 transition-colors duration-300">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 transition-colors duration-300">
+    <div className="glass-card rounded-2xl shadow-sm p-4 relative overflow-hidden">
+      {/* Decorative element */}
+      <div className="absolute top-0 right-0 opacity-5">
+        <Leaf size={80} style={{ transform: 'rotate(-30deg)' }} />
+      </div>
+      
+      <h3 className="text-lg font-semibold text-gray-800 mb-4 relative z-10">
         Notes Breakdown
       </h3>
       
-      <div className="space-y-3">
-        {renderNoteSection(topNotes, 'Top Notes', 'top', 'from-amber-400 to-orange-500')}
-        {renderNoteSection(middleNotes, 'Middle Notes', 'middle', 'from-pink-400 to-rose-500')}
-        {renderNoteSection(baseNotes, 'Base Notes', 'base', 'from-purple-500 to-indigo-600')}
+      <div className="space-y-3 relative z-10">
+        {renderNoteSection(topNotes, 'Top Notes', 'top', 'from-green-400 to-emerald-500')}
+        {renderNoteSection(middleNotes, 'Middle Notes', 'middle', 'from-orange-400 to-rose-500')}
+        {renderNoteSection(baseNotes, 'Base Notes', 'base', 'from-green-600 to-emerald-700')}
       </div>
     </div>
   );

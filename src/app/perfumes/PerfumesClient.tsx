@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import { Search, X, Loader2 } from 'lucide-react';
+import { Search, X, Loader2, Sparkles, Leaf, Flower2, Droplets } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 type PerfumeDoc = {
@@ -129,153 +129,178 @@ export default function PerfumesClient({ initialItems, total, meta, query, pageS
 
   return (
     <div>
-      {/* Header / Filters */}
-      <div className="mb-6 space-y-4">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Perfumes</h1>
-
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* 🔧 CHANGED: Perfume Search with loading indicator */}
-          <div className="flex-1 max-w-md relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search perfumes or brands..."
-              className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-            {isSearching && (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-gray-400" />
-            )}
-          </div>
-
-          {/* Gender Filter */}
-          <select
-            value={gender}
-            onChange={(e) => setGender(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="">All Genders</option>
-            <option value="male">Men</option>
-            <option value="female">Women</option>
-            <option value="unisex">Unisex</option>
-          </select>
-
-          {/* 🔧 NEW: Brand Filter with Autocomplete */}
-          <div className="relative flex-1 max-w-xs" ref={brandInputRef}>
-            <input
-              type="text"
-              value={brandSearch}
-              onChange={(e) => {
-                setBrandSearch(e.target.value);
-                setShowBrandDropdown(true);
-              }}
-              onFocus={() => setShowBrandDropdown(true)}
-              placeholder="Filter by brand..."
-              className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-            {brand && (
-              <button
-                onClick={clearBrand}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-
-            {/* Brand Dropdown */}
-            {showBrandDropdown && brandSuggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 z-50 max-h-60 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
-                {brandSuggestions.map((brandName) => (
-                  <button
-                    key={brandName}
-                    onClick={() => selectBrand(brandName)}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 last:border-b-0"
-                  >
-                    {brandName}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Sort */}
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            <option value="az">Name (A-Z)</option>
-            <option value="za">Name (Z-A)</option>
-            <option value="rating">Highest Rated</option>
-          </select>
+      {/* Floating Botanical Elements - ADDED */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-32 right-20 animate-float">
+          <Leaf size={20} className="text-green-300/20" />
         </div>
+        <div className="absolute bottom-40 left-32 animate-float animate-delay-3">
+          <Flower2 size={18} className="text-orange-300/20" />
+        </div>
+      </div>
 
-        {/* Active Filters */}
-        {(q || gender || brand) && (
-          <div className="flex flex-wrap gap-2">
-            {q && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-sm">
-                Search: {q}
-                <button onClick={() => setQ('')} className="hover:text-primary-900 dark:hover:text-primary-100">
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-            {gender && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-sm">
-                Gender: {gender}
-                <button onClick={() => setGender('')} className="hover:text-primary-900 dark:hover:text-primary-100">
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-            {brand && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-sm">
-                Brand: {brand}
-                <button onClick={clearBrand} className="hover:text-primary-900 dark:hover:text-primary-100">
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
+      {/* Header / Filters - UPDATED WITH BOTANICAL THEME */}
+      <div className="mb-6 space-y-4">
+        <div className="glass-card rounded-2xl p-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 opacity-5">
+            <Droplets size={100} />
           </div>
-        )}
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-orange-500 bg-clip-text text-transparent mb-4 relative z-10">
+            Explore Perfumes
+          </h1>
+
+          <div className="flex flex-col lg:flex-row gap-4 relative z-10">
+            {/* 🔧 CHANGED: Perfume Search with loading indicator - BOTANICAL STYLING */}
+            <div className="flex-1 max-w-md relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search perfumes or brands..."
+                className="w-full pl-10 pr-10 py-2 rounded-lg border border-green-200 bg-white/80 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors"
+              />
+              {isSearching && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-green-600" />
+              )}
+            </div>
+
+            {/* Gender Filter - BOTANICAL STYLING */}
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="px-4 py-2 rounded-lg border border-green-200 bg-white/80 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400"
+            >
+              <option value="">All Genders</option>
+              <option value="male">Men</option>
+              <option value="female">Women</option>
+              <option value="unisex">Unisex</option>
+            </select>
+
+            {/* 🔧 NEW: Brand Filter with Autocomplete - BOTANICAL STYLING */}
+            <div className="relative flex-1 max-w-xs" ref={brandInputRef}>
+              <input
+                type="text"
+                value={brandSearch}
+                onChange={(e) => {
+                  setBrandSearch(e.target.value);
+                  setShowBrandDropdown(true);
+                }}
+                onFocus={() => setShowBrandDropdown(true)}
+                placeholder="Filter by brand..."
+                className="w-full px-4 py-2 pr-10 rounded-lg border border-green-200 bg-white/80 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400"
+              />
+              {brand && (
+                <button
+                  onClick={clearBrand}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+
+              {/* Brand Dropdown - BOTANICAL STYLING */}
+              {showBrandDropdown && brandSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 z-50 max-h-60 overflow-y-auto rounded-lg border border-green-200 bg-white/95 backdrop-blur-sm shadow-lg">
+                  {brandSuggestions.map((brandName) => (
+                    <button
+                      key={brandName}
+                      onClick={() => selectBrand(brandName)}
+                      className="w-full text-left px-4 py-2 hover:bg-green-50 text-gray-800 border-b border-green-100 last:border-b-0 transition-colors"
+                    >
+                      {brandName}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sort - BOTANICAL STYLING */}
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              className="px-4 py-2 rounded-lg border border-green-200 bg-white/80 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400"
+            >
+              <option value="az">Name (A-Z)</option>
+              <option value="za">Name (Z-A)</option>
+              <option value="rating">Highest Rated</option>
+            </select>
+          </div>
+
+          {/* Active Filters - BOTANICAL COLORS */}
+          {(q || gender || brand) && (
+            <div className="flex flex-wrap gap-2 mt-4 relative z-10">
+              {q && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm">
+                  Search: {q}
+                  <button onClick={() => setQ('')} className="hover:text-red-500">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {gender && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-sm">
+                  Gender: {gender}
+                  <button onClick={() => setGender('')} className="hover:text-red-500">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {brand && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm">
+                  Brand: {brand}
+                  <button onClick={clearBrand} className="hover:text-red-500">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Results Count */}
-      <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+      <div className="mb-4 text-sm text-gray-600">
         Showing {sortedItems.length} of {total.toLocaleString()} perfumes
       </div>
 
-      {/* Perfumes Grid */}
+      {/* Perfumes Grid - UPDATED WITH GLASS CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
         {sortedItems.map((item) => (
           <Link
             key={item._id}
             href={`/perfumes/${item.slug || item._id}`}
-            className="group bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg hover:border-primary-500 dark:hover:border-primary-400 transition-all duration-300"
+            className="group glass-card rounded-2xl overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-300"
           >
-            {item.image && (
-              <div className="aspect-square overflow-hidden bg-gray-100 dark:bg-gray-700">
+            <div className="aspect-square overflow-hidden bg-gradient-to-br from-green-50/50 to-orange-50/50 relative">
+              {item.image ? (
                 <img
                   src={item.image}
                   alt={item.variant_name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Sparkles className="w-16 h-16 text-green-300" />
+                </div>
+              )}
+              {/* Corner decoration */}
+              <div className="absolute top-2 right-2 opacity-30">
+                <Leaf size={24} className="text-green-500" />
               </div>
-            )}
+            </div>
             <div className="p-4">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2">
+              <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-green-600 transition-colors line-clamp-2">
                 {item.variant_name}
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{item.brand_name}</p>
+              <p className="text-sm text-gray-600 mb-2">{item.brand_name}</p>
               <div className="flex items-center justify-between">
                 {item.gender && (
-                  <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                  <span className="text-xs px-2 py-1 rounded-full bg-gradient-to-r from-green-100 to-orange-100 text-gray-700">
                     {item.gender}
                   </span>
                 )}
                 {item.rating && (
-                  <span className="text-sm font-medium text-primary-600 dark:text-primary-400">
+                  <span className="text-sm font-medium text-orange-600">
                     ⭐ {item.rating.toFixed(1)}
                   </span>
                 )}
@@ -288,29 +313,32 @@ export default function PerfumesClient({ initialItems, total, meta, query, pageS
       {/* No Results */}
       {sortedItems.length === 0 && !isSearching && (
         <div className="text-center py-12">
-          <p className="text-gray-600 dark:text-gray-400 text-lg">
-            No perfumes found matching your criteria.
-          </p>
+          <div className="glass-card rounded-xl p-8 inline-block">
+            <Flower2 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-600 text-lg">
+              No perfumes found matching your criteria.
+            </p>
+          </div>
         </div>
       )}
 
-      {/* Pagination */}
+      {/* Pagination - BOTANICAL COLORS */}
       {meta.totalPages > 1 && (
         <div className="flex justify-center gap-2">
           <button
             onClick={() => gotoPage(meta.page - 1)}
             disabled={meta.page === 1}
-            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded-lg border border-green-200 bg-white/80 text-gray-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Previous
           </button>
-          <span className="px-4 py-2 text-gray-700 dark:text-gray-300">
+          <span className="px-4 py-2 text-gray-700 font-medium">
             Page {meta.page} of {meta.totalPages}
           </span>
           <button
             onClick={() => gotoPage(meta.page + 1)}
             disabled={meta.page === meta.totalPages}
-            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded-lg border border-green-200 bg-white/80 text-gray-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Next
           </button>

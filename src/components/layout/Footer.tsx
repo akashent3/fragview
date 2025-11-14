@@ -7,7 +7,7 @@ const Footer = () => {
     <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-16 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Brand - FIXED */}
+          {/* Brand */}
           <div className="space-y-4">
             <div className="bg-gradient-to-r from-primary-500 to-purple-500 text-white px-3 py-2 rounded-lg font-bold text-xl inline-flex items-center">
               <Sparkles className="w-5 h-5 mr-2" />
@@ -29,7 +29,7 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Explore - FIXED */}
+          {/* Explore - UPDATED: REMOVED DISCOVER AND TRENDING, ADDED PERFUMES */}
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white mb-4 transition-colors duration-300">Explore</h3>
             <ul className="space-y-2">
@@ -39,8 +39,8 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/discover" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 text-sm transition-colors">
-                  Discover
+                <Link href="/perfumes" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 text-sm transition-colors">
+                  Perfumes
                 </Link>
               </li>
               <li>
@@ -48,15 +48,10 @@ const Footer = () => {
                   Advanced Search
                 </Link>
               </li>
-              <li>
-                <Link href="/trending" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 text-sm transition-colors">
-                  Trending
-                </Link>
-              </li>
             </ul>
           </div>
 
-          {/* Account - FIXED */}
+          {/* Account */}
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white mb-4 transition-colors duration-300">Account</h3>
             <ul className="space-y-2">
@@ -83,7 +78,7 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Support - FIXED */}
+          {/* Support */}
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white mb-4 transition-colors duration-300">Support</h3>
             <ul className="space-y-2">

@@ -15,12 +15,11 @@ async function getHomePageData() {
       db.collection('brands').countDocuments(),
     ]);
 
-    // 🔧 NEW: Get 3 RANDOM featured perfumes (can be changed from admin dashboard)
-    // Check if there's a 'featured' flag in database (for future admin control)
+    // Get 3 RANDOM featured perfumes
     const featuredQuery = { 
       $or: [
-        { featured: true }, // Admin can mark perfumes as featured
-        { rating: { $gte: 4.0 } } // Or use high-rated perfumes
+        { featured: true },
+        { rating: { $gte: 4.0 } }
       ]
     };
 
@@ -28,12 +27,11 @@ async function getHomePageData() {
       .collection('perfumes')
       .aggregate([
         { $match: featuredQuery },
-        { $sample: { size: 3 } }, // 🔧 Random selection
+        { $sample: { size: 3 } },
       ])
       .toArray();
 
-    // 🔧 NEW: Get 4 RANDOM trending brands (can be changed from admin dashboard)
-    // Check if there's a 'trending' flag in database (for future admin control)
+    // Get 4 RANDOM trending brands
     const trendingBrands = await db
       .collection('brands')
       .aggregate([
@@ -45,12 +43,12 @@ async function getHomePageData() {
         { 
           $match: { 
             $or: [
-              { trending: true }, // Admin can mark brands as trending
-              { perfumes_count: { $gte: 10 } } // Or use brands with many perfumes
+              { trending: true },
+              { perfumes_count: { $gte: 10 } }
             ]
           } 
         },
-        { $sample: { size: 4 } }, // 🔧 Random selection
+        { $sample: { size: 4 } },
       ])
       .toArray();
 
@@ -75,7 +73,6 @@ async function getHomePageData() {
     };
   } catch (error) {
     console.error('Error fetching homepage data:', error);
-    // Return fallback data if database fails
     return {
       perfumesCount: 10000,
       brandsCount: 500,
@@ -85,8 +82,7 @@ async function getHomePageData() {
   }
 }
 
-// 🔧 CHANGED: Revalidate every 5 minutes for fresh random selection
-export const revalidate = 300; // 5 minutes (was 3600 = 1 hour)
+export const revalidate = 300; // 5 minutes
 
 export default async function HomePage() {
   const data = await getHomePageData();
@@ -112,7 +108,8 @@ export default async function HomePage() {
             Explore thousands of fragrances, read authentic reviews, and build your personal scent wardrobe with FragView
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/discover" className="bg-gradient-to-r from-primary-500 to-purple-500 text-white px-8 py-3 rounded-full font-semibold hover:shadow-lg transition-shadow">
+            {/* CHANGED: /discover → /search */}
+            <Link href="/search" className="bg-gradient-to-r from-primary-500 to-purple-500 text-white px-8 py-3 rounded-full font-semibold hover:shadow-lg transition-shadow">
               Start Exploring
             </Link>
             <Link href="/brands" className="border-2 border-primary-500 text-primary-600 dark:text-primary-400 dark:border-primary-400 px-8 py-3 rounded-full font-semibold hover:bg-primary-50 dark:hover:bg-gray-800 transition-colors">
@@ -122,7 +119,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Stats Section - Only 2 counters, centered */}
+      {/* Stats Section */}
       <section className="py-16 bg-white dark:bg-gray-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-center gap-16 md:gap-32">
@@ -142,7 +139,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Featured Fragrances - RANDOM SELECTION */}
+      {/* Featured Fragrances */}
       <section className="py-16 px-4 bg-gradient-to-br from-gray-50 to-primary-50/20 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
@@ -155,8 +152,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {data.featuredPerfumes.length > 0 ? (
               data.featuredPerfumes.map((perfume: any) => (
-                <div key={perfume._id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group border border-gray-100 dark:border-gray-700 flex flex-col">
-                  {/* Image container with object-contain to fit entire image */}
+                <div key={perfume._id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group border border-gray-100 dark:border-gray-700">
                   <div className="aspect-w-3 aspect-h-4 bg-gray-100 dark:bg-gray-700 relative h-64 overflow-hidden flex items-center justify-center">
                     {perfume.image ? (
                       <img
@@ -169,7 +165,6 @@ export default async function HomePage() {
                     )}
                   </div>
                   
-                  {/* Card content with flex-1 to take remaining space */}
                   <div className="p-6 flex flex-col flex-1">
                     <div className="mb-3">
                       <h3 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
@@ -187,14 +182,12 @@ export default async function HomePage() {
                       </div>
                     </div>
 
-                    {/* Accords container with min-height to keep alignment */}
                     <div className="mb-4 min-h-[40px]">
                       {perfume.accords.length > 0 && (
                         <AccordTags accords={perfume.accords} />
                       )}
                     </div>
                     
-                    {/* Button pushed to bottom with mt-auto */}
                     <Link 
                       href={`/perfumes/${perfume.slug}`} 
                       className="block w-full bg-gradient-to-r from-primary-500 to-purple-500 text-white text-center py-2 rounded-lg font-medium hover:shadow-lg transition-shadow mt-auto"
@@ -213,7 +206,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Trending Brands - RANDOM SELECTION */}
+      {/* Trending Brands */}
       <section className="py-16 px-4 bg-white dark:bg-gray-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
@@ -245,7 +238,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* CTA Section - CHANGED: /discover → /search */}
       <section className="py-20 px-4 bg-gradient-to-br from-primary-600 to-purple-600 text-white">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl font-bold mb-6">Ready to Find Your Signature Scent?</h2>
@@ -256,7 +249,8 @@ export default async function HomePage() {
             <button className="bg-white text-primary-600 px-8 py-3 rounded-full font-semibold hover:shadow-lg transition-shadow">
               Sign Up Free
             </button>
-            <Link href="/discover" className="border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white/10 transition-colors">
+            {/* CHANGED: /discover → /search */}
+            <Link href="/search" className="border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white/10 transition-colors">
               Explore Now
             </Link>
           </div>

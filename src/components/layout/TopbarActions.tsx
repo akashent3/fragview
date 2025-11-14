@@ -1,6 +1,5 @@
 'use client';
 import Link from 'next/link';
-import MarketSwitch from '@/components/common/MarketSwitch';
 import { useAuthModal } from '@/components/auth/AuthModal';
 import { useSession, signOut } from 'next-auth/react';
 
@@ -12,10 +11,10 @@ export default function TopbarActions() {
 
   return (
     <div className="flex items-center gap-3">
-      <MarketSwitch />
+      {/* REMOVED: <MarketSwitch /> - This contained INR and IN dropdowns */}
 
       {status === 'loading' && (
-        // Short-lived shimmer while session hydrates (will disappear immediately when SSR session is provided)
+        // Short-lived shimmer while session hydrates
         <div className="h-5 w-24 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
       )}
 
@@ -27,12 +26,12 @@ export default function TopbarActions() {
           >
             @{user.username || user.email?.split('@')[0]}
           </Link>
-            <button
-              onClick={() => signOut({ callbackUrl: '/' })}
-              className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-            >
-              Sign out
-            </button>
+          <button
+            onClick={() => signOut({ callbackUrl: '/' })}
+            className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            Sign out
+          </button>
         </div>
       )}
 
@@ -54,7 +53,7 @@ export default function TopbarActions() {
               e.preventDefault();
               open({ mode: 'signup', reason: 'Create your FragView account' });
             }}
-            className="rounded-md bg-gradient-to-r from-primary-500 to-purple-500 px-3 py-1.5 text-white font-medium shadow-sm hover:shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-100 dark:focus-visible:ring-offset-gray-900"
+            className="rounded-md bg-gradient-to-r from-primary-500 to-purple-500 px-3 py-1.5 text-white font-medium shadow-sm hover:shadow-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
           >
             Sign up
           </Link>

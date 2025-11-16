@@ -1,40 +1,72 @@
 'use client';
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Star, Leaf, Flower2, Sparkles } from 'lucide-react';
+import { Star, Leaf, Flower2, Sparkles, MapPin, Globe, Package, ChevronDown, ChevronUp } from 'lucide-react';
 import type { BrandDoc, PerfumeDoc } from './loaders';
 
 interface Props {
   brand: BrandDoc;
   perfumes: PerfumeDoc[];
   meta: { page: number; totalPages: number; total: number };
-  filters: { gender: string; sort: string };
+  filters: { gender: string; collection: string; sort: string };
   pageSize: number;
 }
 
-export default function BrandDetailClient({ brand, perfumes, meta, filters, pageSize }: Props) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const page = meta.page;
+export default function BrandDetailClient({ brand, perfumes: initialPerfumes, meta, filters: initialFilters, pageSize }: Props) {
+  const [selectedGender, setSelectedGender] = useState(initialFilters.gender);
+  const [selectedCollection, setSelectedCollection] = useState(initialFilters.collection);
+  const [selectedSort, setSelectedSort] = useState(initialFilters.sort);
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
-  function updateParam(key: string, value: string) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (value) params.set(key, value);
-    else params.delete(key);
-    params.set('page', '1');
-    router.replace(`?${params.toString()}`);
-  }
+  const collections = useMemo(() => {
+    if (brand.collections_info && Array.isArray(brand.collections_info)) {
+      return brand.collections_info;
+    }
+    return [];
+  }, [brand.collections_info]);
 
-  function gotoPage(newPage: number) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('page', String(newPage));
-    router.replace(`?${params.toString()}`);
-  }
+  // CLIENT-SIDE FILTERING & SORTING
+  const filteredAndSortedPerfumes = useMemo(() => {
+    let result = [...initialPerfumes];
+
+    // Filter by gender - Now uses brands.perfumes.gender values
+    if (selectedGender) {
+      result = result.filter(p => p.gender?.toLowerCase() === selectedGender.toLowerCase());
+    }
+
+    // Filter by collection
+    if (selectedCollection) {
+      result = result.filter(p => {
+        if (!p.collection) return false;
+        return p.collection.toLowerCase().includes(selectedCollection.toLowerCase());
+      });
+    }
+
+    // Sort
+    switch (selectedSort) {
+      case 'az':
+        result.sort((a, b) => (a.variant_name || '').localeCompare(b.variant_name || ''));
+        break;
+      case 'za':
+        result.sort((a, b) => (b.variant_name || '').localeCompare(a.variant_name || ''));
+        break;
+      case 'new':
+        result.sort((a, b) => (b.release_year || 0) - (a.release_year || 0));
+        break;
+      case 'old':
+        result.sort((a, b) => (a.release_year || 0) - (b.release_year || 0));
+        break;
+    }
+
+    return result;
+  }, [initialPerfumes, selectedGender, selectedCollection, selectedSort]);
+
+  const shortDescription = brand.description?.slice(0, 400) + '...' || '';
+  const shouldShowViewMore = (brand.description?.length || 0) > 400;
 
   return (
     <div>
-      {/* Floating Botanical Elements - ADDED */}
+      {/* Floating Botanical Elements */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-32 right-20 animate-float">
           <Leaf size={20} className="text-green-300/20" />
@@ -44,140 +76,231 @@ export default function BrandDetailClient({ brand, perfumes, meta, filters, page
         </div>
       </div>
 
-      {/* Header - UPDATED WITH BOTANICAL THEME */}
-      <div className="mb-8 glass-card rounded-2xl p-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 opacity-5">
-          <Sparkles size={100} />
-        </div>
-        <div className="flex items-start gap-6 relative z-10">
-          <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-orange-400 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-lg">
-            {brand.name.charAt(0)}
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* LEFT: Brand Header */}
+        <div className="lg:col-span-2 glass-card rounded-2xl p-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 opacity-5">
+            <Sparkles size={120} />
           </div>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-orange-500 bg-clip-text text-transparent mb-2">
-              {brand.name}
-            </h1>
+          
+          <div className="flex items-start gap-6 relative z-10">
+            <div className="w-32 h-32 bg-gradient-to-br from-green-400 to-orange-400 rounded-2xl flex items-center justify-center text-white font-bold text-5xl shadow-lg flex-shrink-0">
+              {brand.name.charAt(0).toUpperCase()}
+            </div>
+            
+            <div className="flex-1">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                {brand.name}
+              </h1>
+              
+              {brand.country && (
+                <div className="flex items-center text-gray-600 mb-4">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  <span>{brand.country}</span>
+                </div>
+              )}
+              
+              {brand.description && (
+                <div>
+                  <p className="text-gray-700 leading-relaxed">
+                    {showFullDescription ? brand.description : shortDescription}
+                  </p>
+                  {shouldShowViewMore && (
+                    <button
+                      onClick={() => setShowFullDescription(!showFullDescription)}
+                      className="mt-2 inline-flex items-center gap-1 text-green-600 hover:text-green-700 font-medium text-sm transition-colors"
+                    >
+                      {showFullDescription ? (
+                        <>View Less <ChevronUp className="w-4 h-4" /></>
+                      ) : (
+                        <>View More <ChevronDown className="w-4 h-4" /></>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: Brand Information Sidebar */}
+        <div className="glass-card rounded-2xl p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b border-green-100 pb-2">
+            Brand Information
+          </h3>
+          
+          <div className="space-y-4">
             {brand.country && (
-              <p className="text-sm text-gray-600 mb-2">📍 {brand.country}</p>
+              <div>
+                <div className="text-sm text-gray-600 mb-1">Headquarters</div>
+                <div className="text-gray-900 font-medium">{brand.country}</div>
+              </div>
             )}
-            {brand.description && (
-              <p className="max-w-3xl text-gray-700 leading-relaxed">
-                {brand.description}
-              </p>
+            
+            {brand.official_website && (
+              <div>
+                <div className="text-sm text-gray-600 mb-1">Website</div>
+                <a 
+                  href={brand.official_website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-green-600 hover:text-green-700 font-medium inline-flex items-center gap-1 transition-colors break-all"
+                >
+                  <Globe className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm">
+                    {brand.official_website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                  </span>
+                </a>
+              </div>
             )}
-            <div className="mt-4 flex items-center gap-4">
-              <span className="px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium">
-                {meta.total} Fragrances
-              </span>
+            
+            <div>
+              <div className="text-sm text-gray-600 mb-1">Total Fragrances</div>
+              <div className="text-gray-900 font-medium flex items-center gap-2">
+                <Package className="w-4 h-4 text-green-600" />
+                {meta.total}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filters - UPDATED WITH BOTANICAL STYLING */}
-      <div className="mb-6 flex flex-wrap gap-4 items-center glass-card rounded-xl p-4">
-        <select
-          value={filters.gender}
-          onChange={(e) => updateParam('gender', e.target.value)}
-          className="px-4 py-2 rounded-lg border border-green-200 bg-white/80 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors"
-        >
-          <option value="">All Genders</option>
-          <option value="men">Men</option>
-          <option value="women">Women</option>
-          <option value="unisex">Unisex</option>
-        </select>
+      {/* All Fragrances Section */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">All Fragrances</h2>
+        
+        {/* Filters */}
+        <div className="flex flex-wrap gap-3 items-center glass-card rounded-xl p-4">
+          {/* Gender Filter - FIXED: Only Men/Female/Unisex */}
+          <select
+            value={selectedGender}
+            onChange={(e) => setSelectedGender(e.target.value)}
+            className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors"
+          >
+            <option value="">All Genders</option>
+            <option value="male">Men</option>
+            <option value="female">Female</option>
+            <option value="unisex">Unisex</option>
+          </select>
 
-        <select
-          value={filters.sort}
-          onChange={(e) => updateParam('sort', e.target.value)}
-          className="px-4 py-2 rounded-lg border border-green-200 bg-white/80 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors"
-        >
-          <option value="az">A–Z</option>
-          <option value="za">Z–A</option>
-          <option value="rating">Rating</option>
-          <option value="new">New</option>
-        </select>
+          {/* Collections Filter */}
+          <select
+            value={selectedCollection}
+            onChange={(e) => setSelectedCollection(e.target.value)}
+            className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors"
+          >
+            <option value="">All Collections</option>
+            {collections.map((col: any) => (
+              <option key={col.name} value={col.name}>
+                {col.name} {col.perfume_count ? `(${col.perfume_count})` : ''}
+              </option>
+            ))}
+          </select>
 
-        <span className="ml-auto text-sm text-gray-600">
-          Showing {perfumes.length} of {meta.total} perfumes
-        </span>
+          {/* Sort Filter */}
+          <select
+            value={selectedSort}
+            onChange={(e) => setSelectedSort(e.target.value)}
+            className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400 transition-colors"
+          >
+            <option value="az">Name (A-Z)</option>
+            <option value="za">Name (Z-A)</option>
+            <option value="new">Year (Newest)</option>
+            <option value="old">Year (Oldest)</option>
+          </select>
+
+          <span className="ml-auto text-sm text-gray-600">
+            {filteredAndSortedPerfumes.length} of {initialPerfumes.length} fragrances
+          </span>
+        </div>
       </div>
 
-      {/* Perfumes Grid - UPDATED WITH GLASS CARDS */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-5">
-        {perfumes.map((p) => (
-          <Link
+      {/* Perfume Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        {filteredAndSortedPerfumes.map((p) => (
+          <div
             key={p._id}
-            href={`/perfumes/${p.slug || p._id}`}
-            className="group"
+            className="bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
           >
-            <div className="glass-card rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-              <div className="aspect-[3/4] w-full overflow-hidden bg-gradient-to-br from-green-50/50 to-orange-50/50 relative">
-                {p.image ? (
+            <Link href={`/perfumes/${p.slug || p._id}`}>
+              <div className="aspect-[3/4] w-full overflow-hidden bg-gray-50 relative">
+                {p.image || p.perfume_image ? (
                   <img
-                    src={p.image}
+                    src={p.image || p.perfume_image}
                     alt={`${p.variant_name} by ${p.brand_name}`}
-                    className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    className="h-full w-full object-cover hover:scale-110 transition-transform duration-500"
                   />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center">
-                    <Sparkles className="w-12 h-12 text-green-300" />
+                    <Sparkles className="w-12 h-12 text-gray-300" />
                   </div>
                 )}
-                {/* Corner decoration */}
-                <div className="absolute top-2 right-2 opacity-30">
-                  <Leaf size={20} className="text-green-500" />
-                </div>
               </div>
-              <div className="p-3">
-                <div className="text-sm font-semibold text-gray-900 group-hover:text-green-600 transition-colors truncate">
+            </Link>
+            
+            <div className="p-3">
+              <Link href={`/perfumes/${p.slug || p._id}`}>
+                <h3 className="text-sm font-semibold text-gray-900 hover:text-green-600 transition-colors truncate mb-1">
                   {p.variant_name}
-                </div>
-                <div className="text-xs text-gray-600 truncate">{p.brand_name}</div>
-                {typeof p.rating === 'number' && (
-                  <div className="flex items-center mt-2">
-                    <Star className="w-3 h-3 text-orange-400 fill-current" />
-                    <span className="ml-1 text-xs text-gray-700">
-                      {p.rating.toFixed(2)}
-                    </span>
+                </h3>
+              </Link>
+              
+              <p className="text-xs text-gray-600 truncate mb-1">{p.brand_name}</p>
+              
+              {p.release_year && (
+                <p className="text-xs text-gray-500 mb-2">{p.release_year}</p>
+              )}
+              
+              {typeof p.rating === 'number' && p.rating > 0 && (
+                <div className="flex items-center gap-1 mb-3">
+                  <div className="flex">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`w-3 h-3 ${
+                          star <= Math.round(p.rating!)
+                            ? 'text-orange-400 fill-current'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
                   </div>
-                )}
-              </div>
+                  <span className="text-xs text-gray-700 font-medium">
+                    {p.rating.toFixed(1)}
+                  </span>
+                </div>
+              )}
+              
+              <Link href={`/perfumes/${p.slug || p._id}`}>
+                <button className="w-full py-2 text-xs font-medium text-green-600 border border-green-600 rounded-lg hover:bg-green-600 hover:text-white transition-colors">
+                  View Details
+                </button>
+              </Link>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
 
-      {/* Pagination - UPDATED WITH BOTANICAL COLORS */}
-      {perfumes.length > 0 && (
-        <div className="mt-8 flex items-center justify-center gap-2 text-sm">
-          {page > 1 && (
-            <button
-              onClick={() => gotoPage(page - 1)}
-              className="px-4 py-2 rounded-lg border border-green-200 bg-white/80 text-gray-700 hover:bg-green-50 transition-colors"
-            >
-              Previous
-            </button>
-          )}
-          <span className="px-4 py-2 text-gray-700 font-medium">
-            Page {page} of {meta.totalPages}
-          </span>
-          {page < meta.totalPages && (
-            <button
-              onClick={() => gotoPage(page + 1)}
-              className="px-4 py-2 rounded-lg border border-green-200 bg-white/80 text-gray-700 hover:bg-green-50 transition-colors"
-            >
-              Next
-            </button>
-          )}
-        </div>
-      )}
-
-      {perfumes.length === 0 && (
+      {/* No Results */}
+      {filteredAndSortedPerfumes.length === 0 && (
         <div className="py-12 text-center">
           <div className="glass-card rounded-xl p-8 inline-block">
             <Flower2 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500">No perfumes match current filters.</p>
+            <p className="text-gray-600 mb-2">No perfumes match current filters.</p>
+            <p className="text-sm text-gray-500 mb-4">
+              This brand has {initialPerfumes.length} perfumes total.
+            </p>
+            <button
+              onClick={() => {
+                setSelectedGender('');
+                setSelectedCollection('');
+                setSelectedSort('az');
+              }}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+            >
+              Clear Filters
+            </button>
           </div>
         </div>
       )}

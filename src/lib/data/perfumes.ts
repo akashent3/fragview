@@ -70,7 +70,9 @@ export async function listPerfumes(opts: {
       { brand_name: { $regex: search, $options: 'i' } },
     ];
   }
-  if (brand) filter.brand_name = brand;
+  if (brand) {
+  filter.brand_name = { $regex: `^${escapeRegex(brand)}$`, $options: 'i' };
+  }
   if (gender) filter.gender = gender;
 
   const sortSpec: any = {};

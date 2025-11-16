@@ -4,15 +4,23 @@ import { listPerfumes } from '@/lib/data/perfumes';
 import { pageMeta } from '@/lib/pagination';
 import { sanitizeSingleDoc, sanitizePerfumeDocs } from '@/lib/sanitize';
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 1000;
 
-// Export shared types so the client component consumes the SAME definitions.
 export interface BrandDoc {
   _id: any;
   name: string;
   slug?: string;
   country?: string;
   description?: string;
+  official_website?: string;
+  perfumes?: Array<{
+    name: string;
+    gender: string;
+    release_year: number;
+    collection?: string;
+    collection_slug?: string;
+  }>;
+  collections_info?: Array<{ name: string; slug: string; perfume_count?: number }>;
   [key: string]: any;
 }
 
@@ -22,8 +30,11 @@ export interface PerfumeDoc {
   variant_name: string;
   slug?: string;
   image?: string;
+  perfume_image?: string;
   gender?: string;
   rating?: number;
+  release_year?: number;
+  collection?: string;
   [key: string]: any;
 }
 
@@ -31,7 +42,7 @@ export interface BrandDetailResult {
   brand: BrandDoc;
   perfumes: PerfumeDoc[];
   meta: { page: number; totalPages: number; total: number };
-  filters: { gender: string; sort: string };
+  filters: { gender: string; collection: string; sort: string };
   pageSize: number;
 }
 
@@ -43,34 +54,40 @@ export async function loadBrandDetail(
   if (!brandRaw) return null;
   const brand = sanitizeSingleDoc(brandRaw) as BrandDoc;
 
-  const rawPage = searchParams.page;
-  const page = (() => {
-    const v = Array.isArray(rawPage) ? parseInt(rawPage[0] || '1', 10) : parseInt((rawPage as string) || '1', 10);
-    return Number.isFinite(v) && v > 0 ? v : 1;
-  })();
-
   const gender = typeof searchParams.gender === 'string' ? searchParams.gender : '';
-  const sortRaw = typeof searchParams.sort === 'string' ? searchParams.sort : 'az';
-  const allowed = ['new', 'rating', 'az', 'za'] as const;
-  const sort = allowed.includes(sortRaw as any) ? (sortRaw as any) : 'az';
+  const collection = typeof searchParams.collection === 'string' ? searchParams.collection : '';
+  const sort = typeof searchParams.sort === 'string' ? searchParams.sort : 'az';
 
+  // Load ALL perfumes for this brand
   const { items, total } = await listPerfumes({
-    page,
+    page: 1,
     pageSize: PAGE_SIZE,
     brand: brand.name,
-    gender: gender || undefined,
-    sort,
   });
 
-  // Cast to the shared PerfumeDoc type (types only; data unchanged).
-  const perfumes = sanitizePerfumeDocs(items) as PerfumeDoc[];
-  const meta = pageMeta(total, page, PAGE_SIZE);
+  // MERGE gender AND collection data from brand.perfumes into the actual perfume docs
+  const perfumesWithCorrectData = sanitizePerfumeDocs(items).map((perfume: any) => {
+    // Find matching perfume in brand.perfumes array by name
+    const brandPerfume = brand.perfumes?.find(
+      bp => bp.name.toLowerCase().trim() === perfume.variant_name.toLowerCase().trim()
+    );
+    
+    // Override with correct data from brand.perfumes
+    return {
+      ...perfume,
+      gender: brandPerfume?.gender || perfume.gender, // ✅ Use gender from brand.perfumes
+      collection: brandPerfume?.collection || undefined,
+      collection_slug: brandPerfume?.collection_slug || undefined,
+    };
+  }) as PerfumeDoc[];
+
+  const meta = { page: 1, totalPages: 1, total: perfumesWithCorrectData.length };
 
   return {
     brand,
-    perfumes,
+    perfumes: perfumesWithCorrectData,
     meta,
-    filters: { gender, sort },
+    filters: { gender, collection, sort },
     pageSize: PAGE_SIZE,
   };
 }

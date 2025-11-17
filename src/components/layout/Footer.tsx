@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Instagram, Twitter, Facebook, Sparkles, Leaf } from 'lucide-react';
+import { Instagram, Twitter, Facebook, Leaf } from 'lucide-react';
 
 const Footer = () => {
   return (

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Search, Menu, X, User, ShoppingBag, Sparkles } from 'lucide-react';
+import { Search, Menu, X, User, ShoppingBag } from 'lucide-react';
 
 import TopbarActions from '@/components/layout/TopbarActions';
 import SearchAutocomplete from '@/components/common/SearchAutocomplete';

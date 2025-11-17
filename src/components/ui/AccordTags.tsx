@@ -126,43 +126,74 @@ const AccordTags: React.FC<AccordTagsProps> = ({ accords, className = '' }) => {
     return sum + strength;
   }, 0);
 
+  // Find max strength for mobile width calculation
+  const maxStrength = Math.max(...accords.map(a => a.strength || a.width || 1));
+
   return (
     <div className={className}>
-      <div className="flex gap-0.5 mb-3 rounded-lg overflow-hidden shadow-sm">
+      {/* DESKTOP: Horizontal bars */}
+      <div className="hidden lg:block">
+        <div className="flex gap-0.5 mb-3 rounded-lg overflow-hidden shadow-sm">
+          {accords.map((accord, index) => {
+            const backgroundColor = getAccordColor(accord.name);
+            const strength = accord.strength || accord.width || 1;
+            const widthPercentage = (strength / totalStrength) * 100;
+            
+            return (
+              <div
+                key={index}
+                className="h-10 relative group transition-all duration-300 hover:brightness-110 cursor-default first:rounded-l-lg last:rounded-r-lg"
+                style={{
+                  backgroundColor,
+                  width: `${widthPercentage}%`,
+                }}
+                title={`${accord.name} - Strength: ${strength}/5`}
+              >
+                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-white/10" />
+              </div>
+            );
+          })}
+        </div>
+        
+        <div className="flex justify-between items-center px-1">
+          {accords.map((accord, index) => (
+            <span 
+              key={index} 
+              className="text-xs font-medium text-gray-700 transition-colors hover:text-green-600"
+              style={{ 
+                flex: accord.strength || accord.width || 1,
+                textAlign: index === 0 ? 'left' : index === accords.length - 1 ? 'right' : 'center'
+              }}
+            >
+              {accord.name}
+            </span>
+          ))}
+        </div>
+      </div>
+
+                  {/* MOBILE: Vertical stacked bars - NO HEIGHT LIMIT */}
+      <div className="lg:hidden space-y-0.5">
         {accords.map((accord, index) => {
           const backgroundColor = getAccordColor(accord.name);
           const strength = accord.strength || accord.width || 1;
-          const widthPercentage = (strength / totalStrength) * 100;
+          const widthPercentage = Math.min((strength / maxStrength) * 85, 85);
           
           return (
             <div
               key={index}
-              className="h-10 relative group transition-all duration-300 hover:brightness-110 cursor-default first:rounded-l-lg last:rounded-r-lg"
-              style={{
+              className="flex items-center h-4 rounded-sm transition-all hover:brightness-110 relative overflow-hidden"
+              style={{ 
                 backgroundColor,
                 width: `${widthPercentage}%`,
               }}
-              title={`${accord.name} - Strength: ${strength}/5`}
+              title={`Strength: ${strength}/5`}
             >
-              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-white/10" />
+              <span className="relative text-[8px] font-semibold text-white px-1.5 drop-shadow-sm z-10 truncate leading-none">
+                {accord.name}
+              </span>
             </div>
           );
         })}
-      </div>
-      
-      <div className="flex justify-between items-center px-1">
-        {accords.map((accord, index) => (
-          <span 
-            key={index} 
-            className="text-xs font-medium text-gray-700 transition-colors hover:text-green-600"
-            style={{ 
-              flex: accord.strength || accord.width || 1,
-              textAlign: index === 0 ? 'left' : index === accords.length - 1 ? 'right' : 'center'
-            }}
-          >
-            {accord.name}
-          </span>
-        ))}
       </div>
     </div>
   );

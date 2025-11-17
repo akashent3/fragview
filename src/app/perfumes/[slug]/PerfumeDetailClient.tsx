@@ -223,9 +223,9 @@ export default function PerfumeDetailClient({
       flex-direction: column;
     `;
 
-          postcard.innerHTML = `
+    postcard.innerHTML = `
   <div style="display: flex; flex-direction: column; height: 100%;">
-        <!-- Header with FRAGVIEW Logo Text and QR -->
+    <!-- Header with FRAGVIEW Logo Text and QR -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
       <div style="background: linear-gradient(to right, #10b981, #f97316); border-radius: 8px; padding: 12px 24px; display: inline-block;">
         <span style="font-size: 42px; font-weight: 900; letter-spacing: 3px; color: #1f2937;">
@@ -235,7 +235,7 @@ export default function PerfumeDetailClient({
       <img src="${qrCodeDataUrl}" style="width: 100px; height: 100px;" alt="QR Code" />
     </div>
 
-    <!-- Perfume Image Container - FIXED -->
+    <!-- Perfume Image Container -->
     <div style="background: linear-gradient(135deg, #d1fae5 0%, #fed7aa 100%); border-radius: 20px; padding: 30px; margin-bottom: 30px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; min-height: 550px;">
       ${imageDataUrl 
         ? `<img src="${imageDataUrl}" style="max-width: 100%; max-height: 550px; object-fit: contain; border-radius: 16px;" crossorigin="anonymous" />`
@@ -243,7 +243,7 @@ export default function PerfumeDetailClient({
       }
     </div>
 
-    <!-- Title Section - Both names in gradient box -->
+    <!-- Title Section -->
     <div style="background: linear-gradient(to right, #10b981, #f97316); border-radius: 12px; padding: 28px 40px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); text-align: center;">
       <h1 style="font-size: 58px; font-weight: 900; color: #1f2937; margin: 0 0 8px 0; line-height: 1.1; letter-spacing: 1px;">
         ${perfume.variant_name}
@@ -453,7 +453,6 @@ export default function PerfumeDetailClient({
     aiSummary: reviewCount > 0 ? 'User reviews summary.' : 'No reviews yet.',
   };
 
-  // CHANGE 1: Load similar fragrances with useMemo and debug logging
   const similarPerfumes = React.useMemo(() => {
     if (!perfume.reminds_me || perfume.reminds_me.length === 0) {
       console.log('No similar fragrances in reminds_me');
@@ -487,74 +486,85 @@ export default function PerfumeDetailClient({
       </div>
 
       <div className="mx-auto max-w-5xl space-y-5 px-4 relative z-10">
-        {/* TOP SECTION */}
-        <div ref={snapshotRef} className="glass-card rounded-xl p-5 shadow-sm">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* TOP SECTION - DESKTOP UNCHANGED, MOBILE TWO COLUMNS */}
+        <div ref={snapshotRef} className="glass-card rounded-xl p-3 lg:p-5 shadow-sm">
+          <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 lg:gap-6">
             {/* LEFT - Image, Gender, Perfumer, Buttons */}
-            <div className="space-y-3">
-              <div className="aspect-[3/4] w-full max-w-[280px] mx-auto rounded-xl overflow-hidden bg-gradient-to-br from-green-50/50 to-orange-50/50">
+            <div className="space-y-2 lg:space-y-3">
+              {/* Mobile: Small image in left column, Desktop: 280px centered */}
+              <div className="aspect-[3/4] w-full max-w-[150px] mx-auto lg:max-w-[280px] rounded-lg lg:rounded-xl overflow-hidden bg-gradient-to-br from-green-50/50 to-orange-50/50">
                 {perfume.image ? (
                   <img src={perfume.image} alt={perfume.variant_name} className="h-full w-full object-cover" />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center">
-                    <Sparkles className="w-12 h-12 text-green-300" />
+                    <Sparkles className="w-6 h-6 lg:w-12 lg:h-12 text-green-300" />
                   </div>
                 )}
               </div>
 
-              <div className="space-y-2 text-sm max-w-[280px] mx-auto">
+              <div className="space-y-1 lg:space-y-2 text-[9px] lg:text-sm max-w-[150px] mx-auto lg:max-w-[280px]">
                 <div className="flex justify-between">
                   <span className="text-gray-600 font-medium">Gender:</span>
                   <span className="text-gray-800 font-semibold">{perfume.gender || '—'}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-start">
                   <span className="text-gray-600 font-medium">Perfumer:</span>
-                  <span className="text-gray-800 font-semibold text-right">{perfume.perfumers?.join(', ') || '—'}</span>
+                  <span className="text-gray-800 font-semibold text-right leading-tight">{perfume.perfumers?.join(', ') || '—'}</span>
                 </div>
               </div>
 
-              <div className="flex gap-2 max-w-[280px] mx-auto">
+              <div className="flex gap-1 lg:gap-2 max-w-[150px] mx-auto lg:max-w-[280px]">
                 <button 
                   onClick={() => {
                     if (!isSignedIn) {
                       open({ mode: 'signin', reason: 'Sign in to add to wardrobe', callbackUrl: `/perfumes/${slug}` });
                     }
                   }}
-                  className="flex-1 rounded-lg bg-gradient-to-r from-green-500 to-orange-500 px-3 py-2 font-semibold text-white text-sm hover:shadow-lg transition-all flex items-center justify-center gap-1"
+                  className="flex-1 rounded-md lg:rounded-lg bg-gradient-to-r from-green-500 to-orange-500 px-1.5 lg:px-3 py-1.5 lg:py-2 font-semibold text-white text-[9px] lg:text-sm hover:shadow-lg transition-all flex items-center justify-center gap-0.5 lg:gap-1"
                 >
-                  <Plus className="h-4 w-4" />
-                  Add to Wardrobe
+                  <Plus className="h-3 w-3 lg:h-4 lg:w-4" />
+                  <span className="hidden lg:inline">Add to Wardrobe</span>
+                  <span className="lg:hidden">Add</span>
                 </button>
-                <button onClick={handleSnapshot} className="rounded-lg border-2 border-green-200 p-2 hover:bg-green-50" title="Snapshot">
-                  <Camera className="h-4 w-4 text-green-600" />
+                <button onClick={handleSnapshot} className="rounded-md lg:rounded-lg border-2 border-green-200 p-1 lg:p-2 hover:bg-green-50" title="Snapshot">
+                  <Camera className="h-3 w-3 lg:h-4 lg:w-4 text-green-600" />
                 </button>
               </div>
             </div>
 
-            {/* RIGHT - Name, Brand, Accords, Notes */}
-            <div className="space-y-4">
+            {/* RIGHT - Name, Brand, Accords (allow natural height) */}
+            <div className="space-y-1.5 lg:space-y-4 flex flex-col">
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-orange-500 bg-clip-text text-transparent">
+                <h1 className="text-base lg:text-3xl font-bold bg-gradient-to-r from-green-600 to-orange-500 bg-clip-text text-transparent leading-tight">
                   {perfume.variant_name}
                 </h1>
-                <p className="text-xl font-semibold text-gray-700">{perfume.brand_name}</p>
+                <p className="text-xs lg:text-xl font-semibold text-gray-700">{perfume.brand_name}</p>
               </div>
 
               {transformedAccords.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-2">Main Accords</h3>
+                <div className="flex-1 min-h-0">
+                  <h3 className="text-[9px] lg:text-sm font-semibold text-gray-800 mb-1 lg:mb-2">Main Accords</h3>
                   <AccordTags accords={transformedAccords} />
                 </div>
               )}
 
+              {/* Notes Pyramid - DESKTOP ONLY */}
               {(topNotes.length || middleNotes.length || baseNotes.length) > 0 && (
-                <div>
+                <div className="hidden lg:block">
                   <h3 className="text-sm font-semibold text-gray-800 mb-2">Notes Pyramid</h3>
                   <NotesPyramid topNotes={topNotes} middleNotes={middleNotes} baseNotes={baseNotes} />
                 </div>
               )}
             </div>
           </div>
+
+          {/* Notes Pyramid - MOBILE ONLY (Full width below) */}
+          {(topNotes.length || middleNotes.length || baseNotes.length) > 0 && (
+            <div className="lg:hidden mt-4 pt-4 border-t border-green-100">
+              <h3 className="text-[10px] font-semibold text-gray-800 mb-2">Notes Pyramid</h3>
+              <NotesPyramid topNotes={topNotes} middleNotes={middleNotes} baseNotes={baseNotes} />
+            </div>
+          )}
         </div>
 
         {/* RATINGS SECTION */}
@@ -652,7 +662,6 @@ export default function PerfumeDetailClient({
           </div>
         )}
 
-        {/* CHANGE 2: Always show Similar Fragrances section */}
         <SimilarFragrances
           fragrances={similarPerfumes}
           currentPerfumeId={Number(perfume._id)}

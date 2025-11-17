@@ -41,8 +41,8 @@ interface Props {
   slug: string;
 }
 
-// Fragview Logo as SVG
-const FRAGVIEW_LOGO_SVG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60' viewBox='0 0 200 60'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' style='stop-color:%2310b981;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23f97316;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Ctext x='10' y='40' font-family='Arial, sans-serif' font-size='32' font-weight='bold' fill='url(%23grad)'%3EFRAGVIEW%3C/text%3E%3C/svg%3E`;
+// FragView Logo as SVG data URL
+const FRAGVIEW_LOGO_SVG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 240' width='200' height='240'%3E%3Cdefs%3E%3ClinearGradient id='purpleGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%237B4891;stop-opacity:1' /%3E%3Cstop offset='50%25' style='stop-color:%23A784B5;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23C8B3D6;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cg transform='translate(100, 80)'%3E%3Ccircle cx='0' cy='0' r='12' fill='%236B3F7B'/%3E%3Cellipse cx='0' cy='-35' rx='18' ry='28' fill='url(%23purpleGradient)' transform='rotate(0)'/%3E%3Cellipse cx='0' cy='-35' rx='18' ry='28' fill='url(%23purpleGradient)' transform='rotate(60)'/%3E%3Cellipse cx='0' cy='-35' rx='18' ry='28' fill='url(%23purpleGradient)' transform='rotate(120)'/%3E%3Cellipse cx='0' cy='-35' rx='18' ry='28' fill='url(%23purpleGradient)' transform='rotate(180)'/%3E%3Cellipse cx='0' cy='-35' rx='18' ry='28' fill='url(%23purpleGradient)' transform='rotate(240)'/%3E%3Cellipse cx='0' cy='-35' rx='18' ry='28' fill='url(%23purpleGradient)' transform='rotate(300)'/%3E%3C/g%3E%3Ctext x='100' y='190' font-family='Arial, Helvetica, sans-serif' font-size='32' font-weight='bold' fill='%237B4891' text-anchor='middle'%3EFRAGVIEW%3C/text%3E%3C/svg%3E`;
 
 // Accord color mapping function
 const getAccordColor = (accordName: string): string => {
@@ -225,13 +225,9 @@ export default function PerfumeDetailClient({
 
     postcard.innerHTML = `
   <div style="display: flex; flex-direction: column; height: 100%;">
-    <!-- Header with FRAGVIEW Logo Text and QR -->
+    <!-- Header with FRAGVIEW Logo and QR -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-      <div style="background: linear-gradient(to right, #10b981, #f97316); border-radius: 8px; padding: 12px 24px; display: inline-block;">
-        <span style="font-size: 42px; font-weight: 900; letter-spacing: 3px; color: #1f2937;">
-          FRAGVIEW
-        </span>
-      </div>
+      <img src="${FRAGVIEW_LOGO_SVG}" style="height: 48px; width: auto;" alt="FragView Logo" />
       <img src="${qrCodeDataUrl}" style="width: 100px; height: 100px;" alt="QR Code" />
     </div>
 

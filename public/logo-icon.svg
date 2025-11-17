@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <defs>
+    <linearGradient id="purpleGradientIcon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7B4891;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#A784B5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#C8B3D6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Flower Petals -->
+  <g transform="translate(80, 80)">
+    <!-- Center circle -->
+    <circle cx="0" cy="0" r="15" fill="#6B3F7B"/>
+    
+    <!-- Top petal -->
+    <ellipse cx="0" cy="-40" rx="22" ry="35" fill="url(#purpleGradientIcon)" transform="rotate(0)"/>
+    
+    <!-- Top-right petal -->
+    <ellipse cx="0" cy="-40" rx="22" ry="35" fill="url(#purpleGradientIcon)" transform="rotate(60)"/>
+    
+    <!-- Bottom-right petal -->
+    <ellipse cx="0" cy="-40" rx="22" ry="35" fill="url(#purpleGradientIcon)" transform="rotate(120)"/>
+    
+    <!-- Bottom petal -->
+    <ellipse cx="0" cy="-40" rx="22" ry="35" fill="url(#purpleGradientIcon)" transform="rotate(180)"/>
+    
+    <!-- Bottom-left petal -->
+    <ellipse cx="0" cy="-40" rx="22" ry="35" fill="url(#purpleGradientIcon)" transform="rotate(240)"/>
+    
+    <!-- Top-left petal -->
+    <ellipse cx="0" cy="-40" rx="22" ry="35" fill="url(#purpleGradientIcon)" transform="rotate(300)"/>
+  </g>
+</svg>

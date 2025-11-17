@@ -14,10 +14,11 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="space-y-4">
-            <div className="bg-gradient-to-r from-green-500 to-orange-500 text-white px-3 py-2 rounded-lg font-bold text-xl inline-flex items-center">
-              <Sparkles className="w-5 h-5 mr-2" />
-              FragView
-            </div>
+            <img 
+              src="/logo.svg" 
+              alt="FragView Logo" 
+              className="h-10 w-auto"
+            />
             <p className="text-gray-600 dark:text-gray-300 text-sm">
               Discover, review, and explore the world of fragrances with our modern platform.
             </p>

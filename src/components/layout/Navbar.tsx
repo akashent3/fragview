@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Search, Menu, X, User, ShoppingBag, Sparkles } from 'lucide-react';
+import { Search, Menu, X, User, ShoppingBag } from 'lucide-react';
 
 import TopbarActions from '@/components/layout/TopbarActions';
 import SearchAutocomplete from '@/components/common/SearchAutocomplete';
@@ -15,14 +15,11 @@ const Navbar = () => {
         <div className="flex h-16 items-center gap-4">
           {/* Logo with Botanical Theme */}
           <Link href="/" className="group flex items-center space-x-2 flex-shrink-0">
-            <div className="relative">
-              <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-green-500 to-orange-500 px-4 py-2 text-xl font-bold text-white transition-all group-hover:shadow-lg group-hover:scale-105">
-                <span className="relative z-10 flex items-center">
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  FragView
-                </span>
-              </div>
-            </div>
+            <img 
+              src="/logo.svg" 
+              alt="FragView Logo" 
+              className="h-14 lg:h-20 w-auto transition-all group-hover:scale-105"
+            />
           </Link>
 
           {/* Desktop Navigation Links */}

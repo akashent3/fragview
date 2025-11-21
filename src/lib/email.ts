@@ -61,7 +61,7 @@ function getVerificationEmailTemplate(username: string, verificationUrl: string)
                 <!-- Header -->
                 <tr>
                   <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">FragView</h1>
+                    <img src="https://fragview.com/logo.svg" alt="FragView Logo" width="180" height="180" style="display: block; margin: 0 auto;" />
                   </td>
                 </tr>
                 
@@ -137,7 +137,8 @@ function getWelcomeEmailTemplate(username: string) {
     <html>
       <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 8px;">
-          <h1 style="color: #667eea;">Welcome to FragView, ${username}! 🎉</h1>
+          <img src="https://fragview.com/logo.svg" alt="FragView Logo" width="180" height="180" style="display: block; margin: 0 auto 20px;" />
+          <h1 style="color: #667eea;">Welcome, ${username}! 🎉</h1>
           
           <p>Your email has been verified and your account is now active.</p>
           

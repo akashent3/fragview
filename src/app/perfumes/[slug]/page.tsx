@@ -7,6 +7,7 @@ import { authOptions } from '@/lib/auth';
 export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
+  // Metadata generation doesn't need user context usually
   const data = await loadPerfumeDetail(params.slug);
   if (!data) return {};
   const { perfume, rating, reviewCount } = data;
@@ -46,14 +47,18 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function PerfumeDetailPage({ params }: { params: { slug: string } }) {
-  const data = await loadPerfumeDetail(params.slug);
+  const session = await getServerSession(authOptions);
+  const currentUserId = session?.user?.id;
+
+  // Pass currentUserId to loader
+  const data = await loadPerfumeDetail(params.slug, currentUserId);
+  
   if (!data) return notFound();
 
-  const session = await getServerSession(authOptions);
   const isSignedIn = !!session?.user;
-  const canRate = isSignedIn; // current business rule
+  const canRate = isSignedIn; 
 
-  // JSON-LD injection (metadata API does not automatically add custom script tags)
+  // JSON-LD injection
   const { perfume, rating, reviewCount } = data;
   const url = `https://fragviewvercel.vercel.app/perfumes/${params.slug}`;
   const jsonLd: any = {
@@ -77,7 +82,6 @@ export default async function PerfumeDetailPage({ params }: { params: { slug: st
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#FAFFF5' }}>
-      {/* Animated Background Elements - ADDED */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-20 left-10 w-96 h-96 bg-green-200/10 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-200/10 rounded-full blur-3xl animate-pulse animate-delay-2" />
@@ -93,7 +97,7 @@ export default async function PerfumeDetailPage({ params }: { params: { slug: st
           rating={data.rating}
           isSignedIn={isSignedIn}
           canRate={canRate}
-          reviews={data.reviews}
+          reviews={data.reviews as any} // Type cast to handle generic array
           reviewCount={data.reviewCount}
           slug={params.slug}
         />

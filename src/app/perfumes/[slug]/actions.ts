@@ -13,7 +13,7 @@ export async function submitReview(slug: string, formData: FormData) {
   // Helper to get float or null (allowing decimals now)
   const getFloat = (key: string) => {
     const val = formData.get(key);
-    if (!val) return undefined; // undefined means "do not touch this field"
+    if (!val) return undefined; 
     const parsed = parseFloat(String(val));
     return isNaN(parsed) ? undefined : parsed;
   };
@@ -21,15 +21,27 @@ export async function submitReview(slug: string, formData: FormData) {
   const rating = getFloat('rating');
   const longevity = getFloat('longevity');
   const sillage = getFloat('sillage');
-  const text = formData.get('text'); // string | null
+  const text = formData.get('text'); 
+  const photosJson = formData.get('photos'); // Expecting JSON string of URLs
 
-  // Validation: Ensure inputs are within range if provided
+  // Validation
   if (rating !== undefined && (rating < 1 || rating > 5)) return { ok: false, error: 'Rating must be 1-5.' };
   if (longevity !== undefined && (longevity < 0 || longevity > 5)) return { ok: false, error: 'Longevity must be 0-5.' };
   if (sillage !== undefined && (sillage < 0 || sillage > 5)) return { ok: false, error: 'Sillage must be 0-5.' };
 
   try {
-    // 1. Check if review already exists for this user + perfume
+    // Parse photos
+    let photos: string[] = [];
+    if (photosJson) {
+      try {
+        photos = JSON.parse(String(photosJson));
+        if (!Array.isArray(photos)) photos = [];
+      } catch {
+        photos = [];
+      }
+    }
+
+    // 1. Check if review already exists
     const existingReview = await prisma.review.findFirst({
       where: {
         userId: userId,
@@ -38,18 +50,16 @@ export async function submitReview(slug: string, formData: FormData) {
     });
 
     // 2. Prepare data object
-    // We only include fields that were actually sent in the form data
     const dataToSave: any = {};
-    if (rating !== undefined) dataToSave.rating = Math.round(rating); // Schema is Int for rating (1-5 stars usually integers)
-    // If you REALLY want decimal star ratings in DB, you need to change Prisma schema to Float. 
-    // For now, standard star ratings are usually stored as Int or increments of 0.5 (which usually requires Float in DB or scaling).
-    // Assuming schema is Int for Rating, but Float/Int? for sliders.
-    
+    if (rating !== undefined) dataToSave.rating = Math.round(rating);
     if (longevity !== undefined) dataToSave.longevity = longevity;
     if (sillage !== undefined) dataToSave.sillage = sillage;
     if (text !== null && text !== undefined) {
         const strText = String(text).trim();
         if (strText.length > 0) dataToSave.text = strText;
+    }
+    if (photos.length > 0) {
+      dataToSave.photos = photos;
     }
 
     if (Object.keys(dataToSave).length === 0) {
@@ -64,17 +74,15 @@ export async function submitReview(slug: string, formData: FormData) {
       });
     } else {
       // CREATE new
-      // For new reviews, we need to ensure required fields (like 'text' or 'rating') have defaults if missing
-      // Depending on your schema, 'rating' might be required.
-      // If rating is missing in a partial update (e.g. only sillage slider moved), we default to 0 or null if schema allows.
       await prisma.review.create({
         data: {
           userId,
           perfumeId: slug,
-          rating: dataToSave.rating || 0, // Default if not provided
+          rating: dataToSave.rating || 0, 
           longevity: dataToSave.longevity,
           sillage: dataToSave.sillage,
           text: dataToSave.text || "",
+          photos: photos
         }
       });
     }

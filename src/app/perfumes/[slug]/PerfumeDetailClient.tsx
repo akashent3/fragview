@@ -1,13 +1,15 @@
 'use client';
 import React, { useState, useTransition, useRef, useCallback } from 'react';
-import { Star, Plus, LogIn, Leaf, Flower2, Droplets, Wind, Sparkles, Camera } from 'lucide-react';
+import { Star, Plus, LogIn, Leaf, Flower2, Droplets, Wind, Sparkles, Camera, X, Bell, Clock } from 'lucide-react';
 import NotesPyramid from '@/components/ui/NotesPyramid';
 import AccordTags from '@/components/ui/AccordTags';
 import SimilarFragrances from '@/components/ui/SimilarFragrances';
 import ReviewsSummary from '@/components/ui/ReviewsSummary';
+import ImageUpload from '@/components/upload/ImageUpload';
+import ReviewActionButtons from '@/components/reviews/ReviewActionButtons';
+import MentionTextarea from '@/components/ui/MentionTextarea';
 import { useAuthModal } from '@/components/auth/AuthModal';
 import { submitReview } from './actions';
-import { debounce } from '@/lib/utils'; 
 
 // INLINE DEBOUNCE HELPER
 function debounceFunc<T extends (...args: any[]) => any>(func: T, wait: number) {
@@ -33,12 +35,22 @@ interface PerfumeDoc {
   longevity?: number;
   sillage?: number;
   reminds_me?: string[];
+  created_at?: number | string; // Added for Cooling Period
 }
 
+// 🟢 UPDATED: Added user object for profile display
 interface ReviewLite {
+  id: string;
   rating: number;
   text?: string | null;
+  photos?: string[];
+  helpfulCount?: number;
+  userVote?: 'UP' | 'DOWN' | null;
   createdAt: string;
+  user: {
+    username: string;
+    image?: string | null;
+  };
 }
 
 interface Props {
@@ -104,26 +116,16 @@ function getSillageLabel(value: number): string {
   return 'Strong';
 }
 
-// UPDATED LOGIC: Continuous linear mapping
-// Slider 0-5 maps to 0-12 Hours
-// Formula: Hours = Value * 2.4
-// Examples: 2.5 * 2.4 = 6 Hrs (Center). 5 * 2.4 = 12 Hrs (End).
 function getLongevityHrsLabel(value: number): string {
     const safeValue = Math.max(0, Math.min(5, value));
-    
     if (safeValue >= 4.9) return '12+ hrs'; 
-    
     const hours = safeValue * 2.4;
-    
-    // Use parseFloat to remove trailing decimals like 6.0 -> 6
     return `${parseFloat(hours.toFixed(1))} hrs`;
 }
 
 function getPosition(value: number): number {
   return (value / 5) * 100;
 }
-
-// --- MAIN COMPONENT ---
 
 export default function PerfumeDetailClient({
   perfume,
@@ -141,10 +143,37 @@ export default function PerfumeDetailClient({
   const [userSillage, setUserSillage] = useState<number>(0);
   const [reviewText, setReviewText] = useState('');
   
+  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
+  const [isFollowing, setIsFollowing] = useState(false);
+  
   const [pending, startTransition] = useTransition();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const snapshotRef = useRef<HTMLDivElement>(null);
+
+  // --- COOLING PERIOD LOGIC ---
+  const isCoolingPeriodActive = React.useMemo(() => {
+    if (!perfume.created_at) return false;
+    const createdTime = typeof perfume.created_at === 'number' 
+      ? perfume.created_at * 1000 
+      : new Date(perfume.created_at).getTime();
+    const now = Date.now();
+    const diffTime = Math.abs(now - createdTime);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays < 30;
+  }, [perfume.created_at]);
+
+  const remainingDays = React.useMemo(() => {
+    if (!perfume.created_at) return 0;
+    const createdTime = typeof perfume.created_at === 'number' 
+      ? perfume.created_at * 1000 
+      : new Date(perfume.created_at).getTime();
+    const releaseDate = new Date(createdTime);
+    const unlockDate = new Date(releaseDate);
+    unlockDate.setDate(releaseDate.getDate() + 30);
+    const diffTime = unlockDate.getTime() - Date.now();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }, [perfume.created_at]);
 
   const transformedAccords =
     perfume.accords?.map((a) => ({
@@ -165,13 +194,14 @@ export default function PerfumeDetailClient({
   // --- DEBOUNCED SUBMIT HANDLER ---
   const debouncedSubmit = useCallback(
     debounceFunc((field: string, value: number) => {
+      if (isCoolingPeriodActive) return;
       const formData = new FormData();
       formData.append(field, String(value));
       submitReview(slug, formData).then((res) => {
         if (!res.ok) console.error("Auto-save failed:", res.error);
       });
     }, 500), 
-    [slug]
+    [slug, isCoolingPeriodActive]
   );
 
   const handleSliderChange = (field: 'longevity' | 'sillage', value: number) => {
@@ -179,6 +209,7 @@ export default function PerfumeDetailClient({
         open({ mode: 'signin', reason: `Sign in to rate`, callbackUrl: `/perfumes/${slug}` });
         return;
     }
+    if (isCoolingPeriodActive) return;
 
     if (field === 'longevity') setUserLongevity(value);
     if (field === 'sillage') setUserSillage(value);
@@ -191,6 +222,8 @@ export default function PerfumeDetailClient({
         open({ mode: 'signin', reason: `Sign in to rate`, callbackUrl: `/perfumes/${slug}` });
         return;
     }
+    if (isCoolingPeriodActive) return;
+
     setUserRating(value);
     const formData = new FormData();
     formData.append('rating', String(value));
@@ -199,251 +232,98 @@ export default function PerfumeDetailClient({
     });
   };
 
+  const toggleFollowThread = () => {
+    if (!isSignedIn) return open({ mode: 'signin', reason: 'Sign in to follow' });
+    setIsFollowing(!isFollowing);
+  };
+
   const handleSnapshot = async () => {
-  if (!snapshotRef.current) return;
-
-  try {
-    const [{ default: html2canvas }, { default: QRCode }] = await Promise.all([
-      import('html2canvas'),
-      import('qrcode')
-    ]);
-
-    const qrCodeDataUrl = await QRCode.toDataURL(`https://fragview.com/perfumes/${slug}`, {
-      width: 100,
-      margin: 1,
-      color: { dark: '#10b981', light: '#ffffff' }
-    });
-
-    let imageDataUrl = '';
-    if (perfume.image) {
-      try {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.src = perfume.image;
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          setTimeout(reject, 5000);
-        });
-        imageDataUrl = perfume.image;
-      } catch (err) {
-        console.warn('Failed to load image');
-        imageDataUrl = '';
+    if (!snapshotRef.current) return;
+    try {
+      const [{ default: html2canvas }, { default: QRCode }] = await Promise.all([
+        import('html2canvas'),
+        import('qrcode')
+      ]);
+      const qrCodeDataUrl = await QRCode.toDataURL(`https://fragview.com/perfumes/${slug}`, {
+        width: 100, margin: 1, color: { dark: '#10b981', light: '#ffffff' }
+      });
+      let imageDataUrl = '';
+      if (perfume.image) {
+        try {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.src = perfume.image;
+          await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; setTimeout(reject, 5000); });
+          imageDataUrl = perfume.image;
+        } catch (err) { imageDataUrl = ''; }
       }
-    }
-
-    const postcard = document.createElement('div');
-    postcard.style.cssText = `
-      position: absolute;
-      left: -9999px;
-      width: 1080px;
-      height: 1920px;
-      padding: 50px;
-      background: linear-gradient(135deg, #FAFFF5 0%, #F0FDF4 100%);
-      font-family: system-ui, -apple-system, sans-serif;
-      display: flex;
-      flex-direction: column;
-    `;
-
-    postcard.innerHTML = `
-  <div style="display: flex; flex-direction: column; height: 100%;">
-    <!-- Header with FRAGVIEW Logo Text and QR -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-      <img src="/logo.svg" alt="FragView Logo" style="height: 180px; width: auto;" />
-      <img src="${qrCodeDataUrl}" style="width: 100px; height: 100px;" alt="QR Code" />
-    </div>
-
-    <!-- Perfume Image Container -->
-    <div style="background: linear-gradient(135deg, #d1fae5 0%, #fed7aa 100%); border-radius: 20px; padding: 30px; margin-bottom: 30px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; min-height: 550px;">
-      ${imageDataUrl 
-        ? `<img src="${imageDataUrl}" style="max-width: 100%; max-height: 550px; object-fit: contain; border-radius: 16px;" crossorigin="anonymous" />`
-        : `<div style="width: 100%; height: 550px; background: linear-gradient(135deg, #10b981, #f97316); border-radius: 16px; display: flex; align-items: center; justify-content: center; color: white; font-size: 80px;">✦</div>`
-      }
-    </div>
-
-    <!-- Title Section -->
-    <div style="background: linear-gradient(to right, #10b981, #f97316); border-radius: 12px; padding: 28px 40px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); text-align: center;">
-      <h1 style="font-size: 58px; font-weight: 900; color: #1f2937; margin: 0 0 8px 0; line-height: 1.1; letter-spacing: 1px;">
-        ${perfume.variant_name}
-      </h1>
-      <p style="font-size: 38px; color: #374151; font-weight: 700; margin: 0; letter-spacing: 0.5px;">
-        ${perfume.brand_name}
-      </p>
-    </div>
-
-    <!-- Ratings Grid -->
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 28px;">
-      <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">RATING</p>
-        <div style="display: flex; gap: 5px; margin-bottom: 12px; justify-content: center;">
-          ${[1,2,3,4,5].map(star => 
-            `<span style="color: ${star <= Math.round(userRating || rating) ? '#fb923c' : '#d1d5db'}; font-size: 26px;">★</span>`
-          ).join('')}
-        </div>
-        <p style="font-size: 36px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">
-          ${(userRating || rating).toFixed(1)}
-        </p>
-      </div>
-
-      <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">SILLAGE</p>
-        <div style="height: 14px; background: #e5e7eb; border-radius: 7px; overflow: hidden; margin-bottom: 12px;">
-          <div style="height: 100%; width: ${getPosition(userSillage || perfume.sillage || 0)}%; background: linear-gradient(to right, #10b981, #f97316);"></div>
-        </div>
-        <p style="font-size: 28px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">
-          ${getSillageLabel(userSillage || perfume.sillage || 0)}
-        </p>
-      </div>
-
-      <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">LONGEVITY</p>
-        <div style="height: 14px; background: #e5e7eb; border-radius: 7px; overflow: hidden; margin-bottom: 12px;">
-          <div style="height: 100%; width: ${getPosition(userLongevity || perfume.longevity || 0)}%; background: linear-gradient(to right, #10b981, #f97316);"></div>
-        </div>
-        <p style="font-size: 28px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">
-          ${getLongevityHrsLabel(userLongevity || perfume.longevity || 0)}
-        </p>
-      </div>
-    </div>
-
-    <!-- Main Accords -->
-    ${transformedAccords.length > 0 ? `
-      <div style="background: white; border-radius: 18px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        <p style="font-size: 17px; font-weight: 800; color: #1f2937; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 0.5px;">Main Accords</p>
-        <div style="display: flex; gap: 4px; border-radius: 12px; overflow: hidden; height: 60px; margin-bottom: 14px;">
-          ${transformedAccords.map(accord => {
-            const strength = accord.strength || accord.width || 1;
-            const widthPercentage = (strength / transformedAccords.reduce((sum, a) => sum + (a.strength || a.width || 1), 0)) * 100;
-            return `<div style="background: ${getAccordColor(accord.name)}; width: ${widthPercentage}%; position: relative;">
-              <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.2), rgba(255,255,255,0.2));"></div>
-            </div>`;
-          }).join('')}
-        </div>
-        <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-          ${transformedAccords.map(accord => 
-            `<span style="font-size: 14px; color: #6b7280; font-weight: 600;">${accord.name}</span>`
-          ).join('')}
-        </div>
-      </div>
-    ` : ''}
-
-    <!-- Notes Pyramid -->
-    ${(topNotes.length > 0 || middleNotes.length > 0 || baseNotes.length > 0) ? `
-      <div style="background: white; border-radius: 18px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-        <p style="font-size: 17px; font-weight: 800; color: #1f2937; margin: 0 0 18px 0; text-transform: uppercase; letter-spacing: 0.5px;">Notes Pyramid</p>
-        <div style="display: flex; flex-direction: column; gap: 14px;">
-          ${topNotes.length > 0 ? `
-            <div style="display: flex; align-items: center; gap: 18px;">
-              <span style="font-size: 13px; font-weight: 800; color: #059669; width: 95px; text-align: right; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.5px;">TOP NOTES</span>
-              <div style="background: linear-gradient(to right, #d1fae5, #a7f3d0); border-radius: 12px; padding: 16px 22px; flex: 1; max-width: 70%; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                <span style="font-size: 16px; color: #1f2937; font-weight: 600; line-height: 1.4;">${topNotes.map(n => n.name).join(', ')}</span>
-              </div>
+      const postcard = document.createElement('div');
+      postcard.style.cssText = `position: absolute; left: -9999px; width: 1080px; height: 1920px; padding: 50px; background: linear-gradient(135deg, #FAFFF5 0%, #F0FDF4 100%); font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column;`;
+      postcard.innerHTML = `
+        <div style="display: flex; flex-direction: column; height: 100%;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <img src="/logo.svg" alt="FragView Logo" style="height: 180px; width: auto;" />
+            <img src="${qrCodeDataUrl}" style="width: 100px; height: 100px;" alt="QR Code" />
+          </div>
+          <div style="background: linear-gradient(135deg, #d1fae5 0%, #fed7aa 100%); border-radius: 20px; padding: 30px; margin-bottom: 30px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; min-height: 550px;">
+            ${imageDataUrl ? `<img src="${imageDataUrl}" style="max-width: 100%; max-height: 550px; object-fit: contain; border-radius: 16px;" crossorigin="anonymous" />` : `<div style="width: 100%; height: 550px; background: linear-gradient(135deg, #10b981, #f97316); border-radius: 16px; display: flex; align-items: center; justify-content: center; color: white; font-size: 80px;">✦</div>`}
+          </div>
+          <div style="background: linear-gradient(to right, #10b981, #f97316); border-radius: 12px; padding: 28px 40px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); text-align: center;">
+            <h1 style="font-size: 58px; font-weight: 900; color: #1f2937; margin: 0 0 8px 0; line-height: 1.1; letter-spacing: 1px;">${perfume.variant_name}</h1>
+            <p style="font-size: 38px; color: #374151; font-weight: 700; margin: 0; letter-spacing: 0.5px;">${perfume.brand_name}</p>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 28px;">
+            <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+              <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">RATING</p>
+              <div style="display: flex; gap: 5px; margin-bottom: 12px; justify-content: center;">${[1,2,3,4,5].map(star => `<span style="color: ${star <= Math.round(userRating || rating) ? '#fb923c' : '#d1d5db'}; font-size: 26px;">★</span>`).join('')}</div>
+              <p style="font-size: 36px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">${(userRating || rating).toFixed(1)}</p>
             </div>
-          ` : ''}
-          ${middleNotes.length > 0 ? `
-            <div style="display: flex; align-items: center; gap: 18px;">
-              <span style="font-size: 13px; font-weight: 800; color: #f97316; width: 95px; text-align: right; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.5px;">HEART NOTES</span>
-              <div style="background: linear-gradient(to right, #fed7aa, #fdba74); border-radius: 12px; padding: 16px 22px; flex: 1; max-width: 85%; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                <span style="font-size: 16px; color: #1f2937; font-weight: 600; line-height: 1.4;">${middleNotes.map(n => n.name).join(', ')}</span>
-              </div>
+            <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+              <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">SILLAGE</p>
+              <div style="height: 14px; background: #e5e7eb; border-radius: 7px; overflow: hidden; margin-bottom: 12px;"><div style="height: 100%; width: ${getPosition(userSillage || perfume.sillage || 0)}%; background: linear-gradient(to right, #10b981, #f97316);"></div></div>
+              <p style="font-size: 28px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">${getSillageLabel(userSillage || perfume.sillage || 0)}</p>
             </div>
-          ` : ''}
-          ${baseNotes.length > 0 ? `
-            <div style="display: flex; align-items: center; gap: 18px;">
-              <span style="font-size: 13px; font-weight: 800; color: #047857; width: 95px; text-align: right; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.5px;">BASE NOTES</span>
-              <div style="background: linear-gradient(to right, #6ee7b7, #34d399); border-radius: 12px; padding: 16px 22px; flex: 1; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                <span style="font-size: 16px; color: #1f2937; font-weight: 600; line-height: 1.4;">${baseNotes.map(n => n.name).join(', ')}</span>
-              </div>
+            <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+              <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">LONGEVITY</p>
+              <div style="height: 14px; background: #e5e7eb; border-radius: 7px; overflow: hidden; margin-bottom: 12px;"><div style="height: 100%; width: ${getPosition(userLongevity || perfume.longevity || 0)}%; background: linear-gradient(to right, #10b981, #f97316);"></div></div>
+              <p style="font-size: 28px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">${getLongevityHrsLabel(userLongevity || perfume.longevity || 0)}</p>
             </div>
-          ` : ''}
-        </div>
-      </div>
-    ` : ''}
-
-    <!-- Footer -->
-    <div style="margin-top: auto; padding-top: 24px; border-top: 4px solid #10b981; display: flex; justify-content: space-between; align-items: center;">
-      <div style="font-size: 17px; color: #4b5563; font-weight: 600; line-height: 1.6;">
-        <div style="margin-bottom: 8px;"><span style="font-weight: 800; color: #1f2937;">Gender:</span> ${perfume.gender || '—'}</div>
-        <div><span style="font-weight: 800; color: #1f2937;">Perfumer:</span> ${perfume.perfumers?.join(', ') || '—'}</div>
-      </div>
-      <div style="text-align: right; font-size: 15px; color: #9ca3af; font-weight: 600;">
-        fragview.com/perfumes/${slug}
-      </div>
-    </div>
-  </div>
-`;
-
-    document.body.appendChild(postcard);
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    const canvas = await html2canvas(postcard, {
-      backgroundColor: '#FAFFF5',
-      scale: 2,
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-      width: 1080,
-      height: 1920,
-    });
-
-    document.body.removeChild(postcard);
-
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        alert('Failed to generate image');
-        return;
-      }
-      
-      const url = URL.createObjectURL(blob);
-      
-      const overlay = document.createElement('div');
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;';
-      
-      const dialog = document.createElement('div');
-      dialog.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:24px;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.2);z-index:9999;max-width:400px;width:90%;';
-      dialog.innerHTML = `
-        <h3 style="margin:0 0 16px 0;font-size:18px;font-weight:600;color:#1f2937;">Share Perfume Card</h3>
-        <div style="display:flex;gap:12px;flex-direction:column;">
-          <button id="share-whatsapp" style="padding:12px;border-radius:8px;border:1px solid #16a34a;background:#f0fdf4;color:#16a34a;font-weight:600;cursor:pointer;">Share on WhatsApp</button>
-          <button id="share-download" style="padding:12px;border-radius:8px;border:1px solid #f97316;background:#fff7ed;color:#f97316;font-weight:600;cursor:pointer;">Download Image</button>
-          <button id="share-close" style="padding:12px;border-radius:8px;border:1px solid #d1d5db;background:white;color:#6b7280;font-weight:600;cursor:pointer;">Close</button>
-        </div>
-      `;
-
-      document.body.appendChild(overlay);
-      document.body.appendChild(dialog);
-
-      const cleanup = () => {
-        document.body.removeChild(overlay);
-        document.body.removeChild(dialog);
-        URL.revokeObjectURL(url);
-      };
-
-      document.getElementById('share-whatsapp')!.onclick = () => {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${perfume.variant_name}-fragview.jpg`;
-        link.click();
-        setTimeout(() => window.open(`https://wa.me/?text=Check out ${perfume.variant_name} on Fragview! https://fragview.com/perfumes/${slug}`), 500);
-        cleanup();
-      };
-
-      document.getElementById('share-download')!.onclick = () => {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${perfume.variant_name}-fragview.jpg`;
-        link.click();
-        cleanup();
-      };
-
-      document.getElementById('share-close')!.onclick = cleanup;
-      overlay.onclick = cleanup;
-    }, 'image/jpeg', 0.95);
-  } catch (error) {
-    console.error('Snapshot error:', error);
-    alert(`Failed to generate snapshot: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-};
+          </div>
+          ${transformedAccords.length > 0 ? `<div style="background: white; border-radius: 18px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);"><p style="font-size: 17px; font-weight: 800; color: #1f2937; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 0.5px;">Main Accords</p><div style="display: flex; gap: 4px; border-radius: 12px; overflow: hidden; height: 60px; margin-bottom: 14px;">${transformedAccords.map(accord => { const strength = accord.strength || accord.width || 1; const widthPercentage = (strength / transformedAccords.reduce((sum, a) => sum + (a.strength || a.width || 1), 0)) * 100; return `<div style="background: ${getAccordColor(accord.name)}; width: ${widthPercentage}%; position: relative;"><div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.2), rgba(255,255,255,0.2));"></div></div>`; }).join('')}</div><div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">${transformedAccords.map(accord => `<span style="font-size: 14px; color: #6b7280; font-weight: 600;">${accord.name}</span>`).join('')}</div></div>` : ''}
+          <div style="margin-top: auto; padding-top: 24px; border-top: 4px solid #10b981; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 17px; color: #4b5563; font-weight: 600; line-height: 1.6;">
+              <div style="margin-bottom: 8px;"><span style="font-weight: 800; color: #1f2937;">Gender:</span> ${perfume.gender || '—'}</div>
+              <div><span style="font-weight: 800; color: #1f2937;">Perfumer:</span> ${perfume.perfumers?.join(', ') || '—'}</div>
+            </div>
+            <div style="text-align: right; font-size: 15px; color: #9ca3af; font-weight: 600;">fragview.com/perfumes/${slug}</div>
+          </div>
+        </div>`;
+      document.body.appendChild(postcard);
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const canvas = await html2canvas(postcard, { backgroundColor: '#FAFFF5', scale: 2, logging: false, useCORS: true, allowTaint: true, width: 1080, height: 1920 });
+      document.body.removeChild(postcard);
+      canvas.toBlob((blob) => {
+        if (!blob) { alert('Failed to generate image'); return; }
+        const url = URL.createObjectURL(blob);
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;';
+        const dialog = document.createElement('div');
+        dialog.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:24px;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.2);z-index:9999;max-width:400px;width:90%;';
+        dialog.innerHTML = `<h3 style="margin:0 0 16px 0;font-size:18px;font-weight:600;color:#1f2937;">Share Perfume Card</h3><div style="display:flex;gap:12px;flex-direction:column;"><button id="share-whatsapp" style="padding:12px;border-radius:8px;border:1px solid #16a34a;background:#f0fdf4;color:#16a34a;font-weight:600;cursor:pointer;">Share on WhatsApp</button><button id="share-download" style="padding:12px;border-radius:8px;border:1px solid #f97316;background:#fff7ed;color:#f97316;font-weight:600;cursor:pointer;">Download Image</button><button id="share-close" style="padding:12px;border-radius:8px;border:1px solid #d1d5db;background:white;color:#6b7280;font-weight:600;cursor:pointer;">Close</button></div>`;
+        document.body.appendChild(overlay);
+        document.body.appendChild(dialog);
+        const cleanup = () => { document.body.removeChild(overlay); document.body.removeChild(dialog); URL.revokeObjectURL(url); };
+        document.getElementById('share-whatsapp')!.onclick = () => {
+          const link = document.createElement('a'); link.href = url; link.download = `${perfume.variant_name}-fragview.jpg`; link.click();
+          setTimeout(() => window.open(`https://wa.me/?text=Check out ${perfume.variant_name} on Fragview! https://fragview.com/perfumes/${slug}`), 500); cleanup();
+        };
+        document.getElementById('share-download')!.onclick = () => {
+          const link = document.createElement('a'); link.href = url; link.download = `${perfume.variant_name}-fragview.jpg`; link.click(); cleanup();
+        };
+        document.getElementById('share-close')!.onclick = cleanup; overlay.onclick = cleanup;
+      }, 'image/jpeg', 0.95);
+    } catch (error) { console.error('Snapshot error:', error); alert(`Failed to generate snapshot: ${error instanceof Error ? error.message : 'Unknown error'}`); }
+  };
 
   async function handleSubmitReview(formData: FormData) {
     setErrorMessage(null);
@@ -455,39 +335,48 @@ export default function PerfumeDetailClient({
     }
 
     startTransition(async () => {
-      // Include current slider states in the text review if set
+      // Use reviewText from state if formData doesn't have it (due to MentionTextarea)
+      if (!formData.get('text')) formData.set('text', reviewText);
       if (userRating > 0) formData.set('rating', String(userRating));
       if (userLongevity > 0) formData.set('longevity', String(userLongevity));
       if (userSillage > 0) formData.set('sillage', String(userSillage));
+      
+      // ADDED: Photos
+      if (uploadedPhotos.length > 0) {
+        formData.set('photos', JSON.stringify(uploadedPhotos));
+      }
       
       const result = await submitReview(slug, formData);
       if (!result.ok) setErrorMessage(result.error || 'Failed to submit review.');
       else {
         setSuccessMessage('Review submitted successfully!');
         setReviewText('');
+        setUploadedPhotos([]); // Reset photos
         // Reset local state if you want, or keep it visible
       }
     });
   }
 
+  const addPhoto = (url: string) => {
+    setUploadedPhotos(prev => [...prev, url]);
+  };
+
+  const removePhoto = (index: number) => {
+    setUploadedPhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
   const reviewsSummary = {
     totalReviews: reviewCount,
     averageRating: rating,
     sentiment: 'mixed' as const,
-    keyPoints: [] as string[],
-    commonWords: [] as { word: string; frequency: number }[],
+    keyPoints: [],
+    commonWords: [],
     ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
     aiSummary: reviewCount > 0 ? 'User reviews summary.' : 'No reviews yet.',
   };
 
   const similarPerfumes = React.useMemo(() => {
-    if (!perfume.reminds_me || perfume.reminds_me.length === 0) {
-      console.log('No similar fragrances in reminds_me');
-      return [];
-    }
-    
-    console.log('Similar fragrances:', perfume.reminds_me);
-    
+    if (!perfume.reminds_me || perfume.reminds_me.length === 0) return [];
     return perfume.reminds_me.map((name, idx) => {
       const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       return {
@@ -513,12 +402,9 @@ export default function PerfumeDetailClient({
       </div>
 
       <div className="mx-auto max-w-5xl space-y-5 px-4 relative z-10">
-                        {/* TOP SECTION - DESKTOP UNCHANGED, MOBILE TWO COLUMNS */}
         <div ref={snapshotRef} className="glass-card rounded-xl p-3 lg:p-5 shadow-sm">
           <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 lg:gap-6">
-            {/* LEFT - Image, Gender, Perfumer, Buttons */}
             <div className="space-y-2 lg:space-y-3">
-              {/* Mobile: Small image in left column, Desktop: 280px centered */}
               <div className="aspect-[3/4] w-full max-w-[150px] mx-auto lg:max-w-[280px] rounded-lg lg:rounded-xl overflow-hidden bg-gradient-to-br from-green-50/50 to-orange-50/50">
                 {perfume.image ? (
                   <img src={perfume.image} alt={perfume.variant_name} className="h-full w-full object-cover" />
@@ -559,7 +445,6 @@ export default function PerfumeDetailClient({
               </div>
             </div>
 
-            {/* RIGHT - Name, Brand, Accords (allow natural height) */}
             <div className="space-y-1.5 lg:space-y-4 flex flex-col">
               <div>
                 <h1 className="text-base lg:text-3xl font-bold bg-gradient-to-r from-green-600 to-orange-500 bg-clip-text text-transparent leading-tight">
@@ -575,7 +460,6 @@ export default function PerfumeDetailClient({
                 </div>
               )}
 
-              {/* Notes Pyramid - DESKTOP ONLY */}
               {(topNotes.length || middleNotes.length || baseNotes.length) > 0 && (
                 <div className="hidden lg:block">
                   <h3 className="text-sm font-semibold text-gray-800 mb-2">Notes Pyramid</h3>
@@ -585,7 +469,6 @@ export default function PerfumeDetailClient({
             </div>
           </div>
 
-          {/* Notes Pyramid - MOBILE ONLY (Full width below) */}
           {(topNotes.length || middleNotes.length || baseNotes.length) > 0 && (
             <div className="lg:hidden mt-4 pt-4 border-t border-green-100">
               <h3 className="text-[10px] font-semibold text-gray-800 mb-2">Notes Pyramid</h3>
@@ -594,11 +477,8 @@ export default function PerfumeDetailClient({
           )}
         </div>
 
-        {/* RATINGS SECTION */}
-        <div className="glass-card rounded-xl p-5 shadow-sm">
+        <div className={`glass-card rounded-xl p-5 shadow-sm ${isCoolingPeriodActive ? 'opacity-50 pointer-events-none filter grayscale' : ''}`}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            {/* 1. STAR RATING */}
             <div className="space-y-2">
               <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Overall Rating</h3>
               <div className="flex items-center gap-1 cursor-pointer">
@@ -621,7 +501,6 @@ export default function PerfumeDetailClient({
               </div>
             </div>
 
-            {/* 2. SILLAGE SLIDER */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1">
@@ -637,17 +516,15 @@ export default function PerfumeDetailClient({
                      style={{ width: `${getPosition(userSillage || perfume.sillage || 0)}%` }} 
                    />
                 </div>
-                {/* Invisible Range Input on top */}
                 <input
                     type="range"
                     min="0"
                     max="5"
-                    step="0.1" // ✅ Continuous movement
+                    step="0.1" 
                     value={userSillage || perfume.sillage || 0}
                     onChange={(e) => handleSliderChange('sillage', parseFloat(e.target.value))}
                     className="absolute w-full h-full opacity-0 cursor-pointer z-10"
                 />
-                {/* Custom Thumb (visual only) */}
                 <div 
                     className="absolute h-4 w-4 bg-white border-2 border-orange-500 rounded-full shadow pointer-events-none transition-none"
                     style={{ left: `calc(${getPosition(userSillage || perfume.sillage || 0)}% - 8px)` }}
@@ -658,13 +535,11 @@ export default function PerfumeDetailClient({
                   <span className="text-[10px] text-gray-400 uppercase font-medium">Moderate</span>
                   <span className="text-[10px] text-gray-400 uppercase font-medium">Strong</span>
               </div>
-              {/* CURRENT VALUE BELOW LABELS */}
               <div className="mt-1 text-left">
                 <span className="text-sm font-bold text-gray-800 uppercase">{getSillageLabel(userSillage || perfume.sillage || 0)}</span>
               </div>
             </div>
 
-            {/* 3. LONGEVITY SLIDER */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1">
@@ -684,7 +559,7 @@ export default function PerfumeDetailClient({
                     type="range"
                     min="0"
                     max="5"
-                    step="0.1" // ✅ Continuous movement
+                    step="0.1" 
                     value={userLongevity || perfume.longevity || 0}
                     onChange={(e) => handleSliderChange('longevity', parseFloat(e.target.value))}
                     className="absolute w-full h-full opacity-0 cursor-pointer z-10"
@@ -705,7 +580,6 @@ export default function PerfumeDetailClient({
                 <span>12h+</span>
               </div>
               
-              {/* CURRENT VALUE BELOW LABELS */}
               <div className="mt-1 text-left">
                 <span className="text-sm font-bold text-gray-800 uppercase">{getLongevityHrsLabel(userLongevity || perfume.longevity || 0)}</span>
               </div>
@@ -735,8 +609,30 @@ export default function PerfumeDetailClient({
           <ReviewsSummary summary={reviewsSummary} />
         </div>
 
-        <div id="review-section" className="glass-card rounded-xl p-5 shadow-sm">
-          <h3 className="mb-4 text-xl font-bold text-gray-800">Leave Your Review</h3>
+        <div id="review-section" className="glass-card rounded-xl p-5 shadow-sm relative overflow-hidden">
+          {isCoolingPeriodActive && (
+            <div className="absolute inset-0 z-20 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6">
+              <div className="bg-orange-100 p-4 rounded-full mb-4">
+                <Clock className="w-8 h-8 text-orange-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Reviews are Cooling Down</h3>
+              <p className="text-gray-600 max-w-md mb-4">
+                To ensure authentic experiences, reviews for this new fragrance will open in {remainingDays} days.
+              </p>
+              <span className="text-xs font-bold uppercase tracking-widest text-orange-600 border border-orange-200 px-3 py-1 rounded-full bg-orange-50">
+                Coming Soon
+              </span>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold text-gray-800">Leave Your Review</h3>
+            <button onClick={toggleFollowThread} className={`text-xs font-medium px-3 py-1.5 rounded-full border ${isFollowing ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'} flex items-center gap-1 transition-colors`}>
+              <Bell className={`w-3 h-3 ${isFollowing ? 'fill-current' : ''}`} />
+              {isFollowing ? 'Following' : 'Follow Thread'}
+            </button>
+          </div>
+
           {!isSignedIn ? (
             <div className="rounded-xl border-2 border-dashed border-green-300 bg-green-50/50 p-6 text-center">
               <p className="mb-4 text-gray-700">Please sign in to leave a review</p>
@@ -755,14 +651,33 @@ export default function PerfumeDetailClient({
           ) : (
             <form action={(fd) => handleSubmitReview(fd)} className="space-y-4">
               <p className="text-sm text-gray-600">Use the sliders above to rate. Write your review below:</p>
-              <textarea
-                name="text"
-                value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
-                placeholder="Share your experience..."
-                className="w-full rounded-lg border border-green-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-400 bg-white/80 text-gray-800"
-                rows={4}
+              <MentionTextarea 
+                value={reviewText} 
+                onChange={setReviewText} 
+                placeholder="Share your experience... Type @ to mention users" 
+                className="w-full rounded-xl border border-green-200 px-4 py-3 focus:ring-2 focus:ring-green-400 outline-none bg-white/80"
               />
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Add Photos</label>
+                <div className="flex flex-wrap gap-2 items-start">
+                  {uploadedPhotos.map((url, i) => (
+                    <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 shrink-0">
+                      <img src={url} className="w-full h-full object-cover" alt="Review" />
+                      <button type="button" onClick={() => setUploadedPhotos(p => p.filter((_, idx) => idx !== i))} className="absolute top-0.5 right-0.5 bg-black/50 text-white rounded-full p-0.5"><X size={10} /></button>
+                    </div>
+                  ))}
+                  {uploadedPhotos.length < 3 && (
+                    <div className="w-full sm:w-auto min-w-[160px] max-w-xs">
+                      <ImageUpload 
+                        onUploadComplete={addPhoto} 
+                        folder="reviews" 
+                        label="Upload" 
+                        maxSizeMB={5} 
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
               {errorMessage && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{errorMessage}</div>}
               {successMessage && <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg">{successMessage}</div>}
               <button
@@ -776,24 +691,54 @@ export default function PerfumeDetailClient({
           )}
         </div>
 
+        {/* REVIEWS LIST */}
         <div className="glass-card rounded-xl p-5 shadow-sm">
-          <h3 className="mb-4 text-xl font-bold text-gray-800">Latest Reviews</h3>
-          {reviews.length === 0 && <p className="text-gray-600 text-center py-6">No reviews yet.</p>}
-          <div className="space-y-4">
+          <h3 className="mb-4 text-xl font-bold text-gray-800">Community Reviews</h3>
+          <div className="space-y-6">
             {reviews.map((r, i) => (
-              <div key={i} className="border-b border-green-100 pb-4 last:border-0">
-                <div className="flex items-center gap-2 mb-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star key={star} className={`w-4 h-4 ${star <= r.rating ? 'text-orange-400 fill-orange-400' : 'text-gray-300'}`} />
-                  ))}
-                  <span className="text-sm font-semibold text-gray-800 ml-2">{r.rating.toFixed(1)}</span>
+              <div key={i} className="border-b border-green-50 pb-6 last:border-0">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2">
+                    {/* 🟢 UPDATED: User Avatar Logic */}
+                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs font-bold text-gray-500 overflow-hidden">
+                       {r.user.image ? (
+                         <img src={r.user.image} alt={r.user.username} className="w-full h-full object-cover" />
+                       ) : (
+                         <span>{r.user.username.charAt(0).toUpperCase()}</span>
+                       )}
+                    </div>
+                    <div>
+                      {/* 🟢 UPDATED: Username Display */}
+                      <p className="text-sm font-bold text-gray-900">@{r.user.username}</p> 
+                      <p className="text-[10px] text-gray-400">{new Date(r.createdAt).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Star className="w-3 h-3 fill-orange-400 text-orange-400" />
+                    <span className="text-sm font-bold">{r.rating}</span>
+                  </div>
                 </div>
-                {r.text && <p className="text-gray-700">{r.text}</p>}
-                <div className="mt-2 text-xs text-gray-500">{new Date(r.createdAt).toLocaleDateString()}</div>
+                <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
+                  {r.text}
+                </p>
+                {r.photos && r.photos.length > 0 && (
+                  <div className="flex gap-2 mt-3">
+                    {r.photos.map((p, idx) => (
+                      <img key={idx} src={p} className="w-20 h-20 object-cover rounded-lg border border-gray-100 cursor-pointer hover:scale-105 transition-transform" />
+                    ))}
+                  </div>
+                )}
+                <ReviewActionButtons 
+                  reviewId={r.id} 
+                  initialHelpfulCount={r.helpfulCount || 0} 
+                  userVote={r.userVote}
+                  isLoggedIn={isSignedIn} 
+                />
               </div>
             ))}
           </div>
         </div>
+
       </div>
     </div>
   );

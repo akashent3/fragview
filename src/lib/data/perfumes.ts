@@ -17,8 +17,15 @@ export type PerfumeDoc = {
   pyramids?: { top?: string[]; middle?: string[]; base?: string[] };
   scraped_at?: string;
   date_added?: string;
-  // ADD THIS to satisfy usages in /perfumes/[slug]/page.tsx and PerfumeInfo
   description?: string;
+  
+  // ✅ Added missing fields to fix TypeScript errors
+  votes?: number;
+  longevity?: number;
+  sillage?: number;
+  perfumers?: string[];
+  reminds_me?: string[];
+  created_at?: string | number;
 };
 
 export async function getPerfumeBySlug(slug: string) {
@@ -108,7 +115,6 @@ export async function countPerfumes() {
 }
 
 export async function generatePerfumeSlug(doc: PerfumeDoc): Promise<string> {
-  // Minimal fix: pass required arguments; preserve existing behavior
   return doc.slug || perfumeSlug(doc.brand_name, doc.variant_name);
 }
 

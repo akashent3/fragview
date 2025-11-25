@@ -1,410 +1,479 @@
 'use client';
-import React, { useState , useEffect} from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { Plus, Edit, Trash2, Star, Filter, Grid, List, Leaf, Flower2, Trees, Sparkles } from 'lucide-react';
-import AccordTags from '@/components/ui/AccordTags';
+import { Plus, Trash2, Star, Grid, List, Leaf, Trees, Sparkles, Download, FileText, Loader2, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useAuthModal } from '@/components/auth/AuthModal';
+import WardrobeSearch from '@/components/wardrobe/WardrobeSearch';
+import { getWardrobe, removeFromWardrobe, addToWardrobe, renameSubcategory, WardrobeEntryHydrated } from '@/app/actions/wardrobe';
+import { jsPDF } from "jspdf";
+import autoTable from 'jspdf-autotable';
+import Papa from 'papaparse';
+
+// --- DEFAULTS ---
+const DEFAULT_SUBCATS: Record<string, string[]> = {
+  'My Bottles': ['Daily Wear', 'Special Occasions', 'Office', 'Date Night', 'Summer', 'Winter', 'Gym'],
+  'Wishlist': ['High Priority', 'Low Priority', 'Gift Idea', 'To Sample'],
+  'Past Bottles': ['Used Up', 'Decluttered', 'Gifted Away', 'Sold']
+};
+
+// --- COLOR LOGIC ---
+const getAccordColor = (accordName: string): string => {
+  const colors: { [key: string]: string } = {
+    rose: '#ec4899', jasmine: '#f472b6', violet: '#a855f7', iris: '#c084fc', ylang: '#e879f9', tuberose: '#f0abfc', neroli: '#fbbf24', lavender: '#a78bfa',
+    citrus: '#fbbf24', lemon: '#fde047', bergamot: '#fcd34d', orange: '#fb923c', grapefruit: '#fdba74', mandarin: '#fbbf24',
+    woody: '#92400e', sandalwood: '#b45309', cedar: '#78350f', oud: '#451a03', patchouli: '#7c2d12', vetiver: '#65a30d',
+    spicy: '#dc2626', cinnamon: '#b91c1c', pepper: '#991b1b', ginger: '#ea580c', cardamom: '#c2410c',
+    fresh: '#10b981', aquatic: '#06b6d4', marine: '#0891b2', mint: '#34d399', green: '#22c55e',
+    vanilla: '#fef3c7', caramel: '#fcd34d', chocolate: '#78350f', coffee: '#451a03', honey: '#fbbf24', almond: '#fed7aa',
+    musk: '#9ca3af', amber: '#f59e0b', leather: '#92400e', animalic: '#6b7280',
+    aromatic: '#8b5cf6', herbal: '#84cc16', medicinal: '#22d3ee',
+    fruity: '#f472b6', apple: '#86efac', peach: '#fdba74', berry: '#f87171', tropical: '#fbbf24',
+    powdery: '#d4d4d8', talc: '#e4e4e7',
+    earthy: '#78350f', mossy: '#65a30d',
+    sweet: '#fda4af', smoky: '#52525b', incense: '#71717a',
+  };
+  const lowerName = accordName.toLowerCase();
+  if (colors[lowerName]) return colors[lowerName];
+  for (const [key, color] of Object.entries(colors)) {
+    if (lowerName.includes(key) || key.includes(lowerName)) return color;
+  }
+  const hash = accordName.charCodeAt(0) % 10;
+  return ['#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#f97316', '#22c55e', '#a855f7', '#fb923c', '#14b8a6'][hash];
+};
 
 const WardrobePage = () => {
-  // ✅ Hooks first, every render
   const { data: session, status } = useSession();
   const { open } = useAuthModal();
 
-  const [activeCategory, setActiveCategory] = useState('My Bottles');
+  const [loading, setLoading] = useState(true);
+  const [entries, setEntries] = useState<WardrobeEntryHydrated[]>([]);
+  const [activeTab, setActiveTab] = useState('My Bottles');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
-  const [selectedFragrances, setSelectedFragrances] = useState<number[]>([]);
+  const [showSubcatModal, setShowSubcatModal] = useState(false);
+  
+  const [newPerfume, setNewPerfume] = useState<{id: string, name: string, brand: string, image?: string} | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState('My Bottles');
+  const [selectedSubcat, setSelectedSubcat] = useState(''); 
+  const [isCustomSubcat, setIsCustomSubcat] = useState(false);
+  const [newNotes, setNewNotes] = useState('');
+
+  const [renameMap, setRenameMap] = useState<{old: string, new: string}>({old: '', new: ''});
+
+  const fetchData = async () => {
+    if (status !== 'authenticated') return;
+    setLoading(true);
+    const data = await getWardrobe();
+    setEntries(data);
+    setLoading(false);
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      open({ mode: 'signin', reason: 'Sign in to view your wardrobe' });
+      open({ mode: 'signin', reason: 'Access your wardrobe' });
+    } else if (status === 'authenticated') {
+      fetchData();
     }
   }, [status, open]);
 
-  // Loading and unauth states AFTER hooks
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen relative overflow-hidden py-8" style={{ backgroundColor: '#FAFFF5' }}>
-        <div className="mx-auto max-w-4xl p-6">
-          <div className="glass-card rounded-lg p-4 text-sm text-gray-600">
-            Loading…
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const getDbStatusForTab = (tab: string) => {
+    const map: Record<string, string[]> = {
+      'My Bottles': ['CURRENTLY_USING', 'IN_COLLECTION', 'DECANT', 'GIFTED'],
+      'Wishlist': ['WISH_LIST'],
+      'Past Bottles': ['USED_UP', 'DECLUTTERED'] 
+    };
+    return map[tab] || [];
+  };
 
-  if (status === 'unauthenticated' || !session) {
-    return (
-      <div className="min-h-screen relative overflow-hidden py-8" style={{ backgroundColor: '#FAFFF5' }}>
-        <div className="mx-auto max-w-md p-6">
-          <div className="space-y-3 glass-card rounded-xl p-6">
-            <h1 className="text-xl font-semibold text-gray-800">Sign in required</h1>
-            <p className="text-sm text-gray-600">A sign-in popup should be visible. After signing in, you'll see your wardrobe here.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const processedData = useMemo(() => {
+    const currentStatuses = getDbStatusForTab(activeTab);
+    const filtered = entries.filter(e => currentStatuses.includes(e.status));
+    const subcats = Array.from(new Set(filtered.map(e => e.subcategory))).filter(Boolean).sort();
+    return { items: filtered, subcats };
+  }, [entries, activeTab]);
 
-  // Mock data (unchanged)
-  const categories = {
-    'My Bottles': {
-      subcategories: ['Daily Wear', 'Special Occasions', 'Office'],
-      fragrances: [
-        { id: 1, name: 'Dior Sauvage', brand: 'Dior', rating: 4.5, myRating: 4.7, family: 'Fresh', accords: [{ name: 'fresh' }, { name: 'woody' }], notes: 'Great for daily wear', dateAdded: '2023-09-01', subcategory: 'Daily Wear' },
-        { id: 2, name: 'Bleu de Chanel', brand: 'Chanel', rating: 4.6, myRating: 4.8, family: 'Fresh', accords: [{ name: 'fresh' }, { name: 'citrus' }], dateAdded: '2023-08-15', subcategory: 'Office' },
-        { id: 3, name: 'Aventus', brand: 'Creed', rating: 4.7, family: 'Woody', accords: [{ name: 'woody' }, { name: 'fruity' }], dateAdded: '2023-07-20', subcategory: 'Special Occasions' }
-      ]
-    },
-    'Wishlist': {
-      subcategories: ['To Try', 'Gift Ideas'],
-      fragrances: [
-        { id: 4, name: 'Tom Ford Oud Wood', brand: 'Tom Ford', rating: 4.6, family: 'Woody', accords: [{ name: 'woody' }, { name: 'oriental' }], priority: 'High', dateAdded: '2023-10-05', subcategory: 'To Try' },
-        { id: 5, name: "La Nuit de L'Homme", brand: 'YSL', rating: 4.3, family: 'Oriental', accords: [{ name: 'spicy' }, { name: 'woody' }], dateAdded: '2023-09-25', subcategory: 'Gift Ideas' }
-      ]
-    },
-    'Past Bottles': {
-      subcategories: ['Empties', 'Decluttered'],
-      fragrances: [
-        { id: 6, name: 'CK One', brand: 'Calvin Klein', rating: 4.0, family: 'Fresh', accords: [{ name: 'fresh' }, { name: 'citrus' }], dateAdded: '2023-06-11', subcategory: 'Empties' },
-        { id: 7, name: 'Acqua di Gio', brand: 'Armani', rating: 4.2, family: 'Fresh', accords: [{ name: 'fresh' }, { name: 'aquatic' }], dateAdded: '2023-05-08', subcategory: 'Decluttered' }
-      ]
+  const getSubcatsForDropdown = (categoryName: string) => {
+     const relevantStatuses = getDbStatusForTab(categoryName);
+     const userSubcats = entries
+        .filter(e => relevantStatuses.includes(e.status))
+        .map(e => e.subcategory);
+     const defaults = DEFAULT_SUBCATS[categoryName] || [];
+     return Array.from(new Set([...defaults, ...userSubcats])).filter(Boolean).sort();
+  };
+
+  const handleAdd = async () => {
+    if (!newPerfume) return;
+    let dbStatus = 'CURRENTLY_USING';
+    if (selectedCategory === 'Wishlist') dbStatus = 'WISH_LIST';
+    if (selectedCategory === 'Past Bottles') dbStatus = 'USED_UP';
+    const finalSubcat = selectedSubcat.trim() || 'General';
+    await addToWardrobe(newPerfume.id, dbStatus as any, finalSubcat, newNotes);
+    setShowAddModal(false);
+    setNewPerfume(null);
+    setNewNotes('');
+    setIsCustomSubcat(false);
+    fetchData(); 
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Remove from wardrobe?')) {
+      await removeFromWardrobe(id);
+      fetchData();
     }
   };
 
-  const allFragrances = Object.values(categories).flatMap(cat => (cat as any).fragrances);
-
-  const handleSelectFragrance = (id: number) => {
-    setSelectedFragrances(prev =>
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
+  const handleRenameSubcat = async () => {
+    if (!renameMap.old || !renameMap.new) return;
+    await renameSubcategory(renameMap.old, renameMap.new);
+    setShowSubcatModal(false);
+    fetchData();
   };
 
-  const renderFragranceCard = (fragrance: any) => (
-    <div key={fragrance.id} className="glass-card rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-all hover:scale-[1.02]">
-      <div className="aspect-square bg-gradient-to-br from-green-50/50 to-orange-50/50 flex items-center justify-center relative">
-        <Sparkles className="w-12 h-12 text-green-300" />
-        <div className="absolute top-2 right-2 opacity-30">
-          <Leaf size={24} className="text-green-500" />
-        </div>
-      </div>
-      <div className="p-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="font-semibold text-gray-900">{fragrance.name}</h3>
-            <p className="text-sm text-gray-600">{fragrance.brand}</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <button className="p-2 rounded-full hover:bg-green-50 transition-colors">
-              <Edit className="w-4 h-4 text-gray-600" />
-            </button>
-            <button className="p-2 rounded-full hover:bg-red-50 transition-colors">
-              <Trash2 className="w-4 h-4 text-red-500" />
-            </button>
-          </div>
-        </div>
+  const handleExportCSV = () => {
+    const data = processedData.items.map(item => ({
+      Name: item.name,
+      Brand: item.brand,
+      Category: item.subcategory,
+      Status: item.status,
+      Rating: item.rating || 0
+    }));
+    const csv = Papa.unparse(data);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'wardrobe.csv';
+    link.click();
+  };
 
-        <div className="flex items-center space-x-4 mb-4 text-sm mt-2">
-          <div className="flex items-center">
-            <Star className="w-4 h-4 text-orange-400 fill-current" />
-            <span className="ml-1 text-gray-900">{fragrance.rating}</span>
-          </div>
-          {fragrance.myRating && (
-            <div className="flex items-center">
-              <span className="text-gray-600">My:</span>
-              <Star className="w-4 h-4 text-green-400 fill-current ml-1" />
-              <span className="ml-1 text-gray-900">{fragrance.myRating}</span>
-            </div>
-          )}
-          {fragrance.priority && (
-            <span className={`px-2 py-1 rounded text-xs ${
-              fragrance.priority === 'High' ? 'bg-red-100 text-red-700' :
-              fragrance.priority === 'Medium' ? 'bg-orange-100 text-orange-700' :
-              'bg-green-100 text-green-700'
-            }`}>
-              {fragrance.priority}
-            </span>
-          )}
-        </div>
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    doc.text(`My Wardrobe: ${activeTab}`, 14, 15);
+    autoTable(doc, {
+      head: [['Name', 'Brand', 'Category', 'Rating']],
+      body: processedData.items.map(i => [i.name, i.brand, i.subcategory, i.rating || '-']),
+      startY: 20
+    });
+    doc.save('wardrobe.pdf');
+  };
 
-        <AccordTags accords={fragrance.accords} className="mb-4" />
-
-        {fragrance.notes && (
-          <p className="text-gray-600 text-sm mb-4 italic">"{fragrance.notes}"</p>
-        )}
-
-        <div className="flex justify-between items-center text-xs text-gray-500">
-          <span>Added: {fragrance.dateAdded}</span>
-          <button 
-            onClick={() => handleSelectFragrance(fragrance.id)}
-            className={`px-3 py-1 rounded-full border transition-colors ${
-              selectedFragrances.includes(fragrance.id)
-                ? 'bg-green-500 text-white border-transparent'
-                : 'text-gray-700 border-green-200 hover:bg-green-50'
-            }`}
-          >
-            {selectedFragrances.includes(fragrance.id) ? 'Selected' : 'Select'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderFragranceRow = (fragrance: any) => (
-    <div 
-      key={fragrance.id}
-      className="flex items-center justify-between p-4 glass-card rounded-lg hover:shadow-md transition-all"
-    >
-      <div className="flex items-center space-x-4">
-        <div className="w-12 h-12 rounded bg-gradient-to-br from-green-100 to-orange-100 flex items-center justify-center">
-          <Sparkles className="w-6 h-6 text-green-500" />
-        </div>
-        <div>
-          <h3 className="font-medium text-gray-900">{fragrance.name}</h3>
-          <p className="text-sm text-gray-600">{fragrance.brand}</p>
-          <div className="text-xs text-gray-500">{fragrance.family}</div>
-        </div>
-      </div>
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center">
-          <Star className="w-4 h-4 text-orange-400 fill-current" />
-          <span className="ml-1 text-gray-900">{fragrance.rating}</span>
-        </div>
-        {fragrance.myRating && (
-          <div className="flex items-center">
-            <span className="text-gray-600">My:</span>
-            <Star className="w-4 h-4 text-green-400 fill-current ml-1" />
-            <span className="ml-1 text-gray-900">{fragrance.myRating}</span>
-          </div>
-        )}
-        {fragrance.priority && (
-          <span className={`px-2 py-1 rounded text-xs ${
-            fragrance.priority === 'High' ? 'bg-red-100 text-red-700' :
-            fragrance.priority === 'Medium' ? 'bg-orange-100 text-orange-700' :
-            'bg-green-100 text-green-700'
-          }`}>
-            {fragrance.priority}
-          </span>
-        )}
-      </div>
-      <div className="flex items-center space-x-2">
-        <button className="p-2 rounded-full hover:bg-green-50 transition-colors">
-          <Edit className="w-4 h-4 text-gray-600" />
-        </button>
-        <button className="p-2 rounded-full hover:bg-red-50 transition-colors">
-          <Trash2 className="w-4 h-4 text-red-500" />
-        </button>
-        <button 
-          onClick={() => handleSelectFragrance(fragrance.id)}
-          className={`px-3 py-1 rounded-full border transition-colors ${
-            selectedFragrances.includes(fragrance.id)
-              ? 'bg-green-500 text-white border-transparent'
-              : 'text-gray-700 border-green-200 hover:bg-green-50'
-          }`}
-        >
-          {selectedFragrances.includes(fragrance.id) ? 'Selected' : 'Select'}
-        </button>
-      </div>
-    </div>
-  );
+  if (loading) return <div className="min-h-screen flex justify-center items-center bg-[#FAFFF5]"><Loader2 className="animate-spin text-green-600" /></div>;
 
   return (
     <div className="min-h-screen relative overflow-hidden py-8" style={{ backgroundColor: '#FAFFF5' }}>
-      {/* Animated Background Elements */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-20 left-10 w-96 h-96 bg-green-200/10 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-200/10 rounded-full blur-3xl animate-pulse animate-delay-2" />
-        
-        <div className="absolute top-32 right-20 animate-float">
-          <Leaf size={20} className="text-green-300/20" />
-        </div>
-        <div className="absolute bottom-40 left-32 animate-float animate-delay-3">
-          <Flower2 size={18} className="text-orange-300/20" />
-        </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 relative z-10">
-
-        {/* Header - BOTANICAL THEME */}
+        
         <div className="glass-card rounded-2xl shadow-sm p-8 mb-8 relative overflow-hidden">
-          <div className="absolute top-0 right-0 opacity-5">
-            <Trees size={150} />
-          </div>
+          <div className="absolute top-0 right-0 opacity-5"><Trees size={150} /></div>
           <div className="flex items-center justify-between relative z-10">
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-orange-500 bg-clip-text text-transparent mb-4">My Wardrobe</h1>
-              <p className="text-gray-600">
-                Manage your fragrance collection across different categories
-              </p>
+              <p className="text-gray-600">Manage your collection, export data, and track your journey.</p>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-orange-500 bg-clip-text text-transparent">{allFragrances.length}</div>
-              <div className="text-gray-600 text-sm">Total Fragrances</div>
+              <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-orange-500 bg-clip-text text-transparent">{entries.length}</div>
+              <div className="text-gray-600 text-sm">Total Bottles</div>
             </div>
           </div>
         </div>
 
-        {/* Category Tabs - BOTANICAL THEME */}
         <div className="glass-card rounded-2xl shadow-sm mb-8">
           <div className="border-b border-green-100">
-            <div className="flex space-x-8 px-8 py-4">
-              {Object.keys(categories).map(category => (
-                <button
-                  key={category}
-                  onClick={() => setActiveCategory(category)}
-                  className={`pb-2 border-b-2 font-medium text-sm transition-colors duration-300 ${
-                    activeCategory === category
-                      ? 'border-green-500 text-green-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-800'
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
+            <div className="flex flex-col md:flex-row md:items-center px-8 py-4 gap-4">
+              <div className="flex space-x-8">
+                {['My Bottles', 'Wishlist', 'Past Bottles'].map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`pb-2 border-b-2 font-medium text-sm transition-colors ${
+                      activeTab === tab ? 'border-green-500 text-green-600' : 'border-transparent text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+
               <div className="ml-auto flex space-x-2">
-                <button 
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-green-100 text-green-600' : 'hover:bg-green-50'} transition-colors`}
-                  title="Grid View"
-                >
-                  <Grid className="w-4 h-4" />
-                </button>
-                <button 
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-green-100 text-green-600' : 'hover:bg-green-50'} transition-colors`}
-                  title="List View"
-                >
-                  <List className="w-4 h-4" />
-                </button>
-                <button className="p-2 rounded-lg hover:bg-green-50 transition-colors" title="Filters">
-                  <Filter className="w-4 h-4" />
-                </button>
+                <button onClick={handleExportCSV} className="p-2 rounded-lg hover:bg-green-50 text-gray-600" title="Export CSV"><FileText className="w-4 h-4" /></button>
+                <button onClick={handleExportPDF} className="p-2 rounded-lg hover:bg-green-50 text-gray-600" title="Export PDF"><Download className="w-4 h-4" /></button>
+                <div className="w-px bg-green-200 h-6 mx-2 self-center"></div>
+                <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-green-100 text-green-600' : 'hover:bg-green-50'}`}><Grid className="w-4 h-4" /></button>
+                <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-green-100 text-green-600' : 'hover:bg-green-50'}`}><List className="w-4 h-4" /></button>
               </div>
             </div>
           </div>
 
-          {/* Subcategory Bar */}
-          <div className="px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex space-x-4 overflow-x-auto whitespace-nowrap">
-                {categories[activeCategory as keyof typeof categories].subcategories.map((subcat: string) => (
-                  <button 
-                    key={subcat}
-                    className="px-4 py-2 rounded-full border border-green-200 text-gray-700 hover:bg-green-50 transition-colors"
-                  >
-                    {subcat}
-                  </button>
+          <div className="px-8 py-4 bg-white/50">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap gap-2">
+                {processedData.subcats.length > 0 ? processedData.subcats.map(sub => (
+                  <span key={sub} className="px-3 py-1 rounded-full bg-green-50 border border-green-100 text-xs text-green-800">
+                    {sub}
+                  </span>
+                )) : <span className="text-xs text-gray-400 italic">No items yet.</span>}
+              </div>
+              {processedData.subcats.length > 0 && (
+                <button 
+                  onClick={() => setShowSubcatModal(true)}
+                  className="text-xs font-medium text-orange-600 hover:text-orange-700 underline"
+                >
+                  Manage Subcategories
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <div className="lg:col-span-3">
+            {processedData.items.length === 0 ? (
+               <div className="text-center py-12 glass-card rounded-xl">
+                 <Leaf className="w-12 h-12 text-green-200 mx-auto mb-3" />
+                 <p className="text-gray-500">Your {activeTab} is empty.</p>
+                 <button onClick={() => { setSelectedCategory(activeTab); setShowAddModal(true); }} className="mt-4 text-green-600 font-medium hover:underline">Add your first perfume</button>
+               </div>
+            ) : (
+              // ✨ SUPER COMPACT GRID: 4 cols mobile, 6 cols sm, 8 cols md, 10 cols lg
+              <div className={viewMode === 'grid' ? "grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2" : "space-y-4"}>
+                {processedData.items.map(item => (
+                  <div key={item.id} className={`glass-card rounded-lg overflow-hidden hover:shadow-md transition-all group flex flex-col ${viewMode === 'list' ? 'md:flex-row md:items-center md:p-4 md:gap-4' : ''}`}>
+                    
+                    {/* IMAGE SECTION */}
+                    <div className={`${viewMode === 'grid' ? 'aspect-square w-full' : 'w-full h-48 md:w-24 md:h-24 md:rounded-lg'} bg-white relative flex items-center justify-center overflow-hidden shrink-0 border-b md:border-b-0 md:border-r border-green-50`}>
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="w-full h-full object-contain p-1" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-green-50">
+                           <Sparkles className="w-4 h-4 text-green-200" />
+                        </div>
+                      )}
+                      {viewMode === 'grid' && (
+                        <div className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => handleDelete(item.perfumeId)} className="p-1 bg-white/90 backdrop-blur-sm rounded-full text-red-500 hover:bg-red-50 shadow-sm">
+                            <Trash2 className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={`flex-1 flex flex-col justify-between p-1.5 ${viewMode === 'list' ? 'p-4 md:p-0 md:flex-row md:items-center' : ''}`}>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/perfumes/${item.perfumeId}`} className="font-semibold text-gray-900 hover:text-green-600 block truncate text-[10px] sm:text-xs leading-tight">
+                          {item.name}
+                        </Link>
+                        <p className="text-[8px] text-gray-500 truncate">{item.brand}</p>
+                        
+                        <div className="flex items-center gap-1 mt-1">
+                           {item.rating > 0 && (
+                             <div className="flex items-center bg-orange-50 px-1 py-0.5 rounded">
+                               <Star className="w-2 h-2 fill-orange-400 text-orange-400 mr-0.5" />
+                               <span className="text-[9px] font-medium text-orange-700">{item.rating.toFixed(1)}</span>
+                             </div>
+                           )}
+                           {/* Hide subcategory pill in grid to save space */}
+                           {viewMode === 'list' && (
+                             <span className="text-[10px] uppercase tracking-wider px-2 py-1 bg-green-50 text-green-700 rounded-md font-medium">
+                               {item.subcategory}
+                             </span>
+                           )}
+                        </div>
+
+                        {/* ACCORDS: Limit to 2, very small */}
+                        {item.accords && item.accords.length > 0 && viewMode === 'grid' && (
+                          <div className="flex flex-wrap gap-0.5 mt-1">
+                            {item.accords.slice(0, 2).map((accord: any, idx: number) => {
+                              const accordName = typeof accord === 'string' ? accord : accord.name;
+                              const color = getAccordColor(accordName);
+                              
+                              return (
+                                <span 
+                                  key={idx} 
+                                  className="text-[7px] px-1 py-0 rounded-full font-medium shadow-sm text-white text-shadow-sm truncate max-w-[40px]"
+                                  style={{ backgroundColor: color }}
+                                >
+                                  {accordName}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                        
+                        {/* Full Accords for List View */}
+                        {item.accords && item.accords.length > 0 && viewMode === 'list' && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {item.accords.map((accord: any, idx: number) => {
+                              const accordName = typeof accord === 'string' ? accord : accord.name;
+                              const color = getAccordColor(accordName);
+                              return (
+                                <span key={idx} className="text-[10px] px-2 py-0.5 rounded-full font-medium shadow-sm text-white text-shadow-sm" style={{ backgroundColor: color }}>
+                                  {accordName}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {viewMode === 'list' && (
+                        <button onClick={() => handleDelete(item.perfumeId)} className="hidden md:block p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors shrink-0 ml-4">
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
-              <button
-                onClick={() => setShowSubcategoryModal(true)}
-                className="px-4 py-2 bg-gradient-to-r from-green-500 to-orange-500 text-white rounded-lg hover:shadow-lg transition-shadow"
+            )}
+          </div>
+
+          <div className="lg:col-span-1 space-y-6">
+            <div className="glass-card rounded-2xl p-6 shadow-sm sticky top-24">
+              <button 
+                onClick={() => {
+                  setSelectedCategory(activeTab); 
+                  setShowAddModal(true);
+                }}
+                className="w-full py-3 bg-gradient-to-r from-green-600 to-orange-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
               >
-                Manage Subcategories
+                <Plus className="w-5 h-5" /> Add Fragrance
               </button>
             </div>
           </div>
         </div>
 
-        {/* Content Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-3">
-            {viewMode === 'grid' ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                {categories[activeCategory as keyof typeof categories].fragrances.map((fragrance: any) => renderFragranceCard(fragrance))}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {categories[activeCategory as keyof typeof categories].fragrances.map((fragrance: any) => renderFragranceRow(fragrance))}
-              </div>
-            )}
-          </div>
-
-          {/* Sidebar - BOTANICAL THEME */}
-          <div className="lg:col-span-1">
-            <div className="glass-card rounded-2xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
-              <div className="space-y-3">
-                <button 
-                  onClick={() => setShowAddModal(true)}
-                  className="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-orange-500 text-white rounded-lg hover:shadow-lg transition-shadow"
-                >
-                  <Plus className="w-4 h-4 inline mr-2" />
-                  Add Fragrance
-                </button>
-                <button className="w-full px-4 py-2 border border-green-200 rounded-lg hover:bg-green-50 transition-colors">
-                  Export Wardrobe
-                </button>
-                <button className="w-full px-4 py-2 border border-green-200 rounded-lg hover:bg-green-50 transition-colors">
-                  Import from CSV
-                </button>
-              </div>
-
-              <div className="mt-6">
-                <h4 className="text-sm font-medium text-gray-800 mb-2">Summary</h4>
-                <div className="space-y-2 text-sm text-gray-600">
-                  <div className="flex justify-between"><span>Total</span><span>{allFragrances.length}</span></div>
-                  <div className="flex justify-between"><span>My Bottles</span><span>{categories['My Bottles'].fragrances.length}</span></div>
-                  <div className="flex justify-between"><span>Wishlist</span><span>{categories['Wishlist'].fragrances.length}</span></div>
-                  <div className="flex justify-between"><span>Past Bottles</span><span>{categories['Past Bottles'].fragrances.length}</span></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Info Card */}
-            <div className="mt-6 bg-gradient-to-br from-green-50 to-orange-50 rounded-2xl p-6 border border-green-200">
-              <h4 className="text-lg font-semibold text-green-700 mb-2 flex items-center gap-2">
-                <Leaf className="w-5 h-5" />
-                Wardrobe Tips
-              </h4>
-              <p className="text-green-700 text-sm">
-                Organize your wardrobe with subcategories like Daily Wear, Office, and Special Occasions to find the perfect scent faster.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Add Modal - BOTANICAL THEME */}
+        {/* Modals (Add & Rename) - Unchanged logic, just keeping file complete */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="glass-card rounded-xl p-6 w-full max-w-md relative overflow-hidden">
-              <div className="absolute top-0 right-0 opacity-5">
-                <Flower2 size={100} />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+              <div className="p-6 bg-gradient-to-r from-green-50 to-orange-50 border-b border-green-100 flex justify-between items-center">
+                <h3 className="font-semibold text-gray-800">Add to Wardrobe</h3>
+                <button onClick={() => setShowAddModal(false)}><X className="w-5 h-5 text-gray-500" /></button>
               </div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 relative z-10">Add Fragrance</h3>
-              <div className="space-y-3 relative z-10">
-                <input className="w-full p-2 border border-green-200 rounded focus:outline-none focus:ring-2 focus:ring-green-400 bg-white/80" placeholder="Name" />
-                <input className="w-full p-2 border border-green-200 rounded focus:outline-none focus:ring-2 focus:ring-green-400 bg-white/80" placeholder="Brand" />
-                <select className="w-full p-2 border border-green-200 rounded focus:outline-none focus:ring-2 focus:ring-green-400 bg-white/80">
-                  <option>My Bottles</option>
-                  <option>Wishlist</option>
-                  <option>Past Bottles</option>
-                </select>
-                <div className="flex justify-end space-x-2">
-                  <button onClick={() => setShowAddModal(false)} className="px-4 py-2 border border-green-200 rounded hover:bg-green-50">Cancel</button>
-                  <button className="px-4 py-2 bg-gradient-to-r from-green-500 to-orange-500 text-white rounded">Add</button>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Search Perfume</label>
+                  {newPerfume ? (
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                       <div className="flex items-center gap-2 overflow-hidden">
+                          {newPerfume.image && <img src={newPerfume.image} className="w-6 h-6 rounded-full object-cover" />}
+                          <span className="font-medium text-green-900 truncate">{newPerfume.name}</span>
+                       </div>
+                       <button onClick={() => setNewPerfume(null)} className="text-xs text-red-500 hover:underline flex-shrink-0 ml-2">Change</button>
+                    </div>
+                  ) : (
+                    <WardrobeSearch onSelect={(item) => setNewPerfume(item)} />
+                  )}
                 </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
+                  <select 
+                    className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    value={selectedCategory}
+                    onChange={(e) => {
+                      setSelectedCategory(e.target.value);
+                      setSelectedSubcat(''); 
+                      setIsCustomSubcat(false);
+                    }}
+                  >
+                    <option value="My Bottles">My Bottles</option>
+                    <option value="Wishlist">Wishlist</option>
+                    <option value="Past Bottles">Past Bottles</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Subcategory</label>
+                  {!isCustomSubcat ? (
+                    <div className="flex gap-2">
+                       <select 
+                          className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                          value={selectedSubcat}
+                          onChange={(e) => {
+                            if (e.target.value === 'CUSTOM') setIsCustomSubcat(true);
+                            else setSelectedSubcat(e.target.value);
+                          }}
+                        >
+                          <option value="">Select...</option>
+                          {getSubcatsForDropdown(selectedCategory).map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                          <option value="CUSTOM" className="font-bold text-green-600">+ Create New...</option>
+                        </select>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input 
+                        type="text"
+                        autoFocus
+                        className="w-full p-2 border border-green-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                        placeholder="Type new name..."
+                        value={selectedSubcat}
+                        onChange={(e) => setSelectedSubcat(e.target.value)}
+                      />
+                      <button onClick={() => setIsCustomSubcat(false)} className="text-xs text-gray-500 hover:text-red-500">Cancel</button>
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                   <label className="block text-xs font-medium text-gray-700 mb-1">Private Notes</label>
+                   <textarea 
+                      className="w-full p-2 border border-gray-200 rounded-lg text-sm h-20 focus:ring-2 focus:ring-green-500 outline-none"
+                      placeholder="Notes..."
+                      value={newNotes}
+                      onChange={(e) => setNewNotes(e.target.value)}
+                   />
+                </div>
+
+                <button 
+                  onClick={handleAdd}
+                  disabled={!newPerfume}
+                  className="w-full py-3 bg-green-600 text-white rounded-xl font-medium disabled:opacity-50 hover:bg-green-700 transition-colors"
+                >
+                  Save
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Subcategory Modal - BOTANICAL THEME */}
-        {showSubcategoryModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="glass-card rounded-xl p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Manage Subcategories</h3>
-              <div className="space-y-3">
-                <input className="w-full p-2 border border-green-200 rounded focus:outline-none focus:ring-2 focus:ring-green-400 bg-white/80" placeholder="Add new subcategory" />
-                <div className="flex justify-end space-x-2">
-                  <button onClick={() => setShowSubcategoryModal(false)} className="px-4 py-2 border border-green-200 rounded hover:bg-green-50">Close</button>
-                  <button className="px-4 py-2 bg-gradient-to-r from-green-500 to-orange-500 text-white rounded">Save</button>
+        {showSubcatModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+             <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+                <h3 className="text-lg font-semibold mb-2">Rename Categories</h3>
+                <div className="space-y-3">
+                   <div>
+                     <label className="text-xs text-gray-700">Select Category</label>
+                     <select 
+                        className="w-full p-2 border rounded-lg mt-1"
+                        onChange={(e) => setRenameMap({...renameMap, old: e.target.value})}
+                     >
+                        <option value="">Select...</option>
+                        {processedData.subcats.map(s => <option key={s} value={s}>{s}</option>)}
+                     </select>
+                   </div>
+                   <div>
+                     <label className="text-xs text-gray-700">New Name</label>
+                     <input 
+                        className="w-full p-2 border rounded-lg mt-1"
+                        placeholder="New Name"
+                        onChange={(e) => setRenameMap({...renameMap, new: e.target.value})}
+                     />
+                   </div>
+                   <div className="flex gap-2 mt-4">
+                     <button onClick={() => setShowSubcatModal(false)} className="flex-1 py-2 border rounded-lg">Cancel</button>
+                     <button onClick={handleRenameSubcat} className="flex-1 py-2 bg-green-600 text-white rounded-lg">Update</button>
+                   </div>
                 </div>
-              </div>
-            </div>
+             </div>
           </div>
         )}
 

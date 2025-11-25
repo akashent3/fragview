@@ -112,6 +112,28 @@ export async function generatePerfumeSlug(doc: PerfumeDoc): Promise<string> {
   return doc.slug || perfumeSlug(doc.brand_name, doc.variant_name);
 }
 
+// NEW FUNCTION: Fetch multiple perfumes by their slugs
+export async function getPerfumesBySlugs(slugs: string[]) {
+  if (!slugs || slugs.length === 0) return [];
+  
+  const client = await clientPromise;
+  const db = client.db(DB_NAME);
+  const col = db.collection<PerfumeDoc>(PERFUMES_COLLECTION);
+
+  const perfumes = await col.find({
+    slug: { $in: slugs }
+  }).project({
+    variant_name: 1,
+    brand_name: 1,
+    slug: 1,
+    image: 1,
+    rating: 1,
+    gender: 1
+  }).toArray();
+
+  return perfumes;
+}
+
 function escapeRegex(str: string) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

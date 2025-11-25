@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useTransition, useRef } from 'react';
+import React, { useState, useTransition, useRef, useCallback } from 'react';
 import { Star, Plus, LogIn, Leaf, Flower2, Droplets, Wind, Sparkles, Camera } from 'lucide-react';
 import NotesPyramid from '@/components/ui/NotesPyramid';
 import AccordTags from '@/components/ui/AccordTags';
@@ -7,6 +7,16 @@ import SimilarFragrances from '@/components/ui/SimilarFragrances';
 import ReviewsSummary from '@/components/ui/ReviewsSummary';
 import { useAuthModal } from '@/components/auth/AuthModal';
 import { submitReview } from './actions';
+import { debounce } from '@/lib/utils'; 
+
+// INLINE DEBOUNCE HELPER
+function debounceFunc<T extends (...args: any[]) => any>(func: T, wait: number) {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
 
 interface PerfumeDoc {
   _id: string;
@@ -89,28 +99,31 @@ const getAccordColor = (accordName: string): string => {
 };
 
 function getSillageLabel(value: number): string {
-  if (value <= 1.25) return 'Weak';
-  if (value <= 2.5) return 'Moderate';
+  if (value <= 1.5) return 'Intimate';
+  if (value <= 3.5) return 'Moderate';
   return 'Strong';
 }
 
-function getLongevityLabel(value: number): string {
-  if (value === 0) return '0 hrs';
-  if (value <= 1) return '2 hrs';
-  if (value <= 2) return '4 hrs';
-  if (value <= 3) return '6 hrs';
-  if (value <= 4) return '8 hrs';
-  if (value < 5) return '10 hrs';
-  return '12+ hrs';
+// UPDATED LOGIC: Continuous linear mapping
+// Slider 0-5 maps to 0-12 Hours
+// Formula: Hours = Value * 2.4
+// Examples: 2.5 * 2.4 = 6 Hrs (Center). 5 * 2.4 = 12 Hrs (End).
+function getLongevityHrsLabel(value: number): string {
+    const safeValue = Math.max(0, Math.min(5, value));
+    
+    if (safeValue >= 4.9) return '12+ hrs'; 
+    
+    const hours = safeValue * 2.4;
+    
+    // Use parseFloat to remove trailing decimals like 6.0 -> 6
+    return `${parseFloat(hours.toFixed(1))} hrs`;
 }
 
-function getSillagePosition(value: number): number {
+function getPosition(value: number): number {
   return (value / 5) * 100;
 }
 
-function getLongevityPosition(value: number): number {
-  return (value / 5) * 100;
-}
+// --- MAIN COMPONENT ---
 
 export default function PerfumeDetailClient({
   perfume,
@@ -122,10 +135,12 @@ export default function PerfumeDetailClient({
   slug,
 }: Props) {
   const { open } = useAuthModal();
-  const [userRating, setUserRating] = useState<number>(rating);
-  const [userLongevity, setUserLongevity] = useState<number>(perfume.longevity || 0);
-  const [userSillage, setUserSillage] = useState<number>(perfume.sillage || 0);
+  
+  const [userRating, setUserRating] = useState<number>(0); 
+  const [userLongevity, setUserLongevity] = useState<number>(0);
+  const [userSillage, setUserSillage] = useState<number>(0);
   const [reviewText, setReviewText] = useState('');
+  
   const [pending, startTransition] = useTransition();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -147,31 +162,41 @@ export default function PerfumeDetailClient({
   const middleNotes = perfume.pyramids?.middle?.map((n) => ({ name: n })) || [];
   const baseNotes = perfume.pyramids?.base?.map((n) => ({ name: n })) || [];
 
-  const handleRatingChange = async (newRating: number) => {
+  // --- DEBOUNCED SUBMIT HANDLER ---
+  const debouncedSubmit = useCallback(
+    debounceFunc((field: string, value: number) => {
+      const formData = new FormData();
+      formData.append(field, String(value));
+      submitReview(slug, formData).then((res) => {
+        if (!res.ok) console.error("Auto-save failed:", res.error);
+      });
+    }, 500), 
+    [slug]
+  );
+
+  const handleSliderChange = (field: 'longevity' | 'sillage', value: number) => {
     if (!isSignedIn) {
-      open({ mode: 'signin', reason: 'Sign in to rate this perfume', callbackUrl: `/perfumes/${slug}` });
-      return;
+        open({ mode: 'signin', reason: `Sign in to rate`, callbackUrl: `/perfumes/${slug}` });
+        return;
     }
-    setUserRating(newRating);
-    console.log('Saving rating:', newRating);
+
+    if (field === 'longevity') setUserLongevity(value);
+    if (field === 'sillage') setUserSillage(value);
+
+    debouncedSubmit(field, value);
   };
 
-  const handleLongevityChange = async (value: number) => {
+  const handleRatingChange = (value: number) => {
     if (!isSignedIn) {
-      open({ mode: 'signin', reason: 'Sign in to rate this perfume', callbackUrl: `/perfumes/${slug}` });
-      return;
+        open({ mode: 'signin', reason: `Sign in to rate`, callbackUrl: `/perfumes/${slug}` });
+        return;
     }
-    setUserLongevity(value);
-    console.log('Saving longevity:', value);
-  };
-
-  const handleSillageChange = async (value: number) => {
-    if (!isSignedIn) {
-      open({ mode: 'signin', reason: 'Sign in to rate this perfume', callbackUrl: `/perfumes/${slug}` });
-      return;
-    }
-    setUserSillage(value);
-    console.log('Saving sillage:', value);
+    setUserRating(value);
+    const formData = new FormData();
+    formData.append('rating', String(value));
+    startTransition(() => {
+        submitReview(slug, formData);
+    });
   };
 
   const handleSnapshot = async () => {
@@ -252,31 +277,31 @@ export default function PerfumeDetailClient({
         <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">RATING</p>
         <div style="display: flex; gap: 5px; margin-bottom: 12px; justify-content: center;">
           ${[1,2,3,4,5].map(star => 
-            `<span style="color: ${star <= Math.round(userRating) ? '#fb923c' : '#d1d5db'}; font-size: 26px;">★</span>`
+            `<span style="color: ${star <= Math.round(userRating || rating) ? '#fb923c' : '#d1d5db'}; font-size: 26px;">★</span>`
           ).join('')}
         </div>
         <p style="font-size: 36px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">
-          ${userRating.toFixed(1)}
+          ${(userRating || rating).toFixed(1)}
         </p>
       </div>
 
       <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
         <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">SILLAGE</p>
         <div style="height: 14px; background: #e5e7eb; border-radius: 7px; overflow: hidden; margin-bottom: 12px;">
-          <div style="height: 100%; width: ${getSillagePosition(userSillage)}%; background: linear-gradient(to right, #10b981, #f97316);"></div>
+          <div style="height: 100%; width: ${getPosition(userSillage || perfume.sillage || 0)}%; background: linear-gradient(to right, #10b981, #f97316);"></div>
         </div>
         <p style="font-size: 28px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">
-          ${getSillageLabel(userSillage)}
+          ${getSillageLabel(userSillage || perfume.sillage || 0)}
         </p>
       </div>
 
       <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
         <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">LONGEVITY</p>
         <div style="height: 14px; background: #e5e7eb; border-radius: 7px; overflow: hidden; margin-bottom: 12px;">
-          <div style="height: 100%; width: ${getLongevityPosition(userLongevity)}%; background: linear-gradient(to right, #10b981, #f97316);"></div>
+          <div style="height: 100%; width: ${getPosition(userLongevity || perfume.longevity || 0)}%; background: linear-gradient(to right, #10b981, #f97316);"></div>
         </div>
         <p style="font-size: 28px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">
-          ${getLongevityLabel(userLongevity)}
+          ${getLongevityHrsLabel(userLongevity || perfume.longevity || 0)}
         </p>
       </div>
     </div>
@@ -423,15 +448,24 @@ export default function PerfumeDetailClient({
   async function handleSubmitReview(formData: FormData) {
     setErrorMessage(null);
     setSuccessMessage(null);
+    
+    if (!isSignedIn) {
+        open({ mode: 'signin', reason: 'Sign in to review', callbackUrl: `/perfumes/${slug}` });
+        return;
+    }
+
     startTransition(async () => {
-      formData.set('rating', String(userRating));
-      formData.set('longevity', String(userLongevity));
-      formData.set('sillage', String(userSillage));
+      // Include current slider states in the text review if set
+      if (userRating > 0) formData.set('rating', String(userRating));
+      if (userLongevity > 0) formData.set('longevity', String(userLongevity));
+      if (userSillage > 0) formData.set('sillage', String(userSillage));
+      
       const result = await submitReview(slug, formData);
       if (!result.ok) setErrorMessage(result.error || 'Failed to submit review.');
       else {
         setSuccessMessage('Review submitted successfully!');
         setReviewText('');
+        // Reset local state if you want, or keep it visible
       }
     });
   }
@@ -563,87 +597,118 @@ export default function PerfumeDetailClient({
         {/* RATINGS SECTION */}
         <div className="glass-card rounded-xl p-5 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {/* 1. STAR RATING */}
             <div className="space-y-2">
               <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Overall Rating</h3>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 cursor-pointer">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
                     onClick={() => handleRatingChange(star)}
-                    className={`transition-all ${isSignedIn ? 'cursor-pointer hover:scale-110' : 'cursor-pointer'}`}
+                    type="button"
+                    className="transition-transform hover:scale-110 focus:outline-none"
                   >
-                    <Star className={`w-7 h-7 ${star <= Math.round(userRating) ? 'text-orange-400 fill-orange-400' : 'text-gray-300'}`} />
+                    <Star 
+                        className={`w-7 h-7 ${star <= Math.round(userRating || rating) ? 'text-orange-400 fill-orange-400' : 'text-gray-300'}`} 
+                    />
                   </button>
                 ))}
               </div>
-              <p className="text-xl font-bold text-gray-800">{userRating.toFixed(1)}</p>
-              <p className="text-xs text-gray-600">Based on {reviewCount} reviews</p>
+              <div className="flex justify-between items-end">
+                 <p className="text-xl font-bold text-gray-800">{(userRating || rating).toFixed(1)}</p>
+                 <p className="text-xs text-gray-600">{reviewCount} votes</p>
+              </div>
             </div>
 
+            {/* 2. SILLAGE SLIDER */}
             <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Wind className="w-4 h-4 text-green-600" />
-                <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Sillage</h3>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                    <Wind className="w-4 h-4 text-green-600" />
+                    <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Sillage</h3>
+                </div>
               </div>
-              <div className="relative pt-4 pb-1">
-                <div className="h-2 bg-gray-200 rounded-full relative">
-                  <div className="h-full bg-gradient-to-r from-green-500 to-orange-500 rounded-full" style={{ width: `${getSillagePosition(userSillage)}%` }} />
-                  <div className="absolute top-0 left-[25%] w-0.5 h-2 bg-gray-400" />
-                  <div className="absolute top-0 left-[50%] w-0.5 h-2 bg-gray-400" />
-                  <div className="absolute top-0 left-[75%] w-0.5 h-2 bg-gray-400" />
-                  <input
+              
+              <div className="relative h-6 flex items-center">
+                <div className="absolute w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                   <div 
+                     className="h-full bg-gradient-to-r from-green-500 to-orange-500" 
+                     style={{ width: `${getPosition(userSillage || perfume.sillage || 0)}%` }} 
+                   />
+                </div>
+                {/* Invisible Range Input on top */}
+                <input
                     type="range"
                     min="0"
                     max="5"
-                    step="0.1"
-                    value={userSillage}
-                    onChange={(e) => handleSillageChange(parseFloat(e.target.value))}
-                    className="absolute top-0 left-0 w-full h-2 opacity-0 cursor-pointer"
-                  />
-                  <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-2 border-orange-500 rounded-full shadow-md pointer-events-none" style={{ left: `calc(${getSillagePosition(userSillage)}% - 6px)` }} />
-                </div>
-                <div className="flex justify-between text-xs text-gray-600 mt-1">
-                  <span>Weak</span>
-                  <span>Moderate</span>
-                  <span>Strong</span>
-                </div>
+                    step="0.1" // ✅ Continuous movement
+                    value={userSillage || perfume.sillage || 0}
+                    onChange={(e) => handleSliderChange('sillage', parseFloat(e.target.value))}
+                    className="absolute w-full h-full opacity-0 cursor-pointer z-10"
+                />
+                {/* Custom Thumb (visual only) */}
+                <div 
+                    className="absolute h-4 w-4 bg-white border-2 border-orange-500 rounded-full shadow pointer-events-none transition-none"
+                    style={{ left: `calc(${getPosition(userSillage || perfume.sillage || 0)}% - 8px)` }}
+                />
               </div>
-              <p className="text-lg font-bold text-gray-800">{getSillageLabel(userSillage)}</p>
+              <div className="flex justify-between items-center mt-1">
+                  <span className="text-[10px] text-gray-400 uppercase font-medium">Intimate</span>
+                  <span className="text-[10px] text-gray-400 uppercase font-medium">Moderate</span>
+                  <span className="text-[10px] text-gray-400 uppercase font-medium">Strong</span>
+              </div>
+              {/* CURRENT VALUE BELOW LABELS */}
+              <div className="mt-1 text-left">
+                <span className="text-sm font-bold text-gray-800 uppercase">{getSillageLabel(userSillage || perfume.sillage || 0)}</span>
+              </div>
             </div>
 
+            {/* 3. LONGEVITY SLIDER */}
             <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Droplets className="w-4 h-4 text-orange-600" />
-                <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Longevity</h3>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                    <Droplets className="w-4 h-4 text-orange-600" />
+                    <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Longevity</h3>
+                </div>
               </div>
-              <div className="relative pt-4 pb-1">
-                <div className="h-2 bg-gray-200 rounded-full relative">
-                  <div className="h-full bg-gradient-to-r from-green-500 to-orange-500 rounded-full" style={{ width: `${getLongevityPosition(userLongevity)}%` }} />
-                  <div className="absolute top-0 left-[20%] w-0.5 h-2 bg-gray-400" />
-                  <div className="absolute top-0 left-[40%] w-0.5 h-2 bg-gray-400" />
-                  <div className="absolute top-0 left-[60%] w-0.5 h-2 bg-gray-400" />
-                  <div className="absolute top-0 left-[80%] w-0.5 h-2 bg-gray-400" />
-                  <input
+
+              <div className="relative h-6 flex items-center">
+                <div className="absolute w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                   <div 
+                     className="h-full bg-gradient-to-r from-green-500 to-orange-500" 
+                     style={{ width: `${getPosition(userLongevity || perfume.longevity || 0)}%` }} 
+                   />
+                </div>
+                <input
                     type="range"
                     min="0"
                     max="5"
-                    step="0.1"
-                    value={userLongevity}
-                    onChange={(e) => handleLongevityChange(parseFloat(e.target.value))}
-                    className="absolute top-0 left-0 w-full h-2 opacity-0 cursor-pointer"
-                  />
-                  <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-2 border-green-500 rounded-full shadow-md pointer-events-none" style={{ left: `calc(${getLongevityPosition(userLongevity)}% - 6px)` }} />
-                </div>
-                <div className="flex justify-between text-xs text-gray-600 mt-1">
-                  <span>2h</span>
-                  <span>4h</span>
-                  <span>6h</span>
-                  <span>8h</span>
-                  <span>10h</span>
-                  <span>12+h</span>
-                </div>
+                    step="0.1" // ✅ Continuous movement
+                    value={userLongevity || perfume.longevity || 0}
+                    onChange={(e) => handleSliderChange('longevity', parseFloat(e.target.value))}
+                    className="absolute w-full h-full opacity-0 cursor-pointer z-10"
+                />
+                <div 
+                    className="absolute h-4 w-4 bg-white border-2 border-green-500 rounded-full shadow pointer-events-none transition-none"
+                    style={{ left: `calc(${getPosition(userLongevity || perfume.longevity || 0)}% - 8px)` }}
+                />
               </div>
-              <p className="text-lg font-bold text-gray-800">{getLongevityLabel(userLongevity)}</p>
+              
+              <div className="flex justify-between text-[10px] text-gray-400 uppercase font-medium mt-1">
+                <span>0h</span>
+                <span>2h</span>
+                <span>4h</span>
+                <span>6h</span>
+                <span>8h</span>
+                <span>10h</span>
+                <span>12h+</span>
+              </div>
+              
+              {/* CURRENT VALUE BELOW LABELS */}
+              <div className="mt-1 text-left">
+                <span className="text-sm font-bold text-gray-800 uppercase">{getLongevityHrsLabel(userLongevity || perfume.longevity || 0)}</span>
+              </div>
             </div>
           </div>
         </div>

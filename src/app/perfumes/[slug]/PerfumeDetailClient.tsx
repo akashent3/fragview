@@ -50,6 +50,9 @@ interface ReviewLite {
   user: {
     username: string;
     image?: string | null;
+    xp: number;
+    level: string;
+    badges: string[];
   };
 }
 
@@ -61,6 +64,7 @@ interface Props {
   reviews: ReviewLite[];
   reviewCount: number;
   slug: string;
+  initialIsFollowing: boolean;
 }
 
 // Accord color mapping function
@@ -135,6 +139,7 @@ export default function PerfumeDetailClient({
   reviews,
   reviewCount,
   slug,
+  initialIsFollowing,
 }: Props) {
   const { open } = useAuthModal();
   
@@ -144,7 +149,7 @@ export default function PerfumeDetailClient({
   const [reviewText, setReviewText] = useState('');
   
   const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   
   const [pending, startTransition] = useTransition();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -232,9 +237,29 @@ export default function PerfumeDetailClient({
     });
   };
 
-  const toggleFollowThread = () => {
-    if (!isSignedIn) return open({ mode: 'signin', reason: 'Sign in to follow' });
+  const toggleFollowThread = async () => {
+    if (!isSignedIn) {
+      open({ mode: 'signin', reason: 'Sign in to follow' });
+      return;
+    }
+  
+    const prevState = isFollowing;
     setIsFollowing(!isFollowing);
+  
+    try {
+      const { toggleFollowThread: toggle } = await import('@/app/actions/thread');
+      const result = await toggle(slug);
+    
+      if (result.error) {
+        setIsFollowing(prevState);
+        console.error('Follow error:', result.error);
+      } else {
+        setIsFollowing(result.isFollowing);
+      }
+    } catch (error) {
+      setIsFollowing(prevState);
+      console.error('Follow error:', error);
+    }
   };
 
   const handleSnapshot = async () => {
@@ -694,40 +719,110 @@ export default function PerfumeDetailClient({
         {/* REVIEWS LIST */}
         <div className="glass-card rounded-xl p-5 shadow-sm">
           <h3 className="mb-4 text-xl font-bold text-gray-800">Community Reviews</h3>
+          {reviews.length === 0 && (
+            <p className="text-center py-10 text-gray-400">No reviews yet. Be the first to review!</p>
+          )}
           <div className="space-y-6">
             {reviews.map((r, i) => (
               <div key={i} className="border-b border-green-50 pb-6 last:border-0">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-2">
-                    {/* 🟢 UPDATED: User Avatar Logic */}
-                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs font-bold text-gray-500 overflow-hidden">
-                       {r.user.image ? (
-                         <img src={r.user.image} alt={r.user.username} className="w-full h-full object-cover" />
-                       ) : (
-                         <span>{r.user.username.charAt(0).toUpperCase()}</span>
-                       )}
-                    </div>
-                    <div>
-                      {/* 🟢 UPDATED: Username Display */}
-                      <p className="text-sm font-bold text-gray-900">@{r.user.username}</p> 
-                      <p className="text-[10px] text-gray-400">{new Date(r.createdAt).toLocaleDateString()}</p>
+                <div className="flex justify-between items-start mb-3">
+                  {/* 🟢 UPDATED: Clickable User Info with Badges */}
+                  <div className="flex items-start gap-3 flex-1">
+                    {/* Avatar - Clickable */}
+                    <a 
+                      href={`/u/${r.user.username}`}
+                      className="shrink-0 group"
+                    >
+                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm font-bold text-gray-500 overflow-hidden ring-2 ring-transparent group-hover:ring-green-400 transition-all">
+                        {r.user.image ? (
+                          <img src={r.user.image} alt={r.user.username} className="w-full h-full object-cover" />
+                        ) : (
+                          <span>{r.user.username.charAt(0).toUpperCase()}</span>
+                        )}
+                      </div>
+                    </a>
+            
+                    {/* User Info + Badges */}
+                    <div className="flex-1 min-w-0">
+                      {/* Username - Clickable */}
+                      <a 
+                        href={`/u/${r.user.username}`}
+                        className="text-sm font-bold text-gray-900 hover:text-green-600 transition-colors"
+                      >
+                        @{r.user.username}
+                      </a>
+              
+                      {/* Badges Row */}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        {/* Level Badge */}
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          r.user.level === 'Master' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white' :
+                          r.user.level === 'Expert' ? 'bg-gradient-to-r from-purple-400 to-pink-500 text-white' :
+                          r.user.level === 'Connoisseur' ? 'bg-gradient-to-r from-blue-400 to-cyan-500 text-white' :
+                          r.user.level === 'Enthusiast' ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white' :
+                          'bg-gray-200 text-gray-700'
+                        }`}>
+                          {r.user.level}
+                        </span>
+                
+                          {/* XP Display */}
+                          <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                          {r.user.xp} XP
+                        </span>
+                
+                        {/* Special Badges */}
+                        {r.user.badges.map((badge, idx) => (
+                          <span 
+                            key={idx} 
+                            className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gradient-to-r from-green-100 to-orange-100 text-gray-700 border border-green-200"
+                          >
+                            {badge === 'Early Adopter' && '🌱'}
+                            {badge === 'Active Reviewer' && '⭐'}
+                            {badge === 'Photo Contributor' && '📸'}
+                            {badge === 'Community Helper' && '🤝'}
+                            {badge}
+                          </span>
+                        ))}
+                      </div>
+              
+                      {/* Date */}
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        {new Date(r.createdAt).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          year: 'numeric' 
+                        })}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-orange-400 text-orange-400" />
+          
+                  {/* Rating */}
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    <Star className="w-4 h-4 fill-orange-400 text-orange-400" />
                     <span className="text-sm font-bold">{r.rating}</span>
+                    </div>
                   </div>
-                </div>
-                <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
+        
+                {/* Review Text */}
+                <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line mb-3">
                   {r.text}
                 </p>
+        
+                {/* Review Photos */}
                 {r.photos && r.photos.length > 0 && (
-                  <div className="flex gap-2 mt-3">
-                    {r.photos.map((p, idx) => (
-                      <img key={idx} src={p} className="w-20 h-20 object-cover rounded-lg border border-gray-100 cursor-pointer hover:scale-105 transition-transform" />
+                  <div className="flex gap-2 mt-3 mb-3">
+                  {r.photos.map((p, idx) => (
+                      <img 
+                        key={idx} 
+                        src={p} 
+                        className="w-20 h-20 object-cover rounded-lg border border-gray-100 cursor-pointer hover:scale-105 transition-transform" 
+                        alt={`Review photo ${idx + 1}`}
+                      />
                     ))}
                   </div>
                 )}
+        
+                {/* Action Buttons */}
                 <ReviewActionButtons 
                   reviewId={r.id} 
                   initialHelpfulCount={r.helpfulCount || 0} 

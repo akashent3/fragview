@@ -7,8 +7,8 @@ import { authOptions } from '@/lib/auth';
 export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
-  // Metadata generation doesn't need user context usually
-  const data = await loadPerfumeDetail(params.slug);
+  const session = await getServerSession(authOptions);
+  const data = await loadPerfumeDetail(params.slug, session?.user?.id);
   if (!data) return {};
   const { perfume, rating, reviewCount } = data;
   const title = `${perfume.variant_name} by ${perfume.brand_name} | FragView`;
@@ -49,17 +49,14 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 export default async function PerfumeDetailPage({ params }: { params: { slug: string } }) {
   const session = await getServerSession(authOptions);
   const currentUserId = session?.user?.id;
-
-  // Pass currentUserId to loader
-  const data = await loadPerfumeDetail(params.slug, currentUserId);
   
+  const data = await loadPerfumeDetail(params.slug, currentUserId);
   if (!data) return notFound();
 
   const isSignedIn = !!session?.user;
-  const canRate = isSignedIn; 
+  const canRate = isSignedIn;
 
-  // JSON-LD injection
-  const { perfume, rating, reviewCount } = data;
+  const { perfume, rating, reviewCount, reviews, isFollowingThread } = data;
   const url = `https://fragviewvercel.vercel.app/perfumes/${params.slug}`;
   const jsonLd: any = {
     '@context': 'https://schema.org',
@@ -97,9 +94,10 @@ export default async function PerfumeDetailPage({ params }: { params: { slug: st
           rating={data.rating}
           isSignedIn={isSignedIn}
           canRate={canRate}
-          reviews={data.reviews as any} // Type cast to handle generic array
+          reviews={data.reviews}
           reviewCount={data.reviewCount}
           slug={params.slug}
+          initialIsFollowing={isFollowingThread}
         />
       </div>
     </div>

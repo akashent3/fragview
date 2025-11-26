@@ -1,25 +1,42 @@
-import UserBadges from "@/components/gamification/UserBadges";
+import { loadPublicProfile } from './loaders';
+import { notFound, redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import PublicProfileClient from './PublicProfileClient';
 
-export default function PublicProfile({ params }: { params: { username: string } }) {
-  const user = { username: params.username, credibilityScore: 62 };
+export const revalidate = 60; // Revalidate every minute
+
+export async function generateMetadata({ params }: { params: { username: string } }) {
+  const data = await loadPublicProfile(params.username);
+  if (!data) return {};
+  
+  return {
+    title: `@${data.user.username} | FragView`,
+    description: data.user.bio || `View ${data.user.username}'s fragrance profile, reviews, and collection on FragView. `,
+  };
+}
+
+export default async function PublicProfilePage({ params }: { params: { username: string } }) {
+  const session = await getServerSession(authOptions);
+  const currentUserId = session?.user?. id;
+  
+  const data = await loadPublicProfile(params.username, currentUserId);
+  
+  if (!data) {
+    return notFound();
+  }
+  
+  // If viewing your own profile, redirect to /profile
+  if (data.privacy.isOwnProfile) {
+    redirect('/profile');
+  }
+
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
-      <header className="flex items-center gap-3">
-        <div className="h-14 w-14 rounded-full bg-muted" />
-        <div>
-          <h1 className="text-xl font-semibold">@{user.username}</h1>
-          <UserBadges user={user} />
-        </div>
-      </header>
-
-      <section>
-        <h2 className="mb-2 text-lg font-medium">Wardrobe</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="aspect-square rounded-lg border" />
-          ))}
-        </div>
-      </section>
+    <div className="min-h-screen bg-[#FAFFF5] py-8">
+      <PublicProfileClient 
+        profileData={data}
+        isSignedIn={!!session?. user}
+      />
     </div>
   );
 }

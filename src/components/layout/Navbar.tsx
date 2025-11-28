@@ -5,6 +5,7 @@ import { Search, Menu, X, User, ShoppingBag } from 'lucide-react';
 
 import TopbarActions from '@/components/layout/TopbarActions';
 import SearchAutocomplete from '@/components/common/SearchAutocomplete';
+import NotificationBell from '@/components/notifications/NotificationBell'; // 🆕 ADD THIS
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -31,7 +32,7 @@ const Navbar = () => {
               >
                 Home
               </Link>
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap">
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap pointer-events-none z-50">
                 Home Page
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900"></div>
               </div>
@@ -44,7 +45,7 @@ const Navbar = () => {
               >
                 Brands
               </Link>
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap">
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap pointer-events-none z-50">
                 Explore Brands
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900"></div>
               </div>
@@ -57,7 +58,7 @@ const Navbar = () => {
               >
                 Perfumes
               </Link>
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap">
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap pointer-events-none z-50">
                 Explore Perfumes
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900"></div>
               </div>
@@ -70,7 +71,7 @@ const Navbar = () => {
               >
                 Search
               </Link>
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap">
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap pointer-events-none z-50">
                 Advanced Search
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900"></div>
               </div>
@@ -84,7 +85,7 @@ const Navbar = () => {
             </div>
           </div>
 
-          {/* Right Section: Actions - REMOVED THEME TOGGLE */}
+          {/* Right Section: Actions */}
           <div className="hidden lg:flex items-center gap-3 flex-shrink-0">
             <div className="relative group flex items-center">
               <Link
@@ -94,11 +95,14 @@ const Navbar = () => {
               >
                 <ShoppingBag className="h-5 w-5" />
               </Link>
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap">
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap pointer-events-none z-50">
                 Virtual Wardrobe
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900"></div>
               </div>
             </div>
+
+            {/* 🆕 NOTIFICATION BELL - ADD THIS */}
+            <NotificationBell />
 
             <div className="relative group flex items-center">
               <Link
@@ -108,7 +112,7 @@ const Navbar = () => {
               >
                 <User className="h-5 w-5" />
               </Link>
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap">
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap pointer-events-none z-50">
                 Profile
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900"></div>
               </div>
@@ -117,7 +121,7 @@ const Navbar = () => {
             <TopbarActions />
           </div>
 
-          {/* Mobile menu button - REMOVED THEME TOGGLE */}
+          {/* Mobile menu button */}
           <div className="flex items-center lg:hidden ml-auto">
             <button
               onClick={() => setIsOpen((v) => !v)}
@@ -171,6 +175,14 @@ const Navbar = () => {
                 onClick={() => setIsOpen(false)}
               >
                 My Wardrobe
+              </Link>
+              {/* 🆕 ADD NOTIFICATIONS LINK FOR MOBILE */}
+              <Link 
+                href="/notifications" 
+                className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 transition-all duration-300 hover:bg-green-50 hover:text-green-600"
+                onClick={() => setIsOpen(false)}
+              >
+                Notifications
               </Link>
               <Link 
                 href="/profile" 

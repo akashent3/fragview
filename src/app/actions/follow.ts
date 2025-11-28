@@ -4,11 +4,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { notifyNewFollower } from '@/lib/notifications';
+import { createNotification } from '@/lib/notifications';
 
 export async function toggleFollow(targetUserId: string) {
   const session = await getServerSession(authOptions);
-  if (!session?. user) return { error: 'Not logged in' };
+  if (!session?.user) return { error: 'Not logged in' };
 
   const followerId = session.user.id;
 
@@ -18,7 +18,7 @@ export async function toggleFollow(targetUserId: string) {
 
   try {
     // Check if already following
-    const existing = await prisma. follow.findUnique({
+    const existing = await prisma.follow.findUnique({
       where: {
         followerId_followingId: {
           followerId,
@@ -32,6 +32,8 @@ export async function toggleFollow(targetUserId: string) {
       await prisma.follow.delete({
         where: { id: existing.id }
       });
+      
+      revalidatePath(`/u`);
       return { status: 'unfollowed' };
     } else {
       // Follow
@@ -42,16 +44,23 @@ export async function toggleFollow(targetUserId: string) {
         }
       });
 
-      // 🔔 SEND NOTIFICATION
-      const follower = await prisma. user.findUnique({
+      // 🔔 CREATE NOTIFICATION (in-app only)
+      const follower = await prisma.user.findUnique({
         where: { id: followerId },
         select: { username: true }
       });
 
       if (follower) {
-        await notifyNewFollower(targetUserId, follower.username);
+        await createNotification({
+          userId: targetUserId,
+          type: 'NEW_FOLLOWER',
+          message: `@${follower.username} started following you`,
+          link: `/u/${follower.username}`,
+          sendEmail: false, // In-app only
+        });
       }
 
+      revalidatePath(`/u`);
       return { status: 'followed' };
     }
   } catch (error) {

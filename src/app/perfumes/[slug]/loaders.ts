@@ -35,7 +35,7 @@ const XP_RULES = {
 const calculateProfileXP = (user: any) => {
   let score = 0;
   if (user.image) score += XP_RULES.PROFILE.PHOTO;
-  if (user.location) score += XP_RULES.PROFILE.LOCATION;
+  if (user.location) score += XP_RULES. PROFILE.LOCATION;
   if (user.bio) score += XP_RULES. PROFILE.BIO;
   if (user.favPerfumeIds && user.favPerfumeIds.length > 0) score += XP_RULES. PROFILE.FAV_PERFUMES;
   if (user.favNotes && user.favNotes.length > 0) score += XP_RULES.PROFILE.FAV_NOTES;
@@ -54,7 +54,7 @@ const calculateBadges = (user: any, stats: { reviewCount: number, photoReviewCou
 
   if (stats.reviewCount >= 50) badges.add('Active Reviewer');
   if (stats.photoReviewCount >= 25) badges.add('Photo Contributor');
-  if (stats.helpfulCount >= 100) badges.add('Community Helper');
+  if (stats.helpfulCount >= 100) badges. add('Community Helper');
 
   return Array.from(badges);
 };
@@ -68,9 +68,12 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
     new Set([slug, (perfume as any)._id, (perfume as any).slug]. filter(Boolean). map(String))
   );
 
-  // 1.  Fetch Reviews from Postgres (Including FULL User Data)
+  // 🆕 UPDATED: Fetch Reviews with Replies
   const prismaReviews = await prisma.review.findMany({
-    where: { OR: perfumeIdCandidates. map((v) => ({ perfumeId: v })) },
+    where: { 
+      OR: perfumeIdCandidates. map((v) => ({ perfumeId: v })),
+      parentId: null, // 🆕 Only fetch top-level reviews
+    },
     select: { 
       id: true,
       rating: true, 
@@ -80,10 +83,13 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
       sillage: true,
       helpfulCount: true,
       photos: true,
-      userId: true, // 🟢 ADDED: Need userId to calculate stats
-      // 🟢 FETCH FULL USER DATA
+      userId: true,
+      isEdited: true,      // 🆕 NEW
+      editedAt: true,      // 🆕 NEW
+      isDeleted: true,     // 🆕 NEW
       user: {
         select: {
+          id: true,         // 🆕 NEW
           username: true,
           image: true,
           experiencePoints: true,
@@ -97,7 +103,38 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
           createdAt: true,
         }
       },
-      helpful: currentUserId ?  {
+      // 🆕 NEW: Include nested replies
+      replies: {
+        select: {
+          id: true,
+          rating: true,
+          text: true,
+          createdAt: true,
+          isEdited: true,
+          editedAt: true,
+          isDeleted: true,
+          photos: true,
+          userId: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+              image: true,
+              experiencePoints: true,
+              badges: true,
+              favPerfumeIds: true,
+              favNotes: true,
+              favAccords: true,
+              favPerfumers: true,
+              bio: true,
+              location: true,
+              createdAt: true,
+            }
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      },
+      helpful: currentUserId ? {
         where: { userId: currentUserId },
         select: { id: true }
       } : false
@@ -113,14 +150,14 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
   }
 
   // --- AGGREGATION LOGIC ---
-  const mongoVotes = (perfume.votes || 0); 
+  const mongoVotes = (perfume. votes || 0); 
   const mongoRating = (perfume.rating || 0);
-  const mongoLongevity = (perfume. longevity || 0);
+  const mongoLongevity = (perfume.longevity || 0);
   const mongoSillage = (perfume.sillage || 0);
 
   const validRatings = prismaReviews.filter(r => r.rating > 0);
   const newRatingSum = validRatings.reduce((sum, r) => sum + r.rating, 0);
-  const newRatingCount = validRatings. length;
+  const newRatingCount = validRatings.length;
 
   const newLongevityReviews = prismaReviews.filter(r => r.longevity && r.longevity > 0);
   const newLongevitySum = newLongevityReviews.reduce((sum, r) => sum + (r.longevity || 0), 0);
@@ -147,55 +184,78 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
     ? ((mongoSillage * mongoVotes) + newSillageSum) / totalSillageVotes
     : 0;
 
-  // 3. Calculate XP, Level, and Badges for each reviewer
-  const reviews = await Promise.all(prismaReviews.map(async (r) => {
-    // Get user stats
+  // 🆕 Helper function to calculate user stats and process review/reply
+  const processUserData = async (userId: string, userData: any) => {
     const userReviewStats = await prisma.review.aggregate({
-      where: { userId: r.userId },
-      _sum: {
-        helpfulCount: true,
-        likeCount: true,
-      },
-      _count: {
-        _all: true,
-      }
+      where: { userId },
+      _sum: { helpfulCount: true, likeCount: true },
+      _count: { _all: true }
     });
 
     const reviewsWithPhotos = await prisma.review. count({
       where: {
-        userId: r.userId,
-        NOT: {
-          photos: { equals: [] }
-        }
+        userId,
+        NOT: { photos: { equals: [] } }
       }
     });
 
-    const wardrobeCount = await prisma. wardrobeEntry.count({ where: { userId: r.userId } });
+    const wardrobeCount = await prisma. wardrobeEntry.count({ where: { userId } });
 
     const reviewCount = userReviewStats._count._all;
     const totalHelpful = userReviewStats._sum. helpfulCount || 0;
     const totalLikes = userReviewStats._sum. likeCount || 0;
 
-    // Calculate XP
-    const xpFromReviews = reviewCount * XP_RULES.ACTIVITY.REVIEW_BASE;
+    const xpFromReviews = reviewCount * XP_RULES. ACTIVITY.REVIEW_BASE;
     const xpFromPhotos = reviewsWithPhotos * XP_RULES.ACTIVITY.REVIEW_PHOTO;
     const xpFromHelpful = totalHelpful * XP_RULES.ACTIVITY.HELPFUL_VOTE;
     const xpFromLikes = totalLikes * XP_RULES.ACTIVITY.LIKE;
     const xpFromWardrobe = wardrobeCount * XP_RULES.ACTIVITY.WARDROBE_ADD;
 
     const activityXP = xpFromReviews + xpFromPhotos + xpFromHelpful + xpFromLikes + xpFromWardrobe;
-    const profileXP = calculateProfileXP(r.user);
-    const manualXP = r.user.experiencePoints || 0;
+    const profileXP = calculateProfileXP(userData);
+    const manualXP = userData.experiencePoints || 0;
 
     const totalXP = activityXP + profileXP + manualXP;
     const levelInfo = getLevel(totalXP);
 
-    // Calculate badges
-    const badges = calculateBadges(r. user, {
+    const badges = calculateBadges(userData, {
       reviewCount,
       photoReviewCount: reviewsWithPhotos,
       helpfulCount: totalHelpful
     });
+
+    return { totalXP, levelInfo, badges };
+  };
+
+  // 3. Process reviews with replies
+  const reviews = await Promise.all(prismaReviews.map(async (r) => {
+    const { totalXP, levelInfo, badges } = await processUserData(r.userId, r. user);
+
+    // Process replies
+    const processedReplies = r.replies ?  await Promise.all(
+      r.replies.map(async (reply) => {
+        const replyStats = await processUserData(reply. userId, reply.user);
+
+        return {
+          id: reply.id,
+          rating: reply.rating,
+          text: reply.text,
+          photos: reply.photos || [],
+          createdAt: reply.createdAt. toISOString(),
+          isEdited: reply.isEdited || false,
+          editedAt: reply.editedAt?.toISOString() || null,
+          isDeleted: reply.isDeleted || false,
+          user: {
+            id: reply. user.id,
+            username: reply.user.username || 'User',
+            image: reply.user.image,
+            xp: replyStats.totalXP,
+            level: replyStats.levelInfo. title,
+            badges: replyStats.badges
+          }
+        };
+      })
+    ) : [];
 
     return {
       id: r.id,
@@ -204,15 +264,19 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
       photos: r.photos,
       helpfulCount: r.helpfulCount,
       userVote: (r.helpful && r.helpful.length > 0) ? 'UP' as const : null,
-      createdAt: r.createdAt. toISOString(),
-      // 🟢 ENHANCED USER DATA
+      createdAt: r.createdAt.toISOString(),
+      isEdited: r.isEdited || false,
+      editedAt: r.editedAt?.toISOString() || null,
+      isDeleted: r.isDeleted || false,
       user: {
-        username: r. user.username || 'User',
+        id: r.user.id,
+        username: r.user.username || 'User',
         image: r.user.image,
         xp: totalXP,
         level: levelInfo.title,
         badges: badges
-      }
+      },
+      replies: processedReplies, // 🆕 NEW
     };
   }));
 

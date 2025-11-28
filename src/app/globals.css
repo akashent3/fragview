@@ -153,3 +153,19 @@ a {
   border: none;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
+
+/* Professional animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}

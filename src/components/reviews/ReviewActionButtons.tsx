@@ -1,5 +1,6 @@
 'use client';
-import React, { useState } from 'react';
+
+import React, { useState, useTransition } from 'react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { voteReview } from '@/app/actions/reviews';
 import { useAuthModal } from '@/components/auth/AuthModal';
@@ -11,68 +12,75 @@ interface Props {
   isLoggedIn: boolean;
 }
 
-export default function ReviewActionButtons({ reviewId, initialHelpfulCount, userVote, isLoggedIn }: Props) {
-  const [count, setCount] = useState(initialHelpfulCount);
-  const [currentVote, setCurrentVote] = useState<'UP' | 'DOWN' | null>(userVote || null);
-  const [loading, setLoading] = useState(false);
+export default function ReviewActionButtons({ 
+  reviewId, 
+  initialHelpfulCount, 
+  userVote: initialUserVote,
+  isLoggedIn 
+}: Props) {
   const { open } = useAuthModal();
+  const [helpfulCount, setHelpfulCount] = useState(initialHelpfulCount);
+  const [userVote, setUserVote] = useState<'UP' | 'DOWN' | null>(initialUserVote || null);
+  const [isPending, startTransition] = useTransition();
 
-  const handleVote = async (type: 'UP' | 'DOWN') => {
+  const handleVote = (type: 'UP' | 'DOWN') => {
     if (!isLoggedIn) {
-      open({ mode: 'signin', reason: 'Sign in to vote' });
+      open({ mode: 'signin', reason: 'Sign in to vote on reviews' });
       return;
     }
-    if (loading) return;
 
-    // Optimistic UI Update
-    const prevVote = currentVote;
-    const prevCount = count;
+    startTransition(async () => {
+      const prevVote = userVote;
+      const prevCount = helpfulCount;
 
-    setLoading(true);
-
-    if (currentVote === type) {
-      // Toggle off
-      setCurrentVote(null);
-      if (type === 'UP') setCount(c => c - 1);
-    } else {
-      // Flip or Add
-      setCurrentVote(type);
-      if (type === 'UP') {
-        setCount(c => c + 1); 
-      } else if (prevVote === 'UP') {
-        setCount(c => c - 1);
+      // Optimistic update
+      if (prevVote === type) {
+        setUserVote(null);
+        setHelpfulCount(prev => type === 'UP' ? prev - 1 : prev);
+      } else {
+        setUserVote(type);
+        if (prevVote === 'UP' && type === 'DOWN') {
+          setHelpfulCount(prev => prev - 1);
+        } else if (prevVote === null && type === 'UP') {
+          setHelpfulCount(prev => prev + 1);
+        }
       }
-    }
 
-    const res = await voteReview(reviewId, type);
-    
-    if (res.error) {
-      // Revert on error
-      setCurrentVote(prevVote);
-      setCount(prevCount);
-    }
-    setLoading(false);
+      const result = await voteReview(reviewId, type);
+
+      if (result.error) {
+        // Revert on error
+        setUserVote(prevVote);
+        setHelpfulCount(prevCount);
+      }
+    });
   };
 
   return (
-    <div className="flex items-center gap-3 mt-3">
-      <button 
+    <div className="flex items-center gap-2">
+      <button
         onClick={() => handleVote('UP')}
-        className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${
-          currentVote === 'UP' ? 'text-green-600' : 'text-gray-500 hover:text-green-600'
+        disabled={isPending}
+        className={`flex items-center gap-1. 5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          userVote === 'UP'
+            ? 'bg-green-100 text-green-700 border border-green-300'
+            : 'text-gray-600 hover:bg-green-50 hover:text-green-600 border border-transparent'
         }`}
       >
-        <ThumbsUp className={`w-3.5 h-3.5 ${currentVote === 'UP' ? 'fill-current' : ''}`} />
-        Helpful ({count})
+        <ThumbsUp className="w-4 h-4" />
+        <span>Helpful ({helpfulCount})</span>
       </button>
 
-      <button 
+      <button
         onClick={() => handleVote('DOWN')}
-        className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${
-          currentVote === 'DOWN' ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
+        disabled={isPending}
+        className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          userVote === 'DOWN'
+            ? 'bg-red-100 text-red-700 border border-red-300'
+            : 'text-gray-600 hover:bg-red-50 hover:text-red-600 border border-transparent'
         }`}
       >
-        <ThumbsDown className={`w-3.5 h-3.5 ${currentVote === 'DOWN' ? 'fill-current' : ''}`} />
+        <ThumbsDown className="w-4 h-4" />
       </button>
     </div>
   );

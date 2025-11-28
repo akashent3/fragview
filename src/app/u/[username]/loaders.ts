@@ -267,7 +267,7 @@ export async function loadPublicProfile(username: string, currentUserId?: string
           slug: p?.slug || id,
           name: p?.variant_name || p?.name || 'Unknown Perfume',
           brand: brandName,
-          image: p?. image || p?.images? .[0] || ''
+          image: p?. image || p?.images?.[0] || ''
         };
       };
 

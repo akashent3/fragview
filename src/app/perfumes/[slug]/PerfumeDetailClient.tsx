@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useTransition, useRef, useCallback } from 'react';
-import { Star, Plus, LogIn, Leaf, Flower2, Droplets, Wind, Sparkles, Camera, X, Bell, Clock } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { Star, Plus, LogIn, Leaf, Flower2, Droplets, Wind, Sparkles, Camera, X, Bell, Clock, MessageCircle } from 'lucide-react';
 import NotesPyramid from '@/components/ui/NotesPyramid';
 import AccordTags from '@/components/ui/AccordTags';
 import SimilarFragrances from '@/components/ui/SimilarFragrances';
@@ -10,6 +11,7 @@ import ReviewActionButtons from '@/components/reviews/ReviewActionButtons';
 import MentionTextarea from '@/components/ui/MentionTextarea';
 import { useAuthModal } from '@/components/auth/AuthModal';
 import { submitReview } from './actions';
+import EditReviewModal from '@/components/reviews/EditReviewModal';
 
 // INLINE DEBOUNCE HELPER
 function debounceFunc<T extends (...args: any[]) => any>(func: T, wait: number) {
@@ -35,10 +37,9 @@ interface PerfumeDoc {
   longevity?: number;
   sillage?: number;
   reminds_me?: string[];
-  created_at?: number | string; // Added for Cooling Period
+  created_at?: number | string;
 }
 
-// 🟢 UPDATED: Added user object for profile display
 interface ReviewLite {
   id: string;
   rating: number;
@@ -47,13 +48,18 @@ interface ReviewLite {
   helpfulCount?: number;
   userVote?: 'UP' | 'DOWN' | null;
   createdAt: string;
+  isEdited?: boolean;
+  editedAt?: string | null;
+  isDeleted?: boolean;
   user: {
+    id: string;
     username: string;
     image?: string | null;
     xp: number;
     level: string;
     badges: string[];
   };
+  replies?: ReviewLite[];
 }
 
 interface Props {
@@ -95,7 +101,7 @@ const getAccordColor = (accordName: string): string => {
     floral: '#ec4899',
   };
 
-  const lowerName = accordName.toLowerCase().trim();
+  const lowerName = accordName.toLowerCase(). trim();
   if (colors[lowerName]) return colors[lowerName];
   
   for (const [key, color] of Object.entries(colors)) {
@@ -142,6 +148,7 @@ export default function PerfumeDetailClient({
   initialIsFollowing,
 }: Props) {
   const { open } = useAuthModal();
+  const { data: session } = useSession();
   
   const [userRating, setUserRating] = useState<number>(0); 
   const [userLongevity, setUserLongevity] = useState<number>(0);
@@ -156,6 +163,9 @@ export default function PerfumeDetailClient({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const snapshotRef = useRef<HTMLDivElement>(null);
 
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editingReviewText, setEditingReviewText] = useState('');
+
   // --- COOLING PERIOD LOGIC ---
   const isCoolingPeriodActive = React.useMemo(() => {
     if (!perfume.created_at) return false;
@@ -169,7 +179,7 @@ export default function PerfumeDetailClient({
   }, [perfume.created_at]);
 
   const remainingDays = React.useMemo(() => {
-    if (!perfume.created_at) return 0;
+    if (! perfume.created_at) return 0;
     const createdTime = typeof perfume.created_at === 'number' 
       ? perfume.created_at * 1000 
       : new Date(perfume.created_at).getTime();
@@ -181,7 +191,7 @@ export default function PerfumeDetailClient({
   }, [perfume.created_at]);
 
   const transformedAccords =
-    perfume.accords?.map((a) => ({
+    perfume.accords?. map((a) => ({
       name: a.name,
       strength:
         typeof a.strength === 'number'
@@ -192,9 +202,9 @@ export default function PerfumeDetailClient({
       width: a.width,
     })) || [];
 
-  const topNotes = perfume.pyramids?.top?.map((n) => ({ name: n })) || [];
+  const topNotes = perfume.pyramids?.top?. map((n) => ({ name: n })) || [];
   const middleNotes = perfume.pyramids?.middle?.map((n) => ({ name: n })) || [];
-  const baseNotes = perfume.pyramids?.base?.map((n) => ({ name: n })) || [];
+  const baseNotes = perfume.pyramids?. base?.map((n) => ({ name: n })) || [];
 
   // --- DEBOUNCED SUBMIT HANDLER ---
   const debouncedSubmit = useCallback(
@@ -202,15 +212,15 @@ export default function PerfumeDetailClient({
       if (isCoolingPeriodActive) return;
       const formData = new FormData();
       formData.append(field, String(value));
-      submitReview(slug, formData).then((res) => {
-        if (!res.ok) console.error("Auto-save failed:", res.error);
+      submitReview(slug, formData). then((res) => {
+        if (! res.ok) console.error("Auto-save failed:", res.error);
       });
     }, 500), 
     [slug, isCoolingPeriodActive]
   );
 
   const handleSliderChange = (field: 'longevity' | 'sillage', value: number) => {
-    if (!isSignedIn) {
+    if (! isSignedIn) {
         open({ mode: 'signin', reason: `Sign in to rate`, callbackUrl: `/perfumes/${slug}` });
         return;
     }
@@ -265,7 +275,7 @@ export default function PerfumeDetailClient({
   const handleSnapshot = async () => {
     if (!snapshotRef.current) return;
     try {
-      const [{ default: html2canvas }, { default: QRCode }] = await Promise.all([
+      const [{ default: html2canvas }, { default: QRCode }] = await Promise. all([
         import('html2canvas'),
         import('qrcode')
       ]);
@@ -277,13 +287,13 @@ export default function PerfumeDetailClient({
         try {
           const img = new Image();
           img.crossOrigin = 'anonymous';
-          img.src = perfume.image;
+          img.src = perfume. image;
           await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; setTimeout(reject, 5000); });
           imageDataUrl = perfume.image;
         } catch (err) { imageDataUrl = ''; }
       }
       const postcard = document.createElement('div');
-      postcard.style.cssText = `position: absolute; left: -9999px; width: 1080px; height: 1920px; padding: 50px; background: linear-gradient(135deg, #FAFFF5 0%, #F0FDF4 100%); font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column;`;
+      postcard.style.cssText = `position: absolute; left: -9999px; width: 1080px; height: 1920px; padding: 50px; background: linear-gradient(135deg, #FAFFF5 0%, #F0FDF4 100%); font-family: system-ui, -apple-system, sans-serif;`;
       postcard.innerHTML = `
         <div style="display: flex; flex-direction: column; height: 100%;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
@@ -291,7 +301,7 @@ export default function PerfumeDetailClient({
             <img src="${qrCodeDataUrl}" style="width: 100px; height: 100px;" alt="QR Code" />
           </div>
           <div style="background: linear-gradient(135deg, #d1fae5 0%, #fed7aa 100%); border-radius: 20px; padding: 30px; margin-bottom: 30px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; min-height: 550px;">
-            ${imageDataUrl ? `<img src="${imageDataUrl}" style="max-width: 100%; max-height: 550px; object-fit: contain; border-radius: 16px;" crossorigin="anonymous" />` : `<div style="width: 100%; height: 550px; background: linear-gradient(135deg, #10b981, #f97316); border-radius: 16px; display: flex; align-items: center; justify-content: center; color: white; font-size: 80px;">✦</div>`}
+            ${imageDataUrl ? `<img src="${imageDataUrl}" style="max-width: 100%; max-height: 550px; object-fit: contain; border-radius: 16px;" crossorigin="anonymous" />` : `<div style="width: 100%; height: 550px; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 72px;">✨</div>`}
           </div>
           <div style="background: linear-gradient(to right, #10b981, #f97316); border-radius: 12px; padding: 28px 40px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); text-align: center;">
             <h1 style="font-size: 58px; font-weight: 900; color: #1f2937; margin: 0 0 8px 0; line-height: 1.1; letter-spacing: 1px;">${perfume.variant_name}</h1>
@@ -299,8 +309,8 @@ export default function PerfumeDetailClient({
           </div>
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 28px;">
             <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-              <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">RATING</p>
-              <div style="display: flex; gap: 5px; margin-bottom: 12px; justify-content: center;">${[1,2,3,4,5].map(star => `<span style="color: ${star <= Math.round(userRating || rating) ? '#fb923c' : '#d1d5db'}; font-size: 26px;">★</span>`).join('')}</div>
+              <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1. 5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">RATING</p>
+              <div style="display: flex; gap: 5px; margin-bottom: 12px; justify-content: center;">${[1,2,3,4,5]. map(star => `<span style="color: ${star <= Math.round(userRating || rating) ? '#fb923c' : '#d1d5db'}; font-size: 24px;">★</span>`).join('')}</div>
               <p style="font-size: 36px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">${(userRating || rating).toFixed(1)}</p>
             </div>
             <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
@@ -314,11 +324,11 @@ export default function PerfumeDetailClient({
               <p style="font-size: 28px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">${getLongevityHrsLabel(userLongevity || perfume.longevity || 0)}</p>
             </div>
           </div>
-          ${transformedAccords.length > 0 ? `<div style="background: white; border-radius: 18px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);"><p style="font-size: 17px; font-weight: 800; color: #1f2937; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 0.5px;">Main Accords</p><div style="display: flex; gap: 4px; border-radius: 12px; overflow: hidden; height: 60px; margin-bottom: 14px;">${transformedAccords.map(accord => { const strength = accord.strength || accord.width || 1; const widthPercentage = (strength / transformedAccords.reduce((sum, a) => sum + (a.strength || a.width || 1), 0)) * 100; return `<div style="background: ${getAccordColor(accord.name)}; width: ${widthPercentage}%; position: relative;"><div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.2), rgba(255,255,255,0.2));"></div></div>`; }).join('')}</div><div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">${transformedAccords.map(accord => `<span style="font-size: 14px; color: #6b7280; font-weight: 600;">${accord.name}</span>`).join('')}</div></div>` : ''}
+          ${transformedAccords.length > 0 ? `<div style="background: white; border-radius: 18px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0. 08);"><p style="font-size: 17px; font-weight: 800; color: #1f2937; margin: 0 0 18px 0; text-transform: uppercase; letter-spacing: 1.2px;">Main Accords</p><div style="display: flex; flex-wrap: wrap; gap: 10px;">${transformedAccords.slice(0, 6).map(a => `<span style="background: ${getAccordColor(a.name)}; color: white; padding: 10px 18px; border-radius: 20px; font-size: 15px; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">${a.name}</span>`).join('')}</div></div>` : ''}
           <div style="margin-top: auto; padding-top: 24px; border-top: 4px solid #10b981; display: flex; justify-content: space-between; align-items: center;">
             <div style="font-size: 17px; color: #4b5563; font-weight: 600; line-height: 1.6;">
               <div style="margin-bottom: 8px;"><span style="font-weight: 800; color: #1f2937;">Gender:</span> ${perfume.gender || '—'}</div>
-              <div><span style="font-weight: 800; color: #1f2937;">Perfumer:</span> ${perfume.perfumers?.join(', ') || '—'}</div>
+              <div><span style="font-weight: 800; color: #1f2937;">Perfumer:</span> ${perfume.perfumers?. join(', ') || '—'}</div>
             </div>
             <div style="text-align: right; font-size: 15px; color: #9ca3af; font-weight: 600;">fragview.com/perfumes/${slug}</div>
           </div>
@@ -328,24 +338,24 @@ export default function PerfumeDetailClient({
       const canvas = await html2canvas(postcard, { backgroundColor: '#FAFFF5', scale: 2, logging: false, useCORS: true, allowTaint: true, width: 1080, height: 1920 });
       document.body.removeChild(postcard);
       canvas.toBlob((blob) => {
-        if (!blob) { alert('Failed to generate image'); return; }
+        if (! blob) { alert('Failed to generate image'); return; }
         const url = URL.createObjectURL(blob);
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;';
         const dialog = document.createElement('div');
-        dialog.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:24px;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.2);z-index:9999;max-width:400px;width:90%;';
-        dialog.innerHTML = `<h3 style="margin:0 0 16px 0;font-size:18px;font-weight:600;color:#1f2937;">Share Perfume Card</h3><div style="display:flex;gap:12px;flex-direction:column;"><button id="share-whatsapp" style="padding:12px;border-radius:8px;border:1px solid #16a34a;background:#f0fdf4;color:#16a34a;font-weight:600;cursor:pointer;">Share on WhatsApp</button><button id="share-download" style="padding:12px;border-radius:8px;border:1px solid #f97316;background:#fff7ed;color:#f97316;font-weight:600;cursor:pointer;">Download Image</button><button id="share-close" style="padding:12px;border-radius:8px;border:1px solid #d1d5db;background:white;color:#6b7280;font-weight:600;cursor:pointer;">Close</button></div>`;
+        dialog.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:24px;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.2);z-index:9999;max-width:90vw;';
+        dialog.innerHTML = `<h3 style="margin:0 0 16px 0;font-size:18px;font-weight:600;color:#1f2937;">Share Perfume Card</h3><div style="display:flex;gap:12px;flex-direction:column;"><button id="share-whatsapp" style="padding:12px 24px;background:linear-gradient(to right,#10b981,#f97316);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">Share via WhatsApp</button><button id="share-download" style="padding:12px 24px;background:#6b7280;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">Download Image</button><button id="share-close" style="padding:12px 24px;background:white;color:#6b7280;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">Close</button></div>`;
         document.body.appendChild(overlay);
-        document.body.appendChild(dialog);
+        document.body. appendChild(dialog);
         const cleanup = () => { document.body.removeChild(overlay); document.body.removeChild(dialog); URL.revokeObjectURL(url); };
-        document.getElementById('share-whatsapp')!.onclick = () => {
-          const link = document.createElement('a'); link.href = url; link.download = `${perfume.variant_name}-fragview.jpg`; link.click();
-          setTimeout(() => window.open(`https://wa.me/?text=Check out ${perfume.variant_name} on Fragview! https://fragview.com/perfumes/${slug}`), 500); cleanup();
+        document.getElementById('share-whatsapp')! .onclick = () => {
+          const link = document.createElement('a'); link.href = url; link.download = `${perfume.variant_name}-fragview. jpg`; link.click();
+          setTimeout(() => window.open(`https://wa.me/?text=Check out ${perfume.variant_name} on Fragview!  https://fragview.com/perfumes/${slug}`), 500); cleanup();
         };
-        document.getElementById('share-download')!.onclick = () => {
-          const link = document.createElement('a'); link.href = url; link.download = `${perfume.variant_name}-fragview.jpg`; link.click(); cleanup();
+        document.getElementById('share-download')! .onclick = () => {
+          const link = document.createElement('a'); link.href = url; link.download = `${perfume. variant_name}-fragview.jpg`; link.click(); cleanup();
         };
-        document.getElementById('share-close')!.onclick = cleanup; overlay.onclick = cleanup;
+        document.getElementById('share-close')! .onclick = cleanup; overlay.onclick = cleanup;
       }, 'image/jpeg', 0.95);
     } catch (error) { console.error('Snapshot error:', error); alert(`Failed to generate snapshot: ${error instanceof Error ? error.message : 'Unknown error'}`); }
   };
@@ -360,24 +370,21 @@ export default function PerfumeDetailClient({
     }
 
     startTransition(async () => {
-      // Use reviewText from state if formData doesn't have it (due to MentionTextarea)
-      if (!formData.get('text')) formData.set('text', reviewText);
+      if (! formData.get('text')) formData.set('text', reviewText);
       if (userRating > 0) formData.set('rating', String(userRating));
       if (userLongevity > 0) formData.set('longevity', String(userLongevity));
       if (userSillage > 0) formData.set('sillage', String(userSillage));
       
-      // ADDED: Photos
       if (uploadedPhotos.length > 0) {
-        formData.set('photos', JSON.stringify(uploadedPhotos));
+        formData.set('photos', JSON. stringify(uploadedPhotos));
       }
       
       const result = await submitReview(slug, formData);
-      if (!result.ok) setErrorMessage(result.error || 'Failed to submit review.');
+      if (! result.ok) setErrorMessage(result.error || 'Failed to submit review.');
       else {
         setSuccessMessage('Review submitted successfully!');
         setReviewText('');
-        setUploadedPhotos([]); // Reset photos
-        // Reset local state if you want, or keep it visible
+        setUploadedPhotos([]);
       }
     });
   }
@@ -402,8 +409,8 @@ export default function PerfumeDetailClient({
 
   const similarPerfumes = React.useMemo(() => {
     if (!perfume.reminds_me || perfume.reminds_me.length === 0) return [];
-    return perfume.reminds_me.map((name, idx) => {
-      const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    return perfume.reminds_me. map((name, idx) => {
+      const slug = name.toLowerCase().replace(/\s+/g, '-'). replace(/[^a-z0-9-]/g, '');
       return {
         id: idx + 1000,
         name: name,
@@ -454,7 +461,7 @@ export default function PerfumeDetailClient({
               <div className="flex gap-1 lg:gap-2 max-w-[150px] mx-auto lg:max-w-[280px]">
                 <button 
                   onClick={() => {
-                    if (!isSignedIn) {
+                    if (! isSignedIn) {
                       open({ mode: 'signin', reason: 'Sign in to add to wardrobe', callbackUrl: `/perfumes/${slug}` });
                     }
                   }}
@@ -470,7 +477,7 @@ export default function PerfumeDetailClient({
               </div>
             </div>
 
-            <div className="space-y-1.5 lg:space-y-4 flex flex-col">
+            <div className="space-y-1. 5 lg:space-y-4 flex flex-col">
               <div>
                 <h1 className="text-base lg:text-3xl font-bold bg-gradient-to-r from-green-600 to-orange-500 bg-clip-text text-transparent leading-tight">
                   {perfume.variant_name}
@@ -485,7 +492,7 @@ export default function PerfumeDetailClient({
                 </div>
               )}
 
-              {(topNotes.length || middleNotes.length || baseNotes.length) > 0 && (
+              {(topNotes. length || middleNotes.length || baseNotes.length) > 0 && (
                 <div className="hidden lg:block">
                   <h3 className="text-sm font-semibold text-gray-800 mb-2">Notes Pyramid</h3>
                   <NotesPyramid topNotes={topNotes} middleNotes={middleNotes} baseNotes={baseNotes} />
@@ -615,7 +622,7 @@ export default function PerfumeDetailClient({
         {perfume.perfume_overview && (
           <div className="glass-card rounded-xl p-5 shadow-sm">
             <h3 className="text-xl font-bold text-gray-800 mb-3">About This Fragrance</h3>
-            <p className="text-gray-700 leading-relaxed">{perfume.perfume_overview}</p>
+            <p className="text-gray-700 leading-relaxed">{perfume. perfume_overview}</p>
           </div>
         )}
 
@@ -624,7 +631,7 @@ export default function PerfumeDetailClient({
           currentPerfumeId={Number(perfume._id)}
           userIsVerified={isSignedIn && canRate}
           onAddClick={() => {
-            if (!isSignedIn) {
+            if (! isSignedIn) {
               open({ mode: 'signin', reason: 'Sign in to add similar fragrances', callbackUrl: `/perfumes/${slug}#similar` });
             }
           }}
@@ -652,13 +659,13 @@ export default function PerfumeDetailClient({
 
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-bold text-gray-800">Leave Your Review</h3>
-            <button onClick={toggleFollowThread} className={`text-xs font-medium px-3 py-1.5 rounded-full border ${isFollowing ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'} flex items-center gap-1 transition-colors`}>
+            <button onClick={toggleFollowThread} className={`text-xs font-medium px-3 py-1. 5 rounded-full border ${isFollowing ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-600 border-gray-200 hover:border-green-300'} transition-all flex items-center gap-1. 5`}>
               <Bell className={`w-3 h-3 ${isFollowing ? 'fill-current' : ''}`} />
               {isFollowing ? 'Following' : 'Follow Thread'}
             </button>
           </div>
 
-          {!isSignedIn ? (
+          {! isSignedIn ?  (
             <div className="rounded-xl border-2 border-dashed border-green-300 bg-green-50/50 p-6 text-center">
               <p className="mb-4 text-gray-700">Please sign in to leave a review</p>
               <button
@@ -669,17 +676,17 @@ export default function PerfumeDetailClient({
                 Sign in to continue
               </button>
             </div>
-          ) : !canRate ? (
+          ) : ! canRate ? (
             <div className="rounded-xl border border-orange-300 bg-orange-50 p-4 text-sm text-orange-900">
-              Your account cannot leave reviews yet.
+              Your account cannot leave reviews yet. 
             </div>
           ) : (
             <form action={(fd) => handleSubmitReview(fd)} className="space-y-4">
-              <p className="text-sm text-gray-600">Use the sliders above to rate. Write your review below:</p>
+              <p className="text-sm text-gray-600">Use the sliders above to rate.  Write your review below:</p>
               <MentionTextarea 
                 value={reviewText} 
                 onChange={setReviewText} 
-                placeholder="Share your experience... Type @ to mention users" 
+                placeholder="Share your experience...  Type @ to mention users" 
                 className="w-full rounded-xl border border-green-200 px-4 py-3 focus:ring-2 focus:ring-green-400 outline-none bg-white/80"
               />
               <div className="space-y-2">
@@ -688,7 +695,7 @@ export default function PerfumeDetailClient({
                   {uploadedPhotos.map((url, i) => (
                     <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 shrink-0">
                       <img src={url} className="w-full h-full object-cover" alt="Review" />
-                      <button type="button" onClick={() => setUploadedPhotos(p => p.filter((_, idx) => idx !== i))} className="absolute top-0.5 right-0.5 bg-black/50 text-white rounded-full p-0.5"><X size={10} /></button>
+                      <button type="button" onClick={() => setUploadedPhotos(p => p.filter((_, idx) => idx !== i))} className="absolute top-0. 5 right-0.5 bg-black/50 text-white rounded-full p-0.5"><X className="w-3 h-3" /></button>
                     </div>
                   ))}
                   {uploadedPhotos.length < 3 && (
@@ -707,132 +714,174 @@ export default function PerfumeDetailClient({
               {successMessage && <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg">{successMessage}</div>}
               <button
                 type="submit"
-                disabled={pending || !reviewText.trim()}
+                disabled={pending || !reviewText. trim()}
                 className="rounded-lg bg-gradient-to-r from-green-500 to-orange-500 px-6 py-3 font-semibold text-white disabled:opacity-50 hover:shadow-lg transition-all"
               >
-                {pending ? 'Submitting...' : 'Submit Review'}
+                {pending ?  'Submitting...' : 'Submit Review'}
               </button>
             </form>
           )}
         </div>
 
-        {/* REVIEWS LIST */}
+        {/* REVIEWS LIST - COMPACT & PROFESSIONAL */}
         <div className="glass-card rounded-xl p-5 shadow-sm">
-          <h3 className="mb-4 text-xl font-bold text-gray-800">Community Reviews</h3>
-          {reviews.length === 0 && (
+          <h3 className="mb-4 text-xl font-bold text-gray-800">Community Reviews ({reviews.length})</h3>
+          
+          {reviews.length === 0 ? (
             <p className="text-center py-10 text-gray-400">No reviews yet. Be the first to review!</p>
-          )}
-          <div className="space-y-6">
-            {reviews.map((r, i) => (
-              <div key={i} className="border-b border-green-50 pb-6 last:border-0">
-                <div className="flex justify-between items-start mb-3">
-                  {/* 🟢 UPDATED: Clickable User Info with Badges */}
-                  <div className="flex items-start gap-3 flex-1">
-                    {/* Avatar - Clickable */}
-                    <a 
-                      href={`/u/${r.user.username}`}
-                      className="shrink-0 group"
-                    >
-                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm font-bold text-gray-500 overflow-hidden ring-2 ring-transparent group-hover:ring-green-400 transition-all">
-                        {r.user.image ? (
-                          <img src={r.user.image} alt={r.user.username} className="w-full h-full object-cover" />
-                        ) : (
-                          <span>{r.user.username.charAt(0).toUpperCase()}</span>
+          ) : (
+            <div className="space-y-4">
+              {reviews.map((r) => (
+                <div key={r.id} className="border border-gray-200 rounded-lg p-4 hover:border-green-300 transition-colors bg-white">
+                  {/* Header Row - Compact */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {/* Avatar */}
+                      <a href={`/u/${r.user.username}`} className="shrink-0 group">
+                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm font-bold text-gray-500 overflow-hidden ring-2 ring-transparent group-hover:ring-green-400 transition-all">
+                          {r.user.image ? (
+                            <img src={r.user.image} alt={r.user.username} className="w-full h-full object-cover" />
+                          ) : (
+                            <span>{r.user.username.charAt(0).toUpperCase()}</span>
+                          )}
+                        </div>
+                      </a>
+
+                      {/* User Info - Inline Compact */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <a href={`/u/${r. user.username}`} className="text-sm font-bold text-gray-900 hover:text-green-600 transition-colors">
+                            @{r.user.username}
+                          </a>
+                          
+                          <span className={`text-[9px] font-bold px-1. 5 py-0.5 rounded-full ${
+                            r.user.level === 'Master' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white' :
+                            r.user.level === 'Expert' ? 'bg-gradient-to-r from-purple-400 to-pink-500 text-white' :
+                            r.user.level === 'Connoisseur' ? 'bg-gradient-to-r from-blue-400 to-cyan-500 text-white' :
+                            r.user.level === 'Enthusiast' ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white' :
+                            'bg-gray-200 text-gray-700'
+                          }`}>
+                            {r.user.level}
+                          </span>
+                          
+                          <span className="text-[9px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                            {r.user.xp} XP
+                          </span>
+                          
+                          {r.user.badges. slice(0, 2).map((badge, idx) => (
+                            <span key={idx} className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-gradient-to-r from-green-100 to-orange-100 text-gray-700 border border-green-200" title={badge}>
+                              {badge === 'Early Adopter' && '🌱'}
+                              {badge === 'Active Reviewer' && '⭐'}
+                              {badge === 'Photo Contributor' && '📸'}
+                              {badge === 'Community Helper' && '🤝'}
+                            </span>
+                          ))}
+                          
+                          <span className="text-[10px] text-gray-400">
+                            {new Date(r.createdAt). toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {r.isEdited && <span className="ml-1 text-orange-600 font-medium">(edited)</span>}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Rating */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Star className="w-4 h-4 fill-orange-400 text-orange-400" />
+                      <span className="text-sm font-bold text-gray-900">{r.rating}</span>
+                    </div>
+                  </div>
+
+                  {/* Review Content */}
+                  {r.isDeleted ?  (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                      <p className="text-gray-400 italic text-sm text-center">[This review has been deleted]</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-gray-700 text-sm leading-relaxed mb-3">{r.text}</p>
+
+                      {/* Review Photos - Compact */}
+                      {r.photos && r.photos.length > 0 && (
+                        <div className="flex gap-2 mb-3">
+                          {r.photos.map((p, idx) => (
+                            <img key={idx} src={p} className="w-16 h-16 object-cover rounded-lg border border-gray-200 cursor-pointer hover:scale-105 transition-transform" alt={`Photo ${idx + 1}`} />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Action Buttons - Perfectly Aligned */}
+                      <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
+                        <ReviewActionButtons 
+                          reviewId={r. id} 
+                          initialHelpfulCount={r.helpfulCount || 0} 
+                          userVote={r.userVote}
+                          isLoggedIn={isSignedIn} 
+                        />
+
+                        {/* Edit/Delete - Only for own reviews */}
+                        {isSignedIn && session?.user?. id === r.user.id && (
+                          <>
+                            <div className="w-px h-5 bg-gray-300"></div>
+                            
+                            <button
+                              onClick={() => {
+                                setEditingReviewId(r.id);
+                                setEditingReviewText(r.text || '');
+                              }}
+                              className="flex items-center gap-1. 5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2. 828l8.586-8. 586z" />
+                              </svg>
+                              <span>Edit</span>
+                            </button>
+                            
+                            <button
+                              onClick={async () => {
+                                if (! confirm('Are you sure you want to delete this review?  This action cannot be undone.')) return;
+                                try {
+                                  const res = await fetch(`/api/reviews/actions? reviewId=${r.id}`, { method: 'DELETE' });
+                                  if (res.ok) window.location.reload();
+                                  else alert('Failed to delete review');
+                                } catch {
+                                  alert('Network error');
+                                }
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              <span>Delete</span>
+                            </button>
+                          </>
                         )}
                       </div>
-                    </a>
-            
-                    {/* User Info + Badges */}
-                    <div className="flex-1 min-w-0">
-                      {/* Username - Clickable */}
-                      <a 
-                        href={`/u/${r.user.username}`}
-                        className="text-sm font-bold text-gray-900 hover:text-green-600 transition-colors"
-                      >
-                        @{r.user.username}
-                      </a>
-              
-                      {/* Badges Row */}
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                        {/* Level Badge */}
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          r.user.level === 'Master' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white' :
-                          r.user.level === 'Expert' ? 'bg-gradient-to-r from-purple-400 to-pink-500 text-white' :
-                          r.user.level === 'Connoisseur' ? 'bg-gradient-to-r from-blue-400 to-cyan-500 text-white' :
-                          r.user.level === 'Enthusiast' ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white' :
-                          'bg-gray-200 text-gray-700'
-                        }`}>
-                          {r.user.level}
-                        </span>
-                
-                          {/* XP Display */}
-                          <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                          {r.user.xp} XP
-                        </span>
-                
-                        {/* Special Badges */}
-                        {r.user.badges.map((badge, idx) => (
-                          <span 
-                            key={idx} 
-                            className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gradient-to-r from-green-100 to-orange-100 text-gray-700 border border-green-200"
-                          >
-                            {badge === 'Early Adopter' && '🌱'}
-                            {badge === 'Active Reviewer' && '⭐'}
-                            {badge === 'Photo Contributor' && '📸'}
-                            {badge === 'Community Helper' && '🤝'}
-                            {badge}
-                          </span>
-                        ))}
-                      </div>
-              
-                      {/* Date */}
-                      <p className="text-[10px] text-gray-400 mt-1">
-                        {new Date(r.createdAt).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric', 
-                          year: 'numeric' 
-                        })}
-                      </p>
-                    </div>
-                  </div>
-          
-                  {/* Rating */}
-                  <div className="flex items-center gap-1 shrink-0 ml-2">
-                    <Star className="w-4 h-4 fill-orange-400 text-orange-400" />
-                    <span className="text-sm font-bold">{r.rating}</span>
-                    </div>
-                  </div>
-        
-                {/* Review Text */}
-                <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line mb-3">
-                  {r.text}
-                </p>
-        
-                {/* Review Photos */}
-                {r.photos && r.photos.length > 0 && (
-                  <div className="flex gap-2 mt-3 mb-3">
-                  {r.photos.map((p, idx) => (
-                      <img 
-                        key={idx} 
-                        src={p} 
-                        className="w-20 h-20 object-cover rounded-lg border border-gray-100 cursor-pointer hover:scale-105 transition-transform" 
-                        alt={`Review photo ${idx + 1}`}
-                      />
-                    ))}
-                  </div>
-                )}
-        
-                {/* Action Buttons */}
-                <ReviewActionButtons 
-                  reviewId={r.id} 
-                  initialHelpfulCount={r.helpfulCount || 0} 
-                  userVote={r.userVote}
-                  isLoggedIn={isSignedIn} 
-                />
-              </div>
-            ))}
-          </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Edit Modal */}
+        {editingReviewId && (
+          <EditReviewModal
+            reviewId={editingReviewId}
+            currentText={editingReviewText}
+            onClose={() => {
+              setEditingReviewId(null);
+              setEditingReviewText('');
+            }}
+            onSuccess={() => {
+              setEditingReviewId(null);
+              setEditingReviewText('');
+              window. location.reload();
+            }}
+          />
+        )}
 
       </div>
     </div>

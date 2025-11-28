@@ -4,18 +4,18 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { notifyReviewHelpful, notifyThreadFollowers } from '@/lib/notifications';
+import { createNotification, extractMentions } from '@/lib/notifications';
 
 // Toggle Helpful (Upvote) or Unhelpful (Downvote)
 export async function voteReview(reviewId: string, type: 'UP' | 'DOWN') {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return { error: 'Not logged in' };
+  if (!session?. user) return { error: 'Not logged in' };
 
-  const userId = session.user. id;
+  const userId = session.user.id;
 
   try {
     // Check existing vote
-    const existing = await prisma. reviewHelpful.findUnique({
+    const existing = await prisma.reviewHelpful.findUnique({
       where: {
         reviewId_userId: {
           reviewId: reviewId,
@@ -25,7 +25,7 @@ export async function voteReview(reviewId: string, type: 'UP' | 'DOWN') {
     });
 
     // Get review details for notification
-    const review = await prisma. review.findUnique({
+    const review = await prisma.review.findUnique({
       where: { id: reviewId },
       select: { 
         userId: true, 
@@ -34,10 +34,10 @@ export async function voteReview(reviewId: string, type: 'UP' | 'DOWN') {
       }
     });
 
-    if (! review) return { error: 'Review not found' };
+    if (!review) return { error: 'Review not found' };
 
     // Get voter's username
-    const voter = await prisma. user.findUnique({
+    const voter = await prisma.user.findUnique({
       where: { id: userId },
       select: { username: true }
     });
@@ -56,33 +56,33 @@ export async function voteReview(reviewId: string, type: 'UP' | 'DOWN') {
       
     } else {
       // New Vote
-      await prisma. reviewHelpful. create({
+      await prisma.reviewHelpful. create({
         data: { 
           reviewId, 
           userId, 
         } 
       });
 
-      await prisma.review. update({
+      await prisma.review.update({
         where: { id: reviewId },
         data: { helpfulCount: { increment: 1 } }
       });
 
-      // 🔔 SEND NOTIFICATION (only if voter is not the review author)
+      // 🔔 CREATE NOTIFICATION (only if voter is not the review author, in-app only)
       if (review.userId !== userId && voter && type === 'UP') {
-        // We need to get perfume name - for now use slug
-        await notifyReviewHelpful(
-          review.userId,
-          voter.username,
-          review. perfumeId,
-          review. perfumeId // TODO: Get actual perfume name from MongoDB
-        );
+        await createNotification({
+          userId: review.userId,
+          type: 'REVIEW_HELPFUL',
+          message: `@${voter.username} found your review helpful`,
+          link: `/perfumes/${review.perfumeId}#review-${reviewId}`,
+          sendEmail: false, // In-app only
+        });
       }
       
       return { status: 'added', type };
     }
   } catch (error) {
-    console. error('Voting error:', error);
+    console.error('Voting error:', error);
     return { error: 'Failed to vote' };
   }
 }
@@ -96,20 +96,66 @@ export async function editReview(reviewId: string, newText: string) {
     // Verify ownership
     const review = await prisma.review.findUnique({
       where: { id: reviewId },
-      select: { userId: true, perfumeId: true }
+      select: { userId: true, perfumeId: true, text: true }
     });
 
     if (!review) return { error: 'Review not found' };
     if (review.userId !== session.user.id) return { error: 'Not authorized' };
 
+    // Update review
     await prisma.review. update({
       where: { id: reviewId },
       data: {
         text: newText. trim(),
         isEdited: true,
         editedAt: new Date(),
-      }
+      },
     });
+
+    // 🔔 DETECT @MENTIONS IN EDITED REVIEW (in-app only)
+    const mentions = extractMentions(newText);
+    const oldMentions = review.text ? extractMentions(review.text) : [];
+    
+    // Only notify NEW mentions (not already mentioned in old text)
+    const newMentions = mentions.filter(m => !oldMentions.includes(m));
+    
+    for (const mentionedUsername of newMentions) {
+      // Find mentioned user
+      const mentionedUser = await prisma. user.findUnique({
+        where: { username: mentionedUsername },
+        select: { id: true },
+      });
+
+      // Create notification if user exists and it's not self-mention
+      if (mentionedUser && mentionedUser. id !== session.user.id) {
+        await createNotification({
+          userId: mentionedUser.id,
+          type: 'REVIEW_REPLY',
+          message: `@${session.user.username} mentioned you in an edited review`,
+          link: `/perfumes/${review.perfumeId}#review-${reviewId}`,
+          sendEmail: false, // In-app only
+        });
+      }
+    }
+
+    // 🆕 NOTIFY THREAD FOLLOWERS ON EDIT
+    const threadFollowers = await prisma.threadFollow.findMany({
+      where: {
+        perfumeId: review.perfumeId,
+        userId: { not: session.user.id },
+      },
+      select: { userId: true },
+    });
+
+    for (const follower of threadFollowers) {
+      await createNotification({
+        userId: follower.userId,
+        type: 'THREAD_ACTIVITY',
+        message: `@${session.user.username} edited their review on a thread you follow`,
+        link: `/perfumes/${review.perfumeId}#review-${reviewId}`,
+        sendEmail: false,
+      });
+    }
 
     revalidatePath(`/perfumes/${review.perfumeId}`);
     return { success: true };
@@ -119,10 +165,10 @@ export async function editReview(reviewId: string, newText: string) {
   }
 }
 
-// Delete Review (Soft Delete)
+// Delete Review (Hard Delete)
 export async function deleteReview(reviewId: string) {
   const session = await getServerSession(authOptions);
-  if (!session?. user) return { error: 'Not logged in' };
+  if (!session?.user) return { error: 'Not logged in' };
 
   try {
     // Verify ownership
@@ -132,7 +178,7 @@ export async function deleteReview(reviewId: string) {
     });
 
     if (!review) return { error: 'Review not found' };
-    if (review. userId !== session.user.id) return { error: 'Not authorized' };
+    if (review.userId !== session.user. id) return { error: 'Not authorized' };
 
     // Hard delete the review
     await prisma.review.delete({
@@ -142,7 +188,7 @@ export async function deleteReview(reviewId: string) {
     revalidatePath(`/perfumes/${review.perfumeId}`);
     return { success: true };
   } catch (error) {
-    console.error('Delete review error:', error);
+    console. error('Delete review error:', error);
     return { error: 'Failed to delete review' };
   }
 }

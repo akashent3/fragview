@@ -1,77 +1,36 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Clock, ChevronLeft, Star, Share2, Leaf, Sparkles } from 'lucide-react';
+import { Clock, ChevronLeft, Star, Leaf, Sparkles } from 'lucide-react';
 import { getArticleBySlug } from '@/app/actions/drydown';
+import { getArticleComments } from '@/app/actions/drydown-comments';
 import ShareButtons from '@/components/drydown/ShareButtons';
-
-// --- DUMMY DATA FOR PREVIEW ---
-const DUMMY_ARTICLE = {
-  id: 'preview-id',
-  title: 'The Art of Olfactory Storytelling: A Deep Dive into Niche Perfumery',
-  excerpt: 'Explore how modern perfumers are breaking the rules of traditional scent composition to create narrative-driven fragrances that evoke powerful memories.',
-  content: `
-    <p>Perfume is more than just a pleasant scent; it is a form of liquid literature. In recent years, the rise of niche perfumery has shifted the focus from mass-market appeal to artistic expression.</p>
-    <h2>The Shift to Narrative</h2>
-    <p>Unlike traditional designer fragrances that often aim for broad appeal, niche houses are telling specific, sometimes challenging stories. Think of <em>Imaginary Authors</em> or <em>Zoologist</em>, brands that build entire worlds around their scents.</p>
-    <blockquote>"A great perfume must have a beginning, a middle, and an end. It should take you on a journey." - Jean-Claude Ellena</blockquote>
-    <p>This approach allows for the use of unconventional materials—burning asphalt, old books, or sea salt—to evoke specific times and places.</p>
-    <h2>Key Ingredients</h2>
-    <p>We are seeing a resurgence of raw, animalic notes balanced with hyper-realistic gourmands. The modern nose is sophisticated and craves authenticity over polish.</p>
-  `,
-  coverImage: 'https://images.unsplash.com/photo-1615634260167-c8cdede054de?q=80&w=1200&auto=format&fit=crop',
-  category: 'Deep Dive',
-  readTime: '6 min',
-  publishedAt: new Date().toISOString(),
-  author: {
-    name: 'Elena Vosnaki',
-    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
-    bio: 'Senior Editor and Fragrance Historian exploring the cultural impact of scent.',
-    badges: ['Master', 'Editor']
-  }
-};
-
-const DUMMY_PERFUMES = [
-  {
-    slug: 'baccarat-rouge-540',
-    variant_name: 'Baccarat Rouge 540',
-    brand_name: 'Maison Francis Kurkdjian',
-    image: 'https://fimgs.net/mdimg/perfume/375x500.33519.jpg',
-    rating: 4.2,
-    gender: 'Unisex'
-  },
-  {
-    slug: 'aventus',
-    variant_name: 'Aventus',
-    brand_name: 'Creed',
-    image: 'https://fimgs.net/mdimg/perfume/375x500.9828.jpg',
-    rating: 4.5,
-    gender: 'Male'
-  }
-];
+import ArticleComments from '@/components/drydown/ArticleComments';
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   const data = await getArticleBySlug(params.slug);
-  // Fallback metadata for preview
-  if (!data) return { title: 'Preview Article • The Drydown' };
+  if (!data) return { title: 'Article Not Found • The Drydown' };
+  
   return {
     title: `${data.article.title} • The Drydown`,
-    description: data.article.excerpt,
+    description: data. article.excerpt,
     openGraph: {
       images: [data.article.coverImage || ''],
-    }
+    },
   };
 }
 
 export default async function ArticlePage({ params }: { params: { slug: string } }) {
   const data = await getArticleBySlug(params.slug);
   
-  // USE DUMMY DATA IF NOT FOUND (FOR DESIGN PREVIEW)
-  const article = data?.article || DUMMY_ARTICLE;
-  const mentionedPerfumes = data?.mentionedPerfumes || DUMMY_PERFUMES;
+  if (!data) {
+    return notFound();
+  }
 
-  // If you want strictly 404 in production, uncomment this:
-  // if (!data) return notFound();
+  const { article, mentionedPerfumes } = data;
+
+  // Fetch comments
+  const comments = await getArticleComments(article.id);
 
   return (
     <div className="min-h-screen bg-[#FAFFF5] pb-20">
@@ -90,16 +49,16 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           </Link>
           
           <span className="inline-block px-3 py-1 bg-orange-500 text-white text-xs font-bold uppercase tracking-widest rounded-md mb-4 mx-auto">
-            {article.category}
+            {article. category}
           </span>
           
           <h1 className="text-4xl md:text-6xl font-serif font-bold mb-6 leading-tight text-shadow-lg">
-            {article.title}
+            {article. title}
           </h1>
           
           <div className="flex items-center justify-center gap-6 text-sm text-white/90 font-medium">
             <div className="flex items-center gap-2">
-              {article.author.image ? (
+              {article.author.image ?  (
                 <img src={article.author.image} className="w-10 h-10 rounded-full border-2 border-white object-cover" />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center border-2 border-white">
@@ -113,7 +72,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
             </div>
             <div className="h-8 w-px bg-white/30" />
             <div className="text-left">
-              <div className="leading-none">{new Date(article.publishedAt || new Date().toISOString()).toLocaleDateString()}</div>
+              <div className="leading-none">{new Date(article.publishedAt || article.createdAt).toLocaleDateString()}</div>
               <div className="text-[10px] opacity-70 uppercase tracking-wide">Published</div>
             </div>
             <div className="h-8 w-px bg-white/30" />
@@ -134,7 +93,6 @@ export default async function ArticlePage({ params }: { params: { slug: string }
               <p className="lead text-2xl text-gray-500 italic mb-8 border-l-4 border-orange-400 pl-4">
                 {article.excerpt}
               </p>
-              {/* Dangerous HTML rendering since content is from Trusted Editors */}
               <div dangerouslySetInnerHTML={{ __html: article.content }} />
             </div>
 
@@ -144,9 +102,12 @@ export default async function ArticlePage({ params }: { params: { slug: string }
               </div>
               <ShareButtons title={article.title} />
             </div>
+
+            {/* Comments Section */}
+            <ArticleComments articleId={article. id} initialComments={comments} />
           </div>
 
-          {/* Sidebar: Mentioned Perfumes */}
+          {/* Sidebar: Mentioned Perfumes & Author */}
           <div className="lg:col-span-4">
             <div className="sticky top-24 space-y-8">
               
@@ -163,13 +124,13 @@ export default async function ArticlePage({ params }: { params: { slug: string }
                   )}
                   <div>
                     <div className="font-bold text-gray-900">{article.author.name}</div>
-                    {article.author.badges && article.author.badges.includes('Master') && (
+                    {article.author.badges?.includes('Master') && (
                       <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">Master</span>
                     )}
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 italic">
-                  {article.author.bio || "A fragrance enthusiast contributing to The Drydown."}
+                  {article.author. bio || "A fragrance enthusiast contributing to The Drydown. "}
                 </p>
               </div>
 
@@ -204,7 +165,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
                         {perfume.rating > 0 && (
                           <div className="flex flex-col items-center px-2 border-l border-gray-100">
                             <Star size={12} className="fill-orange-400 text-orange-400 mb-0.5" />
-                            <span className="text-xs font-bold text-gray-700">{perfume.rating.toFixed(1)}</span>
+                            <span className="text-xs font-bold text-gray-700">{perfume.rating. toFixed(1)}</span>
                           </div>
                         )}
                       </Link>

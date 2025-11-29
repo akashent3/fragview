@@ -1,10 +1,11 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useAuthModal } from '@/components/auth/AuthModal';
 import { submitCommunitySuggestion } from '@/app/actions/submissions';
 import { Loader2, CheckCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import DuplicateCheckAlert from '@/components/DuplicateCheckAlert';
 
 export default function CommunitySubmitPage() {
   const { data: session, status } = useSession();
@@ -15,13 +16,60 @@ export default function CommunitySubmitPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
+  // ✅ Duplicate check state
+  const [checking, setChecking] = useState(false);
+  const [duplicateCheck, setDuplicateCheck] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    brand: '',
+    link: '',
+    notes: '',
+  });
+
+  // ✅ Debounced duplicate check
+  useEffect(() => {
+    if (type === 'PERFUME' && (! formData.name || !formData.brand)) {
+      setDuplicateCheck(null);
+      return;
+    }
+
+    if (type === 'BRAND' && ! formData.name) {
+      setDuplicateCheck(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setChecking(true);
+      try {
+        const response = await fetch('/api/check-duplicate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: type. toLowerCase(),
+            name: formData.name,
+            brandName: type === 'PERFUME' ?  formData.brand : undefined,
+          }),
+        });
+
+        const result = await response.json();
+        setDuplicateCheck(result);
+      } catch (error) {
+        console.error('Duplicate check failed:', error);
+      } finally {
+        setChecking(false);
+      }
+    }, 500); // Wait 500ms after user stops typing
+
+    return () => clearTimeout(timer);
+  }, [formData. name, formData.brand, type]);
+
   if (status === 'loading') return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-green-600" /></div>;
 
   if (status === 'unauthenticated') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#FAFFF5] p-4 text-center">
         <h2 className="text-2xl font-bold mb-4">Please Log In</h2>
-        <p className="text-gray-600 mb-6">You need to be a member to submit suggestions.</p>
+        <p className="text-gray-600 mb-6">You need to be a member to submit suggestions. </p>
         <button onClick={() => open({ mode: 'signin', reason: 'Sign in to submit suggestions' })} className="px-6 py-3 bg-green-600 text-white rounded-xl font-bold">
           Sign In
         </button>
@@ -31,23 +79,35 @@ export default function CommunitySubmitPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // ✅ Block submission if exact duplicate exists
+    if (duplicateCheck?. exists) {
+      alert('❌ This ' + type. toLowerCase() + ' already exists in our database!  Please check the existing entry instead of submitting a duplicate.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     
-    const formData = new FormData(e.currentTarget);
+    const formDataObj = new FormData(e.currentTarget);
     const data = {
       type,
-      name: formData.get('name') as string,
-      brand: formData.get('brand') as string, // only for perfume
-      notes: formData.get('notes') as string,
-      link: formData.get('link') as string,
+      name: formDataObj.get('name') as string,
+      brand: formDataObj.get('brand') as string,
+      notes: formDataObj.get('notes') as string,
+      link: formDataObj.get('link') as string,
     };
 
     const res = await submitCommunitySuggestion(data);
     setLoading(false);
     
-    if (res.error) setError(res.error);
-    else setSuccess(true);
+    if (res.error === 'duplicate') {
+      alert(`❌ ${res.message}`);
+    } else if (res.error) {
+      setError(res. error);
+    } else {
+      setSuccess(true);
+    }
   };
 
   if (success) {
@@ -57,7 +117,7 @@ export default function CommunitySubmitPage() {
           <CheckCircle size={32} />
         </div>
         <h2 className="text-2xl font-bold mb-2">Suggestion Received!</h2>
-        <p className="text-gray-600 mb-8">Thank you for helping improve FragView. Our admins will review your submission shortly.</p>
+        <p className="text-gray-600 mb-8">Thank you for helping improve FragView.  Our admins will review your submission shortly.</p>
         <Link href="/submit" className="text-green-600 font-bold hover:underline">Submit another</Link>
         <Link href="/" className="mt-4 text-gray-500 text-sm hover:text-gray-800">Back to Home</Link>
       </div>
@@ -77,13 +137,21 @@ export default function CommunitySubmitPage() {
           {/* Type Toggle */}
           <div className="flex bg-gray-100 p-1 rounded-xl mb-8">
             <button 
-              onClick={() => setType('PERFUME')}
-              className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${type === 'PERFUME' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={() => {
+                setType('PERFUME');
+                setFormData({ name: '', brand: '', link: '', notes: '' });
+                setDuplicateCheck(null);
+              }}
+              className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${type === 'PERFUME' ?  'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
               Missing Perfume
             </button>
             <button 
-              onClick={() => setType('BRAND')}
+              onClick={() => {
+                setType('BRAND');
+                setFormData({ name: '', brand: '', link: '', notes: '' });
+                setDuplicateCheck(null);
+              }}
               className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${type === 'BRAND' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
               Missing Brand
@@ -95,35 +163,69 @@ export default function CommunitySubmitPage() {
               <label className="block text-sm font-bold text-gray-700 mb-2">
                 {type === 'PERFUME' ? 'Perfume Name' : 'Brand Name'} <span className="text-red-500">*</span>
               </label>
-              <input required name="name" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 outline-none" />
+              <input 
+                required 
+                name="name" 
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 outline-none" 
+              />
             </div>
 
             {type === 'PERFUME' && (
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Brand Name <span className="text-red-500">*</span></label>
-                <input required name="brand" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 outline-none" />
+                <input 
+                  required 
+                  name="brand" 
+                  value={formData.brand}
+                  onChange={(e) => setFormData({ ... formData, brand: e.target.value })}
+                  className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 outline-none" 
+                />
               </div>
             )}
 
+            {/* ✅ Duplicate Check Alert */}
+            <DuplicateCheckAlert
+              type={type. toLowerCase() as 'perfume' | 'brand'}
+              duplicateCheck={duplicateCheck}
+              checking={checking}
+            />
+
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">Reference Link <span className="text-red-500">*</span></label>
-              <input required type="url" name="link" placeholder="Official website, press release..." className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 outline-none" />
+              <input 
+                required 
+                type="url" 
+                name="link" 
+                value={formData.link}
+                onChange={(e) => setFormData({ ... formData, link: e.target.value })}
+                placeholder="Official website, press release..." 
+                className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 outline-none" 
+              />
               <p className="text-xs text-gray-500 mt-1">Helping us verify the information faster.</p>
             </div>
 
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">Additional Notes</label>
-              <textarea name="notes" rows={3} placeholder="Any details about notes, year, or perfumer..." className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 outline-none" />
+              <textarea 
+                name="notes" 
+                rows={3} 
+                value={formData. notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Any details about notes, year, or perfumer..." 
+                className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 outline-none" 
+              />
             </div>
 
             {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm">{error}</div>}
 
             <button 
               type="submit" 
-              disabled={loading}
-              className="w-full py-4 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors disabled:opacity-70 flex items-center justify-center"
+              disabled={loading || duplicateCheck?.exists || checking}
+              className="w-full py-4 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              {loading ? <Loader2 className="animate-spin" /> : 'Submit Suggestion'}
+              {loading ?  <Loader2 className="animate-spin" /> : 'Submit Suggestion'}
             </button>
           </form>
         </div>

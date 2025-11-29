@@ -3,39 +3,56 @@
 import prisma from '@/lib/prisma';
 import { getPerfumesBySlugs } from '@/lib/data/perfumes';
 
-// 1. Fetch Latest Articles
-export async function getArticles(category?: string) {
+// 1. Fetch Latest Articles with Pagination
+export async function getArticles(category?: string, page: number = 1, limit: number = 9) {
+  const skip = (page - 1) * limit;
+
   const where = {
     published: true,
-    ...(category ? { category } : {})
+    .. .(category && category !== 'All' ?  { category } : {}),
   };
 
-  const articles = await prisma.article.findMany({
-    where,
-    orderBy: { publishedAt: 'desc' },
-    include: {
-      author: {
-        select: {
-          username: true, // Use username as name fallback
-          image: true,
-          badges: true
-        }
-      }
-    },
-    take: 20
-  });
+  const [articles, total] = await Promise.all([
+    prisma. article.findMany({
+      where,
+      orderBy: { publishedAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            username: true,
+            image: true,
+            badges: true,
+          },
+        },
+        _count: {
+          select: {
+            comments: true, // Get comment count
+          },
+        },
+      },
+      skip,
+      take: limit,
+    }),
+    prisma.article.count({ where }), // Total count for pagination
+  ]);
 
   // Map username to name for frontend consistency
-  return articles.map(a => ({
-    ...a,
-    author: {
-      ...a.author,
-      name: a.author.username
-    }
-  }));
+  return {
+    articles: articles.map((a) => ({
+      ...a,
+      author: {
+        ... a.author,
+        name: a.author.username,
+      },
+      commentCount: a._count.comments,
+    })),
+    total,
+    currentPage: page,
+    totalPages: Math.ceil(total / limit),
+  };
 }
 
-// 2. Fetch Single Article with Sidebar Data
+// 2.  Fetch Single Article with Sidebar Data
 export async function getArticleBySlug(slug: string) {
   const article = await prisma.article.findUnique({
     where: { slug },
@@ -45,13 +62,13 @@ export async function getArticleBySlug(slug: string) {
           username: true,
           image: true,
           badges: true,
-          bio: true
-        }
-      }
-    }
+          bio: true,
+        },
+      },
+    },
   });
 
-  if (!article) return null;
+  if (! article) return null;
 
   // Fetch the perfume details from MongoDB for the sidebar
   const mentionedPerfumes = await getPerfumesBySlugs(article.mentionedPerfumes);
@@ -60,10 +77,10 @@ export async function getArticleBySlug(slug: string) {
     article: {
       ...article,
       author: {
-        ...article.author,
-        name: article.author.username
-      }
+        ...article. author,
+        name: article. author.username,
+      },
     },
-    mentionedPerfumes
+    mentionedPerfumes,
   };
 }

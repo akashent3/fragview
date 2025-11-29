@@ -1,1 +1,0 @@
-import pkg from 'pg'; const { Client } = pkg; (async () => { const c = new Client({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }); try { await c.connect(); console.log('connected'); } catch (e) { console.error('err', e.message); } finally { await c.end(); } })();

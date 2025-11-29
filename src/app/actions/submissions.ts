@@ -1,82 +1,136 @@
 'use server';
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { SubmissionType } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { checkPerfumeExists, checkBrandExists } from '@/lib/duplicate-check';
 
-// --- Community Submission ---
+/**
+ * Submit community suggestion (perfume or brand)
+ */
 export async function submitCommunitySuggestion(data: {
-  type: 'BRAND' | 'PERFUME';
+  type: 'PERFUME' | 'BRAND';
   name: string;
-  brand?: string; // Required if type is PERFUME
+  brand?: string;
+  link: string;
   notes?: string;
-  link?: string;
 }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) return { error: 'You must be logged in to submit suggestions.' };
-
   try {
+    const session = await auth();
+    if (! session?.user) {
+      return { success: false, error: 'You must be logged in to submit suggestions' };
+    }
+
+    // ✅ DUPLICATE CHECK BEFORE SAVING
+    if (data.type === 'PERFUME') {
+      if (! data.brand) {
+        return { success: false, error: 'Brand name is required for perfume suggestions' };
+      }
+
+      const duplicateCheck = await checkPerfumeExists(data.name, data.brand);
+      
+      if (duplicateCheck.exists) {
+        return {
+          success: false,
+          error: 'duplicate',
+          duplicate: duplicateCheck.perfume,
+          message: `This perfume already exists: ${duplicateCheck.perfume. name} by ${duplicateCheck.perfume.brand_name}`,
+        };
+      }
+    } else if (data.type === 'BRAND') {
+      const duplicateCheck = await checkBrandExists(data.name);
+      
+      if (duplicateCheck.exists) {
+        return {
+          success: false,
+          error: 'duplicate',
+          duplicate: duplicateCheck.brand,
+          message: `This brand already exists: ${duplicateCheck. brand. name}`,
+        };
+      }
+    }
+
+    // Save to community submissions queue
     await prisma.communitySubmission.create({
       data: {
-        userId: session.user.id,
-        type: data.type as SubmissionType,
+        userId: session.user. id,
+        type: data. type,
+        status: 'PENDING',
         data: {
           name: data.name,
-          brand: data.brand,
+          brand: data.brand || null,
           link: data.link,
-          userNotes: data.notes
-        }
-      }
+          notes: data.notes || '',
+        },
+      },
     });
+
+    revalidatePath('/submit');
+
     return { success: true };
   } catch (error) {
-    console.error('Submission error:', error);
-    return { error: 'Failed to submit suggestion.' };
+    console.error('Error submitting community suggestion:', error);
+    return { success: false, error: 'Failed to submit suggestion.  Please try again.' };
   }
 }
 
-// --- Brand Owner Submission ---
+/**
+ * Submit brand owner application
+ */
 export async function submitBrandApplication(formData: FormData) {
-  // No login required for brand owners (they might be new to the platform)
-  
-  const rawData = {
-    brandName: formData.get('brandName') as string,
-    companyName: formData.get('companyName') as string,
-    country: formData.get('country') as string,
-    website: formData.get('website') as string,
-    contactName: formData.get('contactName') as string,
-    contactEmail: formData.get('contactEmail') as string,
-    contactPhone: formData.get('contactPhone') as string,
-    position: formData.get('position') as string,
-    // We'll handle file uploads separately via blob if needed, or just store links for now
-    verificationLink: formData.get('verificationLink') as string, 
-  };
-
-  if (!rawData.brandName || !rawData.contactEmail || !rawData.contactName) {
-    return { error: 'Missing required fields.' };
-  }
-
   try {
+    const brandName = formData.get('brandName') as string;
+    const companyName = formData.get('companyName') as string;
+    const country = formData. get('country') as string;
+    const website = formData.get('website') as string;
+    const contactName = formData.get('contactName') as string;
+    const contactEmail = formData. get('contactEmail') as string;
+    const contactPhone = formData.get('contactPhone') as string;
+    const position = formData.get('position') as string;
+    const verificationLink = formData.get('verificationLink') as string;
+
+    // Basic validation
+    if (!brandName || !country || !website || !contactName || !contactEmail) {
+      return { success: false, error: 'Please fill in all required fields' };
+    }
+
+    // ✅ DUPLICATE CHECK BEFORE SAVING
+    const duplicateCheck = await checkBrandExists(brandName);
+    
+    if (duplicateCheck.exists) {
+      return {
+        success: false,
+        error: 'duplicate',
+        duplicate: duplicateCheck.brand,
+        message: `This brand already exists: ${duplicateCheck. brand.name}.  If you are the brand owner, please contact support@fragview.com to claim it.`,
+      };
+    }
+
+    // Save brand owner application
     await prisma.brandOwnerSubmission.create({
       data: {
-        brandName: rawData.brandName,
-        companyName: rawData.companyName,
-        country: rawData.country,
-        website: rawData.website,
-        contactName: rawData.contactName,
-        contactEmail: rawData.contactEmail,
-        contactPhone: rawData.contactPhone,
-        position: rawData.position,
-        brandData: {}, // Can be expanded later
-        perfumesData: {}, // Can be expanded later
-        verificationDocs: rawData.verificationLink ? [rawData.verificationLink] : [],
-      }
+        brandName,
+        companyName: companyName || brandName,
+        country,
+        website,
+        contactName,
+        contactEmail,
+        contactPhone: contactPhone || null,
+        position: position || null,
+        brandData: {
+          verificationLink: verificationLink || null,
+        },
+        perfumesData: [],
+        verificationDocs: verificationLink ? [verificationLink] : [],
+        status: 'PENDING',
+      },
     });
+
+    revalidatePath('/submit');
+
     return { success: true };
   } catch (error) {
-    console.error('Brand submission error:', error);
-    return { error: 'Failed to submit application.' };
+    console.error('Error submitting brand application:', error);
+    return { success: false, error: 'Failed to submit application. Please try again.' };
   }
 }

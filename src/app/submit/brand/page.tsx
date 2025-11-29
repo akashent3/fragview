@@ -1,16 +1,60 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { submitBrandApplication } from '@/app/actions/submissions';
 import { Loader2, CheckCircle, ArrowLeft, Building2 } from 'lucide-react';
 import Link from 'next/link';
+import DuplicateCheckAlert from '@/components/DuplicateCheckAlert';
 
 export default function BrandSubmitPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  // ✅ Duplicate check state
+  const [checking, setChecking] = useState(false);
+  const [duplicateCheck, setDuplicateCheck] = useState<any>(null);
+  const [brandName, setBrandName] = useState('');
+
+  // ✅ Debounced duplicate check
+  useEffect(() => {
+    if (! brandName.  trim()) {
+      setDuplicateCheck(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setChecking(true);
+      try {
+        const response = await fetch('/api/check-duplicate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'brand',
+            name: brandName,
+          }),
+        });
+
+        const result = await response.json();
+        setDuplicateCheck(result);
+      } catch (error) {
+        console.error('Duplicate check failed:', error);
+      } finally {
+        setChecking(false);
+      }
+    }, 500); // Wait 500ms after user stops typing
+
+    return () => clearTimeout(timer);
+  }, [brandName]);
+
+  const handleSubmit = async (e: React. FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // ✅ Block submission if exact duplicate exists
+    if (duplicateCheck?. exists) {
+      alert('❌ This brand already exists in our database!  If you are the brand owner, please contact support@fragview.com to claim it.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     
@@ -18,8 +62,13 @@ export default function BrandSubmitPage() {
     const res = await submitBrandApplication(formData);
     setLoading(false);
     
-    if (res.error) setError(res.error);
-    else setSuccess(true);
+    if (res.error === 'duplicate') {
+      alert(`❌ ${res.message}`);
+    } else if (res.error) {
+      setError(res. error);
+    } else {
+      setSuccess(true);
+    }
   };
 
   if (success) {
@@ -51,7 +100,7 @@ export default function BrandSubmitPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Brand Owner Application</h1>
-              <p className="text-sm text-gray-500">Verify your brand to manage your catalog on FragView.</p>
+              <p className="text-sm text-gray-500">Verify your brand to manage your catalog on FragView. </p>
             </div>
           </div>
 
@@ -63,13 +112,27 @@ export default function BrandSubmitPage() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Brand Name *</label>
-                  <input required name="brandName" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 outline-none" />
+                  <input 
+                    required 
+                    name="brandName" 
+                    value={brandName}
+                    onChange={(e) => setBrandName(e.target.value)}
+                    className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 outline-none" 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Parent Company (if any)</label>
                   <input name="companyName" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 outline-none" />
                 </div>
               </div>
+
+              {/* ✅ Duplicate Check Alert */}
+              <DuplicateCheckAlert
+                type="brand"
+                duplicateCheck={duplicateCheck}
+                checking={checking}
+              />
+
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Country of Origin</label>
@@ -113,7 +176,7 @@ export default function BrandSubmitPage() {
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Proof of Ownership (Link)</label>
                 <input name="verificationLink" placeholder="Link to LinkedIn profile, press kit, or business registration" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 outline-none" />
-                <p className="text-xs text-gray-500 mt-1">We strictly verify all brand applications. Using a company email domain helps speed up the process.</p>
+                <p className="text-xs text-gray-500 mt-1">We strictly verify all brand applications.  Using a company email domain helps speed up the process.</p>
               </div>
             </section>
 
@@ -121,10 +184,10 @@ export default function BrandSubmitPage() {
 
             <button 
               type="submit" 
-              disabled={loading}
-              className="w-full py-4 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-colors disabled:opacity-70 flex items-center justify-center"
+              disabled={loading || duplicateCheck?.exists || checking}
+              className="w-full py-4 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              {loading ? <Loader2 className="animate-spin" /> : 'Submit Application'}
+              {loading ?  <Loader2 className="animate-spin" /> : 'Submit Application'}
             </button>
           </form>
         </div>

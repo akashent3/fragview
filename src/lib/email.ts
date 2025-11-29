@@ -1,9 +1,9 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process. env.RESEND_API_KEY);
 
 // ✅ Use PNG logo with professional styling (OPTION 1 - LARGE)
-const BASE_URL = process.env. NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://fragview.com';
+const BASE_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://fragview.com';
 const LOGO_URL = `${BASE_URL}/logo-white.png`;
 
 // Logo configuration (Option 1 - Large, Professional)
@@ -18,7 +18,7 @@ const LOGO_CONFIG = {
 console.log('📧 Email configuration:');
 console.log('   Base URL:', BASE_URL);
 console.log('   Logo URL:', LOGO_URL);
-console.log('   Logo Size:', `${LOGO_CONFIG.width}x${LOGO_CONFIG.height}`);
+console. log('   Logo Size:', `${LOGO_CONFIG.width}x${LOGO_CONFIG.height}`);
 
 // ===================================
 // HELPER FUNCTION: Generate Logo HTML
@@ -27,8 +27,8 @@ function getLogoHTML() {
   return `
     <table role="presentation" cellspacing="0" cellpadding="0" border="0">
       <tr>
-        <td align="center" style="width:${LOGO_CONFIG.containerWidth}px;height:${LOGO_CONFIG. containerHeight}px;margin:0 auto ${LOGO_CONFIG.containerMargin}px;background:rgba(255,255,255,0.25);border-radius:50%;box-shadow:0 8px 32px rgba(0,0,0,0.1);border:2px solid rgba(255,255,255,0.3);">
-          <img src="${LOGO_URL}" alt="FragView" width="${LOGO_CONFIG.width}" height="${LOGO_CONFIG.height}" style="display:block;margin:${(LOGO_CONFIG.containerHeight - LOGO_CONFIG.height) / 2}px auto;" />
+        <td align="center" style="width:${LOGO_CONFIG.containerWidth}px;height:${LOGO_CONFIG. containerHeight}px;margin:0 auto ${LOGO_CONFIG.containerMargin}px;background:rgba(255,255,255,0.25);border-radius:20px;">
+          <img src="${LOGO_URL}" alt="FragView" width="${LOGO_CONFIG.width}" height="${LOGO_CONFIG.height}" style="display:block;margin:${(LOGO_CONFIG.containerHeight - LOGO_CONFIG.height) / 2}px auto;border-radius:16px;" />
         </td>
       </tr>
     </table>
@@ -43,7 +43,7 @@ export async function sendVerificationEmail(
   username: string,
   token: string
 ) {
-  const verificationUrl = `${BASE_URL}/verify-email?token=${token}`;
+  const verificationUrl = `${BASE_URL}/verify-email? token=${token}`;
 
   console.log('📧 Attempting to send verification email.. .');
   console.log('   To:', email);
@@ -62,7 +62,7 @@ export async function sendVerificationEmail(
     });
     
     console.log('✅ Email sent successfully!');
-    console. log('   Email ID:', result?. id);
+    console.log('   Email ID:', result?. id);
     console.log('   Data:', result);
     
     return result;
@@ -83,7 +83,7 @@ function getVerificationEmailTemplate(username: string, verificationUrl: string)
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1. 0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verify your FragView account</title>
 </head>
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#f5f5f5;">
@@ -400,7 +400,7 @@ function getPasswordResetTemplate(username: string, resetUrl: string, resetCode:
                     <p style="margin:0 0 8px;color:#991b1b;font-size:14px;font-weight:600;">
                       ⚠️ Security Notice
                     </p>
-                    <p style="margin:0;color:#7f1d1d;font-size:13px;line-height:1.6;">
+                    <p style="margin:0;color:#7f1d1d;font-size:13px;line-height:1. 6;">
                       This link expires in <strong>1 hour</strong>. If you didn't request a password reset, please ignore this email.  Your password will remain unchanged.
                     </p>
                   </td>
@@ -428,4 +428,308 @@ function getPasswordResetTemplate(username: string, resetUrl: string, resetCode:
 </body>
 </html>
   `;
+}
+
+// ===================================
+// 🆕 ADMIN EMAIL TEMPLATES
+// ===================================
+
+/**
+ * Send submission approved email
+ */
+export async function sendSubmissionApprovedEmail(
+  email: string,
+  username: string,
+  type: string,
+  itemName: string
+) {
+  const subject = `✅ Your ${type} suggestion was approved! `;
+  const html = `
+<! DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #FAFFF5 0%, #F0FDF4 100%);">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" style="max-width: 600px; width: 100%; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #10b981 0%, #f97316 100%); padding: 40px 30px; text-align: center;">
+              ${getLogoHTML()}
+              <h1 style="margin: 0; color: white; font-size: 24px;">Submission Approved! </h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">
+                Hi <strong style="color: #10b981;">${username}</strong>,
+              </p>
+              <div style="background: linear-gradient(135deg, #d1fae5 0%, #fed7aa 100%); border-radius: 12px; padding: 24px; margin: 24px 0;">
+                <p style="margin: 0; color: #1f2937; font-size: 15px; line-height: 1.6;">
+                  🎉 Great news! Your ${type. toLowerCase()} suggestion <strong>"${itemName}"</strong> has been approved and added to FragView!
+                </p>
+                <p style="margin: 16px 0 0 0; color: #1f2937; font-size: 15px;">
+                  You've earned <strong>+5 XP</strong> for this contribution!
+                </p>
+              </div>
+              <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">
+                Thank you for helping us build the best fragrance community!  🌸<br>
+                <strong style="color: #10b981;">The FragView Team</strong>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background: #f9fafb; padding: 24px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0; color: #9ca3af; font-size: 11px;">
+                FragView • Your trusted fragrance community
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: 'FragView <noreply@fragview.com>',
+      to: email,
+      subject,
+      html,
+    });
+  } catch (error) {
+    console.error('Error sending approval email:', error);
+  }
+}
+
+/**
+ * Send submission rejected email
+ */
+export async function sendSubmissionRejectedEmail(
+  email: string,
+  username: string,
+  type: string,
+  reason: string
+) {
+  const subject = `Your ${type} suggestion needs attention`;
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #FAFFF5 0%, #F0FDF4 100%);">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" style="max-width: 600px; width: 100%; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0. 08); overflow: hidden;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #10b981 0%, #f97316 100%); padding: 40px 30px; text-align: center;">
+              ${getLogoHTML()}
+              <h1 style="margin: 0; color: white; font-size: 24px;">Submission Update</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">
+                Hi <strong style="color: #10b981;">${username}</strong>,
+              </p>
+              <div style="background: #fef3c7; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #f59e0b;">
+                <p style="margin: 0; color: #92400e; font-size: 15px; line-height: 1.6;">
+                  We've reviewed your ${type.toLowerCase()} suggestion, and unfortunately we cannot approve it at this time.
+                </p>
+                <p style="margin: 16px 0 0 0; color: #92400e; font-size: 14px;">
+                  <strong>Reason:</strong> ${reason}
+                </p>
+              </div>
+              <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">
+                Feel free to submit again with updated information!  We appreciate your contribution. <br>
+                <strong style="color: #10b981;">The FragView Team</strong>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background: #f9fafb; padding: 24px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0; color: #9ca3af; font-size: 11px;">
+                FragView • Your trusted fragrance community
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: 'FragView <noreply@fragview.com>',
+      to: email,
+      subject,
+      html,
+    });
+  } catch (error) {
+    console.error('Error sending rejection email:', error);
+  }
+}
+
+/**
+ * Send brand application approved email
+ */
+export async function sendBrandApplicationApprovedEmail(
+  email: string,
+  contactName: string,
+  brandName: string
+) {
+  const subject = `✅ ${brandName} - Brand Application Approved! `;
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #FAFFF5 0%, #F0FDF4 100%);">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" style="max-width: 600px; width: 100%; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0. 08); overflow: hidden;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #10b981 0%, #f97316 100%); padding: 40px 30px; text-align: center;">
+              ${getLogoHTML()}
+              <h1 style="margin: 0; color: white; font-size: 24px;">Welcome to FragView!</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">
+                Dear <strong style="color: #10b981;">${contactName}</strong>,
+              </p>
+              <div style="background: linear-gradient(135deg, #d1fae5 0%, #fed7aa 100%); border-radius: 12px; padding: 24px; margin: 24px 0;">
+                <p style="margin: 0; color: #1f2937; font-size: 15px; line-height: 1.6;">
+                  🎉 Congratulations! Your brand <strong>"${brandName}"</strong> has been verified and added to FragView!
+                </p>
+                <p style="margin: 16px 0 0 0; color: #1f2937; font-size: 15px;">
+                  Your brand now has a <strong>✓ Verified</strong> badge on the platform.
+                </p>
+              </div>
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${BASE_URL}/brands/${brandName. toLowerCase(). replace(/ /g, '-')}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #f97316 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">
+                  View Your Brand Page
+                </a>
+              </div>
+              <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">
+                Thank you for joining FragView! <br>
+                <strong style="color: #10b981;">The FragView Team</strong>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background: #f9fafb; padding: 24px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0; color: #9ca3af; font-size: 11px;">
+                FragView • Your trusted fragrance community
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: 'FragView <noreply@fragview.com>',
+      to: email,
+      subject,
+      html,
+    });
+  } catch (error) {
+    console.error('Error sending brand approval email:', error);
+  }
+}
+
+/**
+ * Send brand application rejected email
+ */
+export async function sendBrandApplicationRejectedEmail(
+  email: string,
+  contactName: string,
+  brandName: string,
+  reason: string
+) {
+  const subject = `${brandName} - Brand Application Update`;
+  const html = `
+<! DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #FAFFF5 0%, #F0FDF4 100%);">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" style="max-width: 600px; width: 100%; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #10b981 0%, #f97316 100%); padding: 40px 30px; text-align: center;">
+              ${getLogoHTML()}
+              <h1 style="margin: 0; color: white; font-size: 24px;">Application Update</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">
+                Dear <strong style="color: #10b981;">${contactName}</strong>,
+              </p>
+              <div style="background: #fef3c7; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #f59e0b;">
+                <p style="margin: 0; color: #92400e; font-size: 15px; line-height: 1.6;">
+                  We've reviewed your brand application for <strong>"${brandName}"</strong>, and we need additional information before we can proceed.
+                </p>
+                <p style="margin: 16px 0 0 0; color: #92400e; font-size: 14px;">
+                  <strong>Reason:</strong> ${reason}
+                </p>
+              </div>
+              <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">
+                Please feel free to resubmit your application with the requested information.  We're here to help!<br>
+                <strong style="color: #10b981;">The FragView Team</strong>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background: #f9fafb; padding: 24px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0; color: #9ca3af; font-size: 11px;">
+                FragView • Your trusted fragrance community
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: 'FragView <noreply@fragview.com>',
+      to: email,
+      subject,
+      html,
+    });
+  } catch (error) {
+    console.error('Error sending brand rejection email:', error);
+  }
 }

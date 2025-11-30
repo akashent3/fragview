@@ -18,7 +18,7 @@ export async function getDashboardStats() {
       activeUsers,
     ] = await Promise.all([
       // Total users
-      prisma.user. count(),
+      prisma.user.count(),
 
       // Total reviews
       prisma.review.count(),
@@ -37,10 +37,10 @@ export async function getDashboardStats() {
       }),
 
       // Total wardrobe items
-      prisma. wardrobeItem.count(),
+      prisma.wardrobeEntry.count(),
 
       // New users (last 7 days)
-      prisma. user.count({
+      prisma.user.count({
         where: {
           createdAt: {
             gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
@@ -49,7 +49,7 @@ export async function getDashboardStats() {
       }),
 
       // Active users (last 30 days - users with reviews or wardrobe activity)
-      prisma.user. count({
+      prisma.user.count({
         where: {
           OR: [
             {
@@ -62,7 +62,7 @@ export async function getDashboardStats() {
               },
             },
             {
-              wardrobeItems: {
+              wardrobe: {
                 some: {
                   createdAt: {
                     gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),

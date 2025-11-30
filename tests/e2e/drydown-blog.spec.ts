@@ -21,7 +21,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
   // ==========================================
   test.describe('Article Listing Page', () => {
     test('should display article listing page', async ({ page }) => {
-      console. log('  📰 Testing article listing page...');
+      console.log('  📰 Testing article listing page...');
       
       await page.goto('/drydown');
       await waitForPageLoad(page);
@@ -29,7 +29,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       // Check for main heading
       await expectTextToExist(page, 'Drydown');
 
-      console. log('  ✅ Article listing page displayed');
+      console.log('  ✅ Article listing page displayed');
     });
 
     test('should display multiple articles', async ({ page }) => {
@@ -48,7 +48,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.goto('/drydown');
       await waitForPageLoad(page);
 
-      const firstArticle = page.locator('[data-testid="article-card"], article, .article-card'). first();
+      const firstArticle = page.locator('[data-testid="article-card"], article, .article-card').first();
       
       if (await firstArticle.isVisible()) {
         // Check for title
@@ -69,7 +69,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await waitForPageLoad(page);
 
       // Articles should have excerpts/descriptions
-      const articleCards = page. locator('[data-testid="article-card"], article, .article-card');
+      const articleCards = page.locator('[data-testid="article-card"], article, .article-card');
       const count = await articleCards.count();
 
       if (count > 0) {
@@ -95,7 +95,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.goto('/drydown');
       await waitForPageLoad(page);
 
-      const categoryBadges = page.locator('[data-testid="category-badge"], .category-badge, . badge');
+      const categoryBadges = page.locator('[data-testid="category-badge"], .category-badge, .badge');
       const badgeCount = await categoryBadges.count();
 
       if (badgeCount > 0) {
@@ -111,12 +111,12 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
     test('should display featured articles section', async ({ page }) => {
       console.log('  ⭐ Testing featured articles.. .');
       
-      await page. goto('/drydown');
+      await page.goto('/drydown');
       await waitForPageLoad(page);
 
-      const featuredSection = page.locator('[data-testid="featured-articles"], . featured-articles, section:has-text("Featured")');
+      const featuredSection = page.locator('[data-testid="featured-articles"], .featured-articles, section:has-text("Featured")');
       
-      if (await featuredSection. isVisible({ timeout: 5000 })) {
+      if (await featuredSection.isVisible({ timeout: 5000 })) {
         console.log('    ✓ Featured articles section found');
         
         const featuredCount = await getElementCount(page, '[data-testid="featured-articles"] article, .featured-articles article');
@@ -128,7 +128,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.goto('/drydown');
       await waitForPageLoad(page);
 
-      const featuredArticle = page.locator('[data-testid="featured-article"], .featured-article'). first();
+      const featuredArticle = page.locator('[data-testid="featured-article"], .featured-article').first();
       
       if (await featuredArticle.isVisible({ timeout: 5000 })) {
         // Featured articles should have larger/different styling
@@ -153,12 +153,12 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       // Check for category buttons/tabs
       const categories = [
         'All',
-        'Fragrance Basics',
-        'Reviews',
-        'Industry News',
-        'Scent Profiles',
-        'Brand Spotlights',
-        'Seasonal Guides'
+        'Industry',
+        'Review',
+        'News',
+        'Interview',
+        'Deep Dive',
+        'Guide'
       ];
 
       let foundCategories = 0;
@@ -182,7 +182,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       console.log(`    ✓ Initial article count: ${initialCount}`);
 
       // Try to click a category filter
-      const categoryButton = page.locator('button:has-text("Fragrance Basics"), button:has-text("Reviews")').first();
+      const categoryButton = page.locator('button:has-text("Industry"), button:has-text("Review")').first();
       
       if (await categoryButton.isVisible({ timeout: 5000 })) {
         const categoryText = await categoryButton.textContent();
@@ -190,7 +190,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
         await waitForPageLoad(page);
 
         // Check if URL contains category parameter
-        const url = page. url();
+        const url = page.url();
         console.log(`    ✓ Clicked category: ${categoryText}`);
         console.log(`    ✓ URL updated: ${url}`);
 
@@ -204,7 +204,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.goto('/drydown');
       await waitForPageLoad(page);
 
-      const categoryButton = page.locator('button:has-text("Reviews")').first();
+      const categoryButton = page.locator('button:has-text("Review")').first();
       
       if (await categoryButton.isVisible({ timeout: 5000 })) {
         await categoryButton.click();
@@ -217,7 +217,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
                  el.getAttribute('aria-selected') === 'true';
         });
 
-        console. log(`    ✓ Active category indicator: ${isActive ?  'Yes' : 'No'}`);
+        console.log(`    ✓ Active category indicator: ${isActive ?  'Yes' : 'No'}`);
       }
     });
 
@@ -226,16 +226,16 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await waitForPageLoad(page);
 
       // Click a specific category first
-      const reviewsButton = page.locator('button:has-text("Reviews")').first();
-      if (await reviewsButton.isVisible({ timeout: 5000 })) {
-        await reviewsButton.click();
+      const reviewButton = page.locator('button:has-text("Review")').first();
+      if (await reviewButton.isVisible({ timeout: 5000 })) {
+        await reviewButton.click();
         await waitForPageLoad(page);
       }
 
       // Then click "All"
-      const allButton = page. locator('button:has-text("All")').first();
+      const allButton = page.locator('button:has-text("All")').first();
       if (await allButton.isVisible({ timeout: 5000 })) {
-        await allButton. click();
+        await allButton.click();
         await waitForPageLoad(page);
 
         const url = page.url();
@@ -249,9 +249,9 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
   // ==========================================
   test.describe('Pagination', () => {
     test('should have pagination controls', async ({ page }) => {
-      console.log('  📄 Testing pagination.. .');
+      console.log('  📄 Testing pagination...');
       
-      await page. goto('/drydown');
+      await page.goto('/drydown');
       await waitForPageLoad(page);
 
       // Check for pagination elements
@@ -270,7 +270,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.goto('/drydown');
       await waitForPageLoad(page);
 
-      const nextButton = page.locator('button:has-text("Next"), [aria-label="Next page"]'). first();
+      const nextButton = page.locator('button:has-text("Next"), [aria-label="Next page"]').first();
       
       if (await nextButton.isVisible({ timeout: 5000 }) && await nextButton.isEnabled()) {
         // Get articles on page 1
@@ -278,7 +278,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
         console.log(`    ✓ Page 1 articles: ${page1Count}`);
 
         // Go to page 2
-        await nextButton. click();
+        await nextButton.click();
         await waitForPageLoad(page);
 
         // Check URL changed
@@ -313,7 +313,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.goto('/drydown? page=2');
       await waitForPageLoad(page);
 
-      const pageIndicator = page.locator('text=/Page \\d+|\\d+ of \\d+/i'). first();
+      const pageIndicator = page.locator('text=/Page \\d+|\\d+ of \\d+/i').first();
       
       if (await pageIndicator.isVisible({ timeout: 5000 })) {
         const text = await pageIndicator.textContent();
@@ -326,7 +326,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await waitForPageLoad(page);
 
       // Click category
-      const categoryButton = page.locator('button:has-text("Reviews")').first();
+      const categoryButton = page.locator('button:has-text("Review")').first();
       if (await categoryButton.isVisible({ timeout: 5000 })) {
         await categoryButton.click();
         await waitForPageLoad(page);
@@ -408,10 +408,10 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.goto('/drydown');
       await waitForPageLoad(page);
 
-      await page.locator('[data-testid="article-card"], article'). first().click();
+      await page.locator('[data-testid="article-card"], article').first().click();
       await waitForPageLoad(page);
 
-      const coverImage = page.locator('[data-testid="cover-image"], .cover-image, article img'). first();
+      const coverImage = page.locator('[data-testid="cover-image"], .cover-image, article img').first();
       
       if (await coverImage.isVisible({ timeout: 5000 })) {
         console.log('    ✓ Cover image displayed');
@@ -425,11 +425,11 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.locator('[data-testid="article-card"], article').first().click();
       await waitForPageLoad(page);
 
-      const content = page.locator('[data-testid="article-content"], . article-content, article > div').first();
+      const content = page.locator('[data-testid="article-content"], .article-content, article > div').first();
       await expect(content).toBeVisible();
 
       const contentText = await content.textContent();
-      expect(contentText?. length).toBeGreaterThan(100);
+      expect(contentText?.length).toBeGreaterThan(100);
       console.log(`    ✓ Article content displayed (${contentText?.length} characters)`);
     });
 
@@ -440,7 +440,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.locator('[data-testid="article-card"], article').first().click();
       await waitForPageLoad(page);
 
-      const authorLink = page.locator('a[href*="/profile/"], a[href*="/user/"]'). first();
+      const authorLink = page.locator('a[href*="/profile/"], a[href*="/user/"]').first();
       
       if (await authorLink.isVisible({ timeout: 5000 })) {
         console.log('    ✓ Author profile link found');
@@ -451,7 +451,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.goto('/drydown');
       await waitForPageLoad(page);
 
-      await page.locator('[data-testid="article-card"], article'). first().click();
+      await page.locator('[data-testid="article-card"], article').first().click();
       await waitForPageLoad(page);
 
       // Try to find back button
@@ -505,11 +505,11 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.goto('/drydown');
       await waitForPageLoad(page);
 
-      await page. locator('[data-testid="article-card"], article').first(). click();
+      await page.locator('[data-testid="article-card"], article').first(). click();
       await waitForPageLoad(page);
 
       await page.evaluate(() => window.scrollTo(0, document.body. scrollHeight));
-      await page. waitForTimeout(1000);
+      await page.waitForTimeout(1000);
 
       const relatedArticle = page.locator('[data-testid="related-article"], .related-article').first();
       
@@ -551,11 +551,11 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.goto('/drydown');
       await waitForPageLoad(page);
 
-      await page.locator('[data-testid="article-card"], article'). first().click();
+      await page.locator('[data-testid="article-card"], article').first().click();
       await waitForPageLoad(page);
 
-      await page.evaluate(() => window.scrollTo(0, document.body. scrollHeight));
-      await page. waitForTimeout(1000);
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await page.waitForTimeout(1000);
 
       const comments = page.locator('[data-testid="comment"], .comment, [data-comment]');
       const commentCount = await comments.count();
@@ -583,7 +583,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await waitForPageLoad(page);
 
       await page.evaluate(() => window.scrollTo(0, document.body. scrollHeight));
-      await page. waitForTimeout(1000);
+      await page.waitForTimeout(1000);
 
       const loginPrompt = page. locator('text=/log in|sign in to comment|Login to comment/i').first();
       
@@ -634,7 +634,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.goto('/drydown');
       await waitForPageLoad(page);
 
-      await page. locator('[data-testid="article-card"], article').first(). click();
+      await page.locator('[data-testid="article-card"], article').first().click();
       await waitForPageLoad(page);
 
       const commentCount = page.locator('text=/\\d+ comment|\\d+ discussion/i').first();
@@ -659,7 +659,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       const searchInput = page.locator('input[placeholder*="Search" i], input[type="search"]').first();
       
       if (await searchInput. isVisible({ timeout: 5000 })) {
-        console. log('    ✓ Search input found');
+        console.log('    ✓ Search input found');
       } else {
         console.log('    ℹ️  No search functionality');
       }
@@ -669,7 +669,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.goto('/drydown');
       await waitForPageLoad(page);
 
-      const searchInput = page.locator('input[placeholder*="Search" i], input[type="search"]'). first();
+      const searchInput = page.locator('input[placeholder*="Search" i], input[type="search"]').first();
       
       if (await searchInput.isVisible({ timeout: 5000 })) {
         await searchInput.fill('fragrance');
@@ -690,7 +690,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
 
       const resultsMessage = page.locator('text=/results for|Showing.*results|Search results/i').first();
       
-      if (await resultsMessage. isVisible({ timeout: 5000 })) {
+      if (await resultsMessage.isVisible({ timeout: 5000 })) {
         const text = await resultsMessage.textContent();
         console.log(`    ✓ Search results message: ${text}`);
       }
@@ -700,7 +700,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.goto('/drydown?search=xyzabc123nonexistent');
       await waitForPageLoad(page);
 
-      const noResults = page.locator('text=/No articles found|No results|0 results/i'). first();
+      const noResults = page.locator('text=/No articles found|No results|0 results/i').first();
       
       if (await noResults.isVisible({ timeout: 5000 })) {
         console.log('    ✓ No results message displayed');
@@ -718,7 +718,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       await page.goto('/drydown');
       await waitForPageLoad(page);
 
-      await page.locator('[data-testid="article-card"], article'). first().click();
+      await page.locator('[data-testid="article-card"], article').first().click();
       await waitForPageLoad(page);
 
       const shareButton = page.locator('button:has-text("Share"), [aria-label*="Share" i]').first();
@@ -793,7 +793,7 @@ test. describe('Drydown Blog - Complete Test Suite', () => {
       console.log('  ⚡ Testing performance...');
       
       const startTime = Date.now();
-      await page. goto('/drydown');
+      await page.goto('/drydown');
       await waitForPageLoad(page);
       const loadTime = Date.now() - startTime;
 

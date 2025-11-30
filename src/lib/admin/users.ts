@@ -42,7 +42,7 @@ export async function getUsers({
         _count: {
           select: {
             reviews: true,
-            wardrobeItems: true,
+            wardrobe: true,
           },
         },
       },
@@ -74,14 +74,14 @@ export async function getUserByUsername(username: string) {
           createdAt: true,
         },
       },
-      wardrobeItems: {
+      wardrobe: {
         take: 10,
         orderBy: { createdAt: 'desc' },
       },
       _count: {
         select: {
           reviews: true,
-          wardrobeItems: true,
+          wardrobe: true,
           followers: true,
           following: true,
         },

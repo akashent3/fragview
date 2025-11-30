@@ -28,7 +28,7 @@ export default async function AdminDashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
         <p className="text-gray-600 mt-1">Welcome back, {admin.username}</p>
       </div>
 
@@ -43,19 +43,19 @@ export default async function AdminDashboard() {
         />
         <StatsCard
           title="Total Perfumes"
-          value={stats. content.perfumes}
+          value={stats.content.perfumes}
           icon={Package}
           color="green"
         />
         <StatsCard
           title="Total Brands"
-          value={stats. content.brands}
+          value={stats.content.brands}
           icon={Building2}
           color="orange"
         />
         <StatsCard
           title="Total Reviews"
-          value={stats. content.reviews}
+          value={stats.content.reviews}
           icon={Star}
           color="purple"
         />
@@ -65,7 +65,7 @@ export default async function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatsCard
           title="Active Users (30d)"
-          value={stats. users.active}
+          value={stats.users.active}
           icon={TrendingUp}
           color="green"
         />
@@ -77,7 +77,7 @@ export default async function AdminDashboard() {
         />
         <StatsCard
           title="Notifications Sent"
-          value={stats. notifications}
+          value={stats.notifications}
           icon={Calendar}
           color="purple"
         />
@@ -87,14 +87,14 @@ export default async function AdminDashboard() {
       {stats.pending.total > 0 && (
         <div className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-lg">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-6 h-6 text-orange-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-6 h-6 text-orange-600 flex-shrink-0 mt-0.5"/>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-orange-900">
                 {stats.pending.total} Pending Item{stats.pending.total !== 1 ? 's' : ''}
               </h3>
               <p className="text-orange-700 text-sm mt-1">
                 {stats.pending.submissions} community submission{stats.pending.submissions !== 1 ? 's' : ''} and{' '}
-                {stats. pending.brandApplications} brand application{stats.pending.brandApplications !== 1 ? 's' : ''} awaiting review
+                {stats.pending.brandApplications} brand application{stats.pending.brandApplications !== 1 ? 's' : ''} awaiting review
               </p>
               <div className="flex gap-3 mt-3">
                 <a

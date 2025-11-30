@@ -9,7 +9,7 @@ export async function getArticles(category?: string, page: number = 1, limit: nu
 
   const where = {
     published: true,
-    .. .(category && category !== 'All' ?  { category } : {}),
+    ...(category && category !== 'All' ?  { category } : {}),
   };
 
   const [articles, total] = await Promise.all([

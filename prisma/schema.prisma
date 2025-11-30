@@ -11,42 +11,41 @@ datasource db {
 }
 
 model User {
-  id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  username             String                @unique @db.VarChar(50)
-  email                String                @unique @db.VarChar(255)
-  emailVerified        DateTime?             @db.Timestamptz(6)
-  password             String?               @db.VarChar(255)
-  image                String? 
-  bio                  String?
-  location             String?               @db.VarChar(100)
-  role                 UserRole              @default(USER)
-  experiencePoints     Int                   @default(0)
-  badges               String[]              @db.VarChar(50)
-  testData             Boolean               @default(false)
-  createdAt            DateTime              @default(now()) @db.Timestamptz(6)
-  updatedAt            DateTime              @updatedAt @db.Timestamptz(6)
-  favAccords           String[]              @db.VarChar(50)
-  favNotes             String[]              @db.VarChar(50)
-  favPerfumeIds        String[]              @db.VarChar(255)
-  favPerfumers         String[]              @db.VarChar(100)
-  isActivityPublic     Boolean               @default(true)
-  isWardrobePublic     Boolean               @default(false)
-  accounts             Account[]
-  articles             Article[]
-  communitySubmissions CommunitySubmission[]
-  following            Follow[]              @relation("Follower")
-  followers            Follow[]              @relation("Following")
-  notifications        Notification[]
-  ratings              Rating[]
-  reviews              Review[]
-  sessions             Session[]
-  similarVotes         SimilarPerfumeVote[]
-  wardrobe             WardrobeEntry[]
-  activityLogs         ActivityLog[]
-  articleComments      ArticleComment[]
-
-  emailNotifWeeklyDigest   Boolean  @default(true)
-  unsubscribedFromAll      Boolean  @default(false)
+  id                     String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username               String                @unique @db.VarChar(50)
+  email                  String                @unique @db.VarChar(255)
+  emailVerified          DateTime?             @db.Timestamptz(6)
+  password               String?               @db.VarChar(255)
+  image                  String?
+  bio                    String?
+  location               String?               @db.VarChar(100)
+  role                   UserRole              @default(USER)
+  experiencePoints       Int                   @default(0)
+  badges                 String[]              @db.VarChar(50)
+  createdAt              DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime              @updatedAt @db.Timestamptz(6)
+  favAccords             String[]              @db.VarChar(50)
+  favNotes               String[]              @db.VarChar(50)
+  favPerfumeIds          String[]              @db.VarChar(255)
+  favPerfumers           String[]              @db.VarChar(100)
+  isActivityPublic       Boolean               @default(true)
+  isWardrobePublic       Boolean               @default(false)
+  emailNotifWeeklyDigest Boolean               @default(true)
+  unsubscribedFromAll    Boolean               @default(false)
+  testData               Boolean               @default(false)
+  accounts               Account[]
+  activityLogs           ActivityLog[]
+  articleComments        ArticleComment[]
+  articles               Article[]
+  communitySubmissions   CommunitySubmission[]
+  following              Follow[]              @relation("Follower")
+  followers              Follow[]              @relation("Following")
+  notifications          Notification[]
+  ratings                Rating[]
+  reviews                Review[]
+  sessions               Session[]
+  similarVotes           SimilarPerfumeVote[]
+  wardrobe               WardrobeEntry[]
 
   @@index([email])
   @@index([username])
@@ -60,13 +59,13 @@ model Account {
   type              String  @db.VarChar(50)
   provider          String  @db.VarChar(50)
   providerAccountId String  @db.VarChar(255)
-  refresh_token     String? 
-  access_token      String? 
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
-  token_type        String?  @db.VarChar(50)
-  scope             String? 
-  id_token          String? 
-  session_state     String? 
+  token_type        String? @db.VarChar(50)
+  scope             String?
+  id_token          String?
+  session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
@@ -121,19 +120,18 @@ model Review {
   likeCount    Int             @default(0)
   isEdited     Boolean         @default(false)
   editedAt     DateTime?       @db.Timestamptz(6)
-  isDeleted    Boolean         @default(false)
-  deletedAt    DateTime? 
-  testData     Boolean         @default(false)
   createdAt    DateTime        @default(now()) @db.Timestamptz(6)
   updatedAt    DateTime        @updatedAt @db.Timestamptz(6)
   longevity    Int?            @db.SmallInt
   sillage      Int?            @db.SmallInt
+  deletedAt    DateTime?
+  isDeleted    Boolean         @default(false)
+  parentId     String?         @db.Uuid
+  testData     Boolean         @default(false)
   helpful      ReviewHelpful[]
+  parent       Review?         @relation("ReviewReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      Review[]        @relation("ReviewReplies")
   user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  parentId      String?        @db.Uuid
-  parent        Review?        @relation("ReviewReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies       Review[]       @relation("ReviewReplies")
 
   @@index([perfumeId])
   @@index([parentId])
@@ -190,7 +188,7 @@ model WardrobeEntry {
   perfumeId   String         @db.VarChar(255)
   subcategory String         @db.VarChar(100)
   status      WardrobeStatus
-  notes       String? 
+  notes       String?
   createdAt   DateTime       @default(now()) @db.Timestamptz(6)
   updatedAt   DateTime       @updatedAt @db.Timestamptz(6)
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -234,8 +232,8 @@ model Notification {
   message   String
   link      String?
   read      Boolean          @default(false)
-  testData  Boolean          @default(false)
   createdAt DateTime         @default(now()) @db.Timestamptz(6)
+  testData  Boolean          @default(false)
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
@@ -261,10 +259,10 @@ model Collection {
   id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name         String    @db.VarChar(200)
   slug         String    @unique @db.VarChar(200)
-  description  String? 
+  description  String?
   categoryId   String?   @db.Uuid
   perfumeIds   String[]  @db.VarChar(255)
-  thumbnailUrl String? 
+  thumbnailUrl String?
   displayOrder Int       @default(0)
   createdAt    DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt    DateTime  @updatedAt @db.Timestamptz(6)
@@ -283,7 +281,7 @@ model Price {
   currency     String   @db.VarChar(3)
   region       String   @db.VarChar(50)
   bottleSize   String   @db.VarChar(20)
-  url          String? 
+  url          String?
   lastUpdated  DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([perfumeId])
@@ -299,9 +297,9 @@ model CommunitySubmission {
   data        Json
   status      SubmissionStatus @default(PENDING)
   adminNotes  String?
-  testData    Boolean          @default(false)
   createdAt   DateTime         @default(now()) @db.Timestamptz(6)
   processedAt DateTime?        @db.Timestamptz(6)
+  testData    Boolean          @default(false)
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status])
@@ -325,9 +323,9 @@ model BrandOwnerSubmission {
   verificationDocs String[]
   status           SubmissionStatus @default(PENDING)
   adminNotes       String?
-  testData         Boolean          @default(false)
   createdAt        DateTime         @default(now()) @db.Timestamptz(6)
   processedAt      DateTime?        @db.Timestamptz(6)
+  testData         Boolean          @default(false)
 
   @@index([status])
   @@index([contactEmail])
@@ -358,7 +356,7 @@ model AdminActivityLog {
   adminId   String   @db.Uuid
   action    String   @db.VarChar(100)
   target    String   @db.VarChar(255)
-  details   Json? 
+  details   Json?
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([adminId])
@@ -371,7 +369,7 @@ model FeaturedItem {
   id        String   @id @default(cuid())
   type      String
   mongoId   String
-  position  Int? 
+  position  Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -383,11 +381,10 @@ model ArticleComment {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   articleId String   @db.Uuid
   userId    String   @db.Uuid
-  content   String   @db.Text
-  testData  Boolean  @default(false)
+  content   String
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
-
+  testData  Boolean  @default(false)
   article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -396,25 +393,24 @@ model ArticleComment {
   @@map("article_comments")
 }
 
-
 model Article {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  slug              String    @unique @db.VarChar(255)
-  title             String    @db.VarChar(255)
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug              String           @unique @db.VarChar(255)
+  title             String           @db.VarChar(255)
   excerpt           String
   content           String
   coverImage        String?
-  category          String    @db.VarChar(50)
-  readTime          String    @db.VarChar(20)
-  authorId          String    @db.Uuid
-  mentionedPerfumes String[]  @db.VarChar(255)
-  published         Boolean   @default(false)
-  publishedAt       DateTime? @db.Timestamptz(6)
-  testData          Boolean   @default(false)
-  createdAt         DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt         DateTime  @updatedAt @db.Timestamptz(6)
-  author            User      @relation(fields: [authorId], references: [id])
+  category          String           @db.VarChar(50)
+  readTime          String           @db.VarChar(20)
+  authorId          String           @db.Uuid
+  mentionedPerfumes String[]         @db.VarChar(255)
+  published         Boolean          @default(false)
+  publishedAt       DateTime?        @db.Timestamptz(6)
+  createdAt         DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime         @updatedAt @db.Timestamptz(6)
+  testData          Boolean          @default(false)
   comments          ArticleComment[]
+  author            User             @relation(fields: [authorId], references: [id])
 
   @@index([slug])
   @@index([published])
@@ -423,12 +419,12 @@ model Article {
 }
 
 model FeaturedPerfume {
-  id          String   @id @default(cuid())
-  perfumeId   String
-  position    Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id        String   @id @default(cuid())
+  perfumeId String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([position])
   @@map("featured_perfumes")
 }
@@ -439,22 +435,21 @@ model TrendingBrand {
   position  Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([position])
   @@map("trending_brands")
 }
 
 model ActivityLog {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId      String   @db.Uuid
-  action      String   @db.VarChar(100)
-  targetType  String?  @db.VarChar(50)
-  targetId    String?  @db.VarChar(255)
-  details     Json?
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
-  
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @db.Uuid
+  action     String   @db.VarChar(100)
+  targetType String?  @db.VarChar(50)
+  targetId   String?  @db.VarChar(255)
+  details    Json?
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([createdAt(sort: Desc)])
   @@index([action])
@@ -481,11 +476,11 @@ enum NotificationType {
   NEW_FOLLOWER
   REVIEW_HELPFUL
   REVIEW_LIKE
-  REVIEW_REPLY
-  THREAD_ACTIVITY
   SUBMISSION_APPROVED
   SUBMISSION_REJECTED
   SYSTEM_ANNOUNCEMENT
+  REVIEW_REPLY
+  THREAD_ACTIVITY
 }
 
 enum SubmissionType {

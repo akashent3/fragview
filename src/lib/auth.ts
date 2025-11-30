@@ -1,4 +1,5 @@
 import { NextAuthOptions } from 'next-auth';
+import { getServerSession } from 'next-auth';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
@@ -130,3 +131,5 @@ export const authOptions: NextAuthOptions = {
   debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
 };
+
+export const auth = () => getServerSession(authOptions);

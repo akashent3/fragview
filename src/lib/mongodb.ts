@@ -54,3 +54,9 @@ export async function getNotesCollection() {
   const db = await getMongoDb();
   return db.collection('notes');
 }
+
+export async function connectMongoDB() {
+  const client = await clientPromise;
+  const db = client.db('fragview');
+  return { client, db };
+}

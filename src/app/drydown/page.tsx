@@ -30,7 +30,7 @@ export default async function DrydownPage({
 
   // Fetch articles with pagination
   const { articles, total, totalPages } = await getArticles(
-    selectedCategory && selectedCategory !== 'All' ?  selectedCategory : undefined,
+    selectedCategory && selectedCategory !== 'All' ? selectedCategory : undefined,
     currentPage,
     9 // 9 articles per page (1 featured + 8 in grid)
   );
@@ -39,7 +39,7 @@ export default async function DrydownPage({
   const recent = articles.slice(1);
 
   // Check if user is ADMIN or EDITOR
-  const canManage = session?.user?.role === 'ADMIN' || session?. user?.role === 'EDITOR';
+  const canManage = session?.user?.role === 'ADMIN' || session?.user?.role === 'EDITOR';
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#FAFFF5] text-gray-800">
@@ -79,15 +79,15 @@ export default async function DrydownPage({
           {categories.map((cat) => {
             const params = new URLSearchParams();
             if (cat !== 'All') params.set('category', cat);
-            const href = params.toString() ?  `/drydown?${params.toString()}` : '/drydown';
+            const href = params.toString() ? `/drydown?${params.toString()}` : '/drydown';
 
             return (
               <Link
                 key={cat}
                 href={href}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                  (! selectedCategory && cat === 'All') || selectedCategory === cat
-                    ?  'bg-green-600 text-white shadow-lg'
+                  (!selectedCategory && cat === 'All') || selectedCategory === cat
+                    ? 'bg-green-600 text-white shadow-lg'
                     : 'bg-white/60 backdrop-blur-md text-gray-700 hover:bg-white hover:shadow-md'
                 }`}
               >
@@ -98,7 +98,7 @@ export default async function DrydownPage({
         </div>
 
         {/* Empty State */}
-        {articles. length === 0 ?  (
+        {articles.length === 0 ?  (
           <div className="text-center py-20">
             <div className="w-24 h-24 mx-auto mb-6 bg-green-100 rounded-full flex items-center justify-center">
               <Newspaper className="w-12 h-12 text-green-600" />
@@ -123,9 +123,9 @@ export default async function DrydownPage({
           <>
             {/* Featured Article */}
             {featured && (
-              <Link href={`/drydown/${featured. slug}`} className="mb-16 group block cursor-pointer">
+              <Link href={`/drydown/${featured.slug}`} className="mb-16 group block cursor-pointer">
                 <div className="relative h-[500px] w-full rounded-3xl overflow-hidden shadow-xl">
-                  {featured.coverImage ?  (
+                  {featured.coverImage ? (
                     <img
                       src={featured.coverImage}
                       alt={featured.title}
@@ -151,7 +151,7 @@ export default async function DrydownPage({
 
                     <div className="flex items-center gap-4 text-sm text-gray-300">
                       <div className="flex items-center gap-2">
-                        {featured.author. image ?  (
+                        {featured.author. image ? (
                           <img
                             src={featured.author.image}
                             className="w-8 h-8 rounded-full object-cover"
@@ -168,7 +168,7 @@ export default async function DrydownPage({
                       <span>{new Date(featured.publishedAt || featured.createdAt).toLocaleDateString()}</span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
-                        <Clock size={14} /> {featured. readTime}
+                        <Clock size={14} /> {featured.readTime}
                       </span>
                       {featured.commentCount > 0 && (
                         <>
@@ -188,7 +188,7 @@ export default async function DrydownPage({
             {recent.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
                 {recent.map((article) => (
-                  <Link href={`/drydown/${article.slug}`} key={article. id} className="group">
+                  <Link href={`/drydown/${article.slug}`} key={article.id} className="group">
                     <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-green-100 overflow-hidden hover:shadow-lg transition-all duration-300 h-full flex flex-col">
                       <div className="h-48 overflow-hidden relative">
                         {article.coverImage ? (
@@ -256,18 +256,17 @@ export default async function DrydownPage({
                 <Link
                   href={
                     currentPage > 1
-                      ? `/drydown? ${new URLSearchParams({
-                          .. .(selectedCategory && selectedCategory !== 'All' && { category: selectedCategory }),
-                          page: (currentPage - 1). toString(),
+                      ? `/drydown?${new URLSearchParams({
+                          ...(selectedCategory && selectedCategory !== 'All' && { category: selectedCategory }),
+                          page: (currentPage - 1).toString(),
                         }).toString()}`
-                      : '#'
+                      : '/drydown'
                   }
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
                     currentPage > 1
                       ? 'bg-white/60 backdrop-blur-md text-gray-700 hover:bg-white hover:shadow-md'
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none'
                   }`}
-                  onClick={(e) => currentPage <= 1 && e.preventDefault()}
                 >
                   <ChevronLeft size={16} />
                   Previous
@@ -317,14 +316,13 @@ export default async function DrydownPage({
                           ...(selectedCategory && selectedCategory !== 'All' && { category: selectedCategory }),
                           page: (currentPage + 1).toString(),
                         }).toString()}`
-                      : '#'
+                      : '/drydown'
                   }
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
                     currentPage < totalPages
-                      ?  'bg-white/60 backdrop-blur-md text-gray-700 hover:bg-white hover:shadow-md'
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      ? 'bg-white/60 backdrop-blur-md text-gray-700 hover:bg-white hover:shadow-md'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none'
                   }`}
-                  onClick={(e) => currentPage >= totalPages && e.preventDefault()}
                 >
                   Next
                   <ChevronRight size={16} />

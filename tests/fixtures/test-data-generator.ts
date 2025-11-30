@@ -310,25 +310,26 @@ export async function generateTestData(): Promise<TestDataIds> {
     // 8. CREATE TEST ARTICLES (SUPABASE)
     // ==========================================
     console.log('📝 Creating 15 test articles in Supabase...');
-    const categories = ['FRAGRANCE_BASICS', 'REVIEWS', 'INDUSTRY_NEWS', 'SCENT_PROFILES', 'BRAND_SPOTLIGHTS', 'SEASONAL_GUIDES'];
-    
+    const categories = ['All', 'Review', 'Guide', 'News', 'Interview', 'Deep Dive', 'Industry']; // ✅ Match page. tsx categories
+
     for (let i = 0; i < 15; i++) {
       const isPublished = i < 12; // 12 published, 3 drafts
-      const title = faker.lorem.sentence();
+      const title = faker.lorem. sentence();
       
       const article = await prisma.article.create({
         data: {
           title: title,
-          slug: `test-article-${faker.lorem.slug()}-${i}`,
+          slug: `test-article-${faker. lorem.slug()}-${i}`,
           excerpt: faker.lorem.paragraph(),
           content: `# ${title}\n\n${faker.lorem. paragraphs(10, '\n\n')}`,
           coverImage: faker.image.url(),
-          category: faker.helpers.arrayElement(categories),
+          category: faker.helpers. arrayElement(categories), // ✅ Now matches the page
           published: isPublished,
-          authorId: testDataIds.adminUserId,
-          publishedAt: isPublished ? faker.date.recent({ days: 30 }) : null,
-          readTime: `${faker.number.int({ min: 3, max: 15 })} min`,
+          authorId: testDataIds. adminUserId,
+          publishedAt: isPublished ? faker. date.recent({ days: 30 }) : null,
+          readTime: `${faker.number. int({ min: 3, max: 15 })} min`,
           mentionedPerfumes: faker.helpers.arrayElements(testDataIds.perfumeIds, faker.number.int({ min: 1, max: 5 })),
+          testData: true, // ✅ Add this for cleanup
         },
       });
       testDataIds.articleIds.push(article.id);

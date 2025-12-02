@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
-import { connectMongoDB } from '@/lib/mongodb';
+import { connectMongoDB } from '@/lib/mongodb'; // ✅ FIXED IMPORT
+import { ObjectId } from 'mongodb'; // ✅ ADDED IMPORT
 import { logAdminAction } from './stats';
 
 /**
@@ -16,16 +17,19 @@ export async function getFeaturedContent() {
       }),
     ]);
 
-    const { db } = await connectMongoDB();
+    const { db } = await connectMongoDB(); // ✅ FIXED FUNCTION NAME
 
     // Fetch perfume details from MongoDB
     const perfumeDetails = await Promise.all(
       featuredPerfumes.map(async (fp) => {
-        const perfume = await db.collection('perfumes').findOne({ _id: fp.perfumeId });
+        // ✅ CONVERT STRING TO OBJECTID
+        const perfume = await db.collection('perfumes').findOne({ 
+          _id: new ObjectId(fp.perfumeId) 
+        });
         return {
           id: fp.id,
           mongoId: fp.perfumeId,
-          name: perfume?. name || 'Unknown',
+          name: perfume?.name || perfume?.variant_name || 'Unknown',
           brandName: perfume?.brand_name || '',
           image: perfume?.image || null,
           position: fp.position,
@@ -36,10 +40,13 @@ export async function getFeaturedContent() {
     // Fetch brand details from MongoDB
     const brandDetails = await Promise.all(
       trendingBrands.map(async (tb) => {
-        const brand = await db.collection('brands').findOne({ _id: tb.brandId });
+        // ✅ CONVERT STRING TO OBJECTID
+        const brand = await db.collection('brands').findOne({ 
+          _id: new ObjectId(tb.brandId) 
+        });
         return {
           id: tb.id,
-          mongoId: tb. brandId,
+          mongoId: tb.brandId,
           name: brand?.name || 'Unknown',
           image: brand?.logo || null,
           position: tb.position,
@@ -52,7 +59,7 @@ export async function getFeaturedContent() {
       trendingBrands: brandDetails,
     };
   } catch (error) {
-    console. error('Error fetching featured content:', error);
+    console.error('Error fetching featured content:', error);
     return {
       featuredPerfumes: [],
       trendingBrands: [],
@@ -66,7 +73,7 @@ export async function getFeaturedContent() {
 export async function setFeaturedPerfumesAction(perfumeIds: string[], adminId: string) {
   try {
     // Delete existing featured perfumes
-    await prisma.featuredPerfume. deleteMany({});
+    await prisma.featuredPerfume.deleteMany({});
 
     // Insert new ones with positions
     await Promise.all(
@@ -85,7 +92,7 @@ export async function setFeaturedPerfumesAction(perfumeIds: string[], adminId: s
       adminId,
       'SET_FEATURED',
       'PERFUME',
-      perfumeIds. join(','),
+      perfumeIds.join(','),
       { count: perfumeIds.length }
     );
 
@@ -107,7 +114,7 @@ export async function setTrendingBrandsAction(brandIds: string[], adminId: strin
     // Insert new ones with positions
     await Promise.all(
       brandIds.map((brandId, index) =>
-        prisma. trendingBrand.create({
+        prisma.trendingBrand.create({
           data: {
             brandId,
             position: index,
@@ -127,7 +134,7 @@ export async function setTrendingBrandsAction(brandIds: string[], adminId: strin
 
     return { success: true };
   } catch (error) {
-    console. error('Error setting trending brands:', error);
+    console.error('Error setting trending brands:', error);
     return { success: false, error: 'Failed to update trending brands' };
   }
 }
@@ -137,12 +144,13 @@ export async function setTrendingBrandsAction(brandIds: string[], adminId: strin
  */
 export async function searchPerfumesForFeatured(query: string) {
   try {
-    const { db } = await connectMongoDB();
+    const { db } = await connectMongoDB(); // ✅ FIXED FUNCTION NAME
     
     const perfumes = await db
       .collection('perfumes')
       .find({
         $or: [
+          { variant_name: { $regex: query, $options: 'i' } }, // ✅ FIXED FIELD NAME
           { name: { $regex: query, $options: 'i' } },
           { brand_name: { $regex: query, $options: 'i' } },
         ],
@@ -162,7 +170,7 @@ export async function searchPerfumesForFeatured(query: string) {
  */
 export async function searchBrandsForFeatured(query: string) {
   try {
-    const { db } = await connectMongoDB();
+    const { db } = await connectMongoDB(); // ✅ FIXED FUNCTION NAME
     
     const brands = await db
       .collection('brands')
@@ -174,7 +182,7 @@ export async function searchBrandsForFeatured(query: string) {
 
     return brands;
   } catch (error) {
-    console. error('Error searching brands:', error);
+    console.error('Error searching brands:', error);
     return [];
   }
 }

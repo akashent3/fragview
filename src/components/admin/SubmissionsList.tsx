@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { Package, Building2, Eye, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Package, Building2, Eye, CheckCircle, XCircle, Clock, ClipboardList } from 'lucide-react';
 
 interface Submission {
   id: string;

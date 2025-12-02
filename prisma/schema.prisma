@@ -173,12 +173,15 @@ model SimilarPerfumeVote {
   userId           String   @db.Uuid
   sourcePerfumeId  String   @db.VarChar(255)
   similarPerfumeId String   @db.VarChar(255)
+  voteType         VoteType 
   createdAt        DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(6)
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, sourcePerfumeId, similarPerfumeId])
   @@index([sourcePerfumeId])
   @@index([similarPerfumeId])
+  @@index([voteType])
   @@map("similar_perfume_votes")
 }
 
@@ -492,4 +495,9 @@ enum SubmissionStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum VoteType {
+  UP
+  DOWN
 }

@@ -16,7 +16,7 @@ interface UserItem {
   experiencePoints: number;
   _count: {
     reviews: number;
-    wardrobeItems: number;
+    wardrobe: number;
   };
 }
 
@@ -167,7 +167,7 @@ export default function UsersListClient({ users, total, currentPage }: Props) {
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-600">
                       <p>{user._count.reviews} reviews</p>
-                      <p>{user._count.wardrobeItems} wardrobe items</p>
+                      <p>{user._count.wardrobe} wardrobe items</p>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">

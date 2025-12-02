@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createArticle, updateArticle } from '@/app/actions/admin/articles';
-import { generateSlug, calculateReadTime } from '@/lib/admin/articles';
+import { generateSlug, calculateReadTime } from '@/lib/utils/article-utils';
 import { Save, Eye, Loader2, X, Search, Plus } from 'lucide-react';
 import ImageUploadComponent from './ImageUploadComponent';
 import dynamic from 'next/dynamic';

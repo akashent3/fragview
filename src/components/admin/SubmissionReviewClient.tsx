@@ -43,7 +43,7 @@ export default function SubmissionReviewClient({ submission }: Props) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            type: submission.type. toLowerCase(),
+            type: submission.type.toLowerCase(),
             name: submission.data.name || submission.data.brandName,
             brandName: submission.data.brand,
           }),
@@ -63,8 +63,8 @@ export default function SubmissionReviewClient({ submission }: Props) {
 
   const handleApprove = async () => {
     // ✅ Block approval if duplicate exists
-    if (duplicateCheck?. exists) {
-      alert('❌ Cannot approve!  This ' + submission.type. toLowerCase() + ' already exists in the database.  Please reject this submission.');
+    if (duplicateCheck?.exists) {
+      alert('❌ Cannot approve!  This ' + submission.type.toLowerCase() + ' already exists in the database. Please reject this submission.');
       return;
     }
 
@@ -134,7 +134,7 @@ export default function SubmissionReviewClient({ submission }: Props) {
       {/* Status Badge */}
       {isAlreadyProcessed && (
         <div className={`p-4 rounded-xl border-2 ${
-          submission. status === 'APPROVED'
+          submission.status === 'APPROVED'
             ? 'bg-green-50 border-green-200'
             : 'bg-red-50 border-red-200'
         }`}>
@@ -158,11 +158,11 @@ export default function SubmissionReviewClient({ submission }: Props) {
               </p>
               <div className="mt-3 p-4 bg-red-100 rounded-lg border-2 border-red-300">
                 <p className="font-bold text-red-900 text-lg">
-                  {duplicateCheck.perfume?.name || duplicateCheck. brand?.name}
-                  {duplicateCheck.perfume?. brand_name && ` by ${duplicateCheck.perfume. brand_name}`}
+                  {duplicateCheck.perfume?.name || duplicateCheck.brand?.name}
+                  {duplicateCheck.perfume?.brand_name && ` by ${duplicateCheck.perfume.brand_name}`}
                 </p>
                 <Link
-                  href={`/${submission.type.toLowerCase()}s/${duplicateCheck.perfume? ._id || duplicateCheck.brand?._id}`}
+                  href={`/${submission.type.toLowerCase()}s/${duplicateCheck.perfume?._id || duplicateCheck.brand?._id}`}
                   target="_blank"
                   className="inline-flex items-center gap-1 mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm"
                 >
@@ -181,7 +181,7 @@ export default function SubmissionReviewClient({ submission }: Props) {
       )}
 
       {/* ✅ DUPLICATE CHECK - Similar Items Warning */}
-      {!checkingDuplicate && ! duplicateCheck?.exists && duplicateCheck?.similar?. length > 0 && (
+      {!checkingDuplicate && ! duplicateCheck?.exists && duplicateCheck?.similar?.length > 0 && (
         <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-xl">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -264,7 +264,7 @@ export default function SubmissionReviewClient({ submission }: Props) {
                       </label>
                       <input
                         type="text"
-                        value={editedData. gender || ''}
+                        value={editedData.gender || ''}
                         onChange={(e) => setEditedData({ ...editedData, gender: e.target.value })}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                         disabled={isAlreadyProcessed}
@@ -291,7 +291,7 @@ export default function SubmissionReviewClient({ submission }: Props) {
                     </label>
                     <textarea
                       value={editedData.description || ''}
-                      onChange={(e) => setEditedData({ ...editedData, description: e.target. value })}
+                      onChange={(e) => setEditedData({ ...editedData, description: e.target.value })}
                       rows={4}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       disabled={isAlreadyProcessed}
@@ -307,7 +307,7 @@ export default function SubmissionReviewClient({ submission }: Props) {
                     <input
                       type="text"
                       value={editedData.brandName || editedData.name || ''}
-                      onChange={(e) => setEditedData({ ...editedData, brandName: e.target. value, name: e.target.value })}
+                      onChange={(e) => setEditedData({ ...editedData, brandName: e.target.value, name: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       disabled={isAlreadyProcessed}
                     />
@@ -332,7 +332,7 @@ export default function SubmissionReviewClient({ submission }: Props) {
                     </label>
                     <textarea
                       value={editedData.description || ''}
-                      onChange={(e) => setEditedData({ ...editedData, description: e.target. value })}
+                      onChange={(e) => setEditedData({ ...editedData, description: e.target.value })}
                       rows={4}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       disabled={isAlreadyProcessed}
@@ -387,15 +387,15 @@ export default function SubmissionReviewClient({ submission }: Props) {
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Submitted By</h3>
             <div className="flex items-center gap-3 mb-4">
-              {submission.user. image ?  (
+              {submission.user.image ?  (
                 <img
-                  src={submission.user. image}
+                  src={submission.user.image}
                   alt={submission.user.username}
                   className="w-12 h-12 rounded-full object-cover"
                 />
               ) : (
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-orange-400 flex items-center justify-center text-white font-bold">
-                  {submission.user.username. charAt(0). toUpperCase()}
+                  {submission.user.username.charAt(0).toUpperCase()}
                 </div>
               )}
               <div>

@@ -38,6 +38,18 @@ interface PerfumeDoc {
   sillage?: number;
   reminds_me?: string[];
   created_at?: number | string;
+  ai_summary?: {
+    generated_at: Date;
+    review_count: number;
+    summary: {
+      overall_sentiment: 'positive' | 'mixed' | 'negative';
+      summary_text: string;
+      common_likes: string[];
+      common_dislikes: string[];
+    };
+    last_updated: Date;
+    needs_refresh: boolean;
+  } | null;
 }
 
 interface ReviewLite {
@@ -59,7 +71,6 @@ interface ReviewLite {
     level: string;
     badges: string[];
   };
-  replies?: ReviewLite[];
 }
 
 interface Props {
@@ -627,19 +638,19 @@ export default function PerfumeDetailClient({
         )}
 
         <SimilarFragrances
-          fragrances={similarPerfumes}
-          currentPerfumeId={Number(perfume._id)}
-          userIsVerified={isSignedIn && canRate}
-          onAddClick={() => {
-            if (! isSignedIn) {
-              open({ mode: 'signin', reason: 'Sign in to add similar fragrances', callbackUrl: `/perfumes/${slug}#similar` });
-            }
-          }}
+          currentPerfumeId={perfume._id.toString()}
         />
 
+        {perfume.ai_summary?.summary && (
         <div className="glass-card rounded-xl p-5 shadow-sm">
-          <ReviewsSummary summary={reviewsSummary} />
+          <ReviewsSummary 
+            summary={reviewsSummary}
+            aiGeneratedSummary={perfume.ai_summary.summary}
+            reviewCount={perfume.ai_summary.review_count || reviewCount}
+            lastUpdated={perfume.ai_summary. last_updated ? new Date(perfume.ai_summary.last_updated) : undefined}
+          />
         </div>
+        )}
 
         <div id="review-section" className="glass-card rounded-xl p-5 shadow-sm relative overflow-hidden">
           {isCoolingPeriodActive && (

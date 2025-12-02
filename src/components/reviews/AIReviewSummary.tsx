@@ -5,41 +5,24 @@ import { Sparkles, ThumbsUp, ThumbsDown, TrendingUp } from 'lucide-react';
 
 interface ReviewsSummaryProps {
   summary: {
-    totalReviews: number;
-    averageRating: number;
-    sentiment: string;
-    keyPoints: string[];
-    commonWords: string[];
-    ratingDistribution: Record<number, number>;
-    aiSummary: string;
-  } | null;
-  aiGeneratedSummary?: {
     overall_sentiment: 'positive' | 'mixed' | 'negative';
     summary_text: string;
     common_likes: string[];
     common_dislikes: string[];
   } | null;
-  reviewCount?: number;
+  reviewCount: number;
   lastUpdated?: Date;
 }
 
 export default function ReviewsSummary({ 
   summary, 
-  aiGeneratedSummary,
-  reviewCount,
+  reviewCount, 
   lastUpdated 
 }: ReviewsSummaryProps) {
-  // CRITICAL: Only show if AI summary exists AND has actual data
-  if (! aiGeneratedSummary) {
-    return null; // Complete invisibility - no placeholder, no empty space
-  }
-
-  // Also check if the AI summary has actual content
-  if (! aiGeneratedSummary.summary_text || aiGeneratedSummary.summary_text.trim(). length === 0) {
+  // Don't show if no summary or less than 5 reviews
+  if (!summary || reviewCount < 5) {
     return null;
   }
-
-  const displayReviewCount = reviewCount || summary?. totalReviews || 0;
 
   // Sentiment styling
   const sentimentStyles = {
@@ -57,16 +40,16 @@ export default function ReviewsSummary({
     },
   };
 
-  const style = sentimentStyles[aiGeneratedSummary.overall_sentiment];
+  const style = sentimentStyles[summary.overall_sentiment];
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="relative overflow-hidden rounded-3xl bg-white/40 backdrop-blur-xl border-2 border-white/40 p-8 shadow-lg"
+      className="relative overflow-hidden rounded-3xl bg-white/40 backdrop-blur-xl border-2 border-white/40 p-8 mb-8 shadow-lg"
     >
-      {/* Floating decoration elements */}
+      {/* Floating decoration elements (matching your theme) */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-purple-200/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
       <div className="absolute bottom-0 left-0 w-40 h-40 bg-pink-200/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
@@ -81,7 +64,7 @@ export default function ReviewsSummary({
               AI-Powered Review Summary
             </h3>
             <p className="text-sm text-gray-600 mt-1">
-              Based on {displayReviewCount} {displayReviewCount === 1 ? 'review' : 'reviews'}
+              Based on {reviewCount} {reviewCount === 1 ? 'review' : 'reviews'}
               {lastUpdated && ` • Updated ${formatDate(lastUpdated)}`}
             </p>
           </div>
@@ -90,21 +73,21 @@ export default function ReviewsSummary({
         {/* Sentiment badge */}
         <div className={`px-4 py-2 rounded-full ${style.badge} border font-semibold text-sm capitalize flex items-center gap-2`}>
           <span className="text-xl">{style.icon}</span>
-          {aiGeneratedSummary.overall_sentiment}
+          {summary.overall_sentiment}
         </div>
       </div>
 
       {/* Summary text */}
       <div className="relative bg-white/60 backdrop-blur-sm rounded-2xl p-6 mb-6 border border-white/60 shadow-sm">
         <p className="text-gray-800 leading-relaxed text-lg">
-          {aiGeneratedSummary.summary_text}
+          {summary.summary_text}
         </p>
       </div>
 
       {/* Likes and Dislikes (side by side) */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* What People Love */}
-        {aiGeneratedSummary.common_likes && aiGeneratedSummary.common_likes.length > 0 && (
+        {summary.common_likes && summary.common_likes.length > 0 && (
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/60 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
@@ -113,7 +96,7 @@ export default function ReviewsSummary({
               <h4 className="text-lg font-semibold text-gray-800">What People Love</h4>
             </div>
             <ul className="space-y-3">
-              {aiGeneratedSummary.common_likes.map((like, idx) => (
+              {summary.common_likes.map((like, idx) => (
                 <li key={idx} className="flex items-start gap-3 text-gray-700">
                   <span className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0" />
                   <span className="leading-relaxed">{like}</span>
@@ -124,7 +107,7 @@ export default function ReviewsSummary({
         )}
 
         {/* Common Concerns */}
-        {aiGeneratedSummary.common_dislikes && aiGeneratedSummary.common_dislikes.length > 0 && (
+        {summary.common_dislikes && summary.common_dislikes.length > 0 && (
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/60 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
@@ -133,7 +116,7 @@ export default function ReviewsSummary({
               <h4 className="text-lg font-semibold text-gray-800">Common Concerns</h4>
             </div>
             <ul className="space-y-3">
-              {aiGeneratedSummary.common_dislikes. map((dislike, idx) => (
+              {summary.common_dislikes.map((dislike, idx) => (
                 <li key={idx} className="flex items-start gap-3 text-gray-700">
                   <span className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0" />
                   <span className="leading-relaxed">{dislike}</span>

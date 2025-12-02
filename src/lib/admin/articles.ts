@@ -1,6 +1,7 @@
 import prisma from '@/lib/prisma';
 import { logAdminAction } from './stats';
 import { revalidatePath } from 'next/cache';
+import { generateSlug as genSlug, calculateReadTime as calcReadTime } from '@/lib/utils/article-utils';
 
 /**
  * Get all articles with filters
@@ -240,22 +241,5 @@ export async function deleteArticle(articleId: string, userId: string) {
   }
 }
 
-/**
- * Generate slug from title
- */
-export function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-/**
- * Calculate read time
- */
-export function calculateReadTime(content: string): string {
-  const wordsPerMinute = 200;
-  const wordCount = content.split(/\s+/).length;
-  const minutes = Math.ceil(wordCount / wordsPerMinute);
-  return `${minutes} min read`;
-}
+export const generateSlug = genSlug;
+export const calculateReadTime = calcReadTime;

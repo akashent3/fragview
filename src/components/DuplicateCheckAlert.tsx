@@ -41,11 +41,11 @@ export default function DuplicateCheckAlert({ type, duplicateCheck, checking }: 
   }
 
   // Exact duplicate found - RED WARNING
-  if (duplicateCheck?. exists) {
+  if (duplicateCheck?.exists) {
     const item = type === 'perfume' ? duplicateCheck.perfume : duplicateCheck.brand;
     const linkHref = type === 'perfume' 
-      ? `/perfumes/${item? ._id}` 
-      : `/brands/${item? ._id}`;
+      ? `/perfumes/${item?._id}`
+      : `/brands/${item?._id}`;
 
     return (
       <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl">
@@ -59,10 +59,10 @@ export default function DuplicateCheckAlert({ type, duplicateCheck, checking }: 
               {type === 'perfume' ? (
                 <>
                   <strong>{duplicateCheck.perfume?.name}</strong> by{' '}
-                  <strong>{duplicateCheck.perfume?. brand_name}</strong>
+                  <strong>{duplicateCheck.perfume?.brand_name}</strong>
                 </>
               ) : (
-                <strong>{duplicateCheck.brand?. name}</strong>
+                <strong>{duplicateCheck.brand?.name}</strong>
               )}{' '}
               is already in our database.
             </p>

@@ -39,7 +39,6 @@ export default function ReviewItem({
   currentUserId 
 }: ReviewItemProps) {
   const { data: session } = useSession();
-  const [showReplyForm, setShowReplyForm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -248,14 +247,7 @@ export default function ReviewItem({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-4 pt-3 border-t border-green-50">
-          <button
-            onClick={() => setShowReplyForm(! showReplyForm)}
-            className="flex items-center gap-1 text-sm text-gray-600 hover:text-green-600 transition-colors"
-          >
-            <MessageCircle className="w-4 h-4" />
-            Reply
-          </button>
-
+          
           <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-green-600 transition-colors">
             <ThumbsUp className="w-4 h-4" />
             Helpful
@@ -278,22 +270,6 @@ export default function ReviewItem({
             onReplySuccess();
           }}
         />
-      )}
-
-      {/* Nested Replies */}
-      {review. replies && review.replies.length > 0 && (
-        <div className="mt-3 space-y-3">
-          {review.replies. map((reply) => (
-            <ReviewItem
-              key={reply.id}
-              review={reply}
-              perfumeSlug={perfumeSlug}
-              depth={depth + 1}
-              onReplySuccess={onReplySuccess}
-              currentUserId={currentUserId}
-            />
-          ))}
-        </div>
       )}
     </div>
   );

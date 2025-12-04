@@ -75,6 +75,9 @@ export default function NotificationDropdown({ onClose, onCountChange }: Props) 
   const getIcon = (type: string) => {
     const icons: Record<string, string> = {
       NEW_FOLLOWER: '👤',
+      FOLLOW_REQUEST: '🤝',       
+      FOLLOW_APPROVED: '✅',        
+      BRAND_NEW_RELEASE: '🎉',     
       REVIEW_HELPFUL: '👍',
       REVIEW_LIKE: '❤️',
       REVIEW_REPLY: '💬',

@@ -27,7 +27,6 @@ const navigation = [
   { name: 'Perfumes', href: '/admin/perfumes', icon: Package },
   { name: 'Brands', href: '/admin/brands', icon: Building2 },
   { name: 'Featured Content', href: '/admin/featured', icon: Star },
-  { name: 'Notes & Accords', href: '/admin/notes-accords', icon: Palette },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
   { name: 'Moderation', href: '/admin/moderation', icon: ShieldAlert },
 ];

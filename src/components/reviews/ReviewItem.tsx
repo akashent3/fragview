@@ -56,7 +56,7 @@ export default function ReviewItem({
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffMs = now. getTime() - date.getTime();
+    const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / 86400000);
 
     if (diffDays === 0) return 'Today';
@@ -64,7 +64,7 @@ export default function ReviewItem({
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
     if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-    return `${Math. floor(diffDays / 365)} years ago`;
+    return `${Math.floor(diffDays / 365)} years ago`;
   };
 
   const handleDelete = async () => {
@@ -85,7 +85,7 @@ export default function ReviewItem({
         alert(data.error || 'Failed to delete review');
       }
     } catch (error) {
-      alert('Network error. Please try again.');
+      alert('Network error.Please try again.');
     } finally {
       setIsDeleting(false);
       setShowMenu(false);
@@ -107,7 +107,7 @@ export default function ReviewItem({
   }
 
   return (
-    <div className={depth > 0 ? 'ml-12' : ''} id={`review-${review. id}`}>
+    <div className={depth > 0 ? 'ml-12' : ''} id={`review-${review.id}`}>
       <div className="p-4 bg-white rounded-lg border border-green-100 hover:border-green-200 transition-colors">
         {/* User Info */}
         <div className="flex items-start justify-between mb-3">
@@ -147,7 +147,7 @@ export default function ReviewItem({
                 {review.user.badges.map((badge) => (
                   <span 
                     key={badge}
-                    className="text-xs px-2 py-0. 5 bg-orange-100 text-orange-700 rounded-full"
+                    className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full"
                     title={badge}
                   >
                     {badge === 'Early Adopter' && '🌟'}
@@ -178,9 +178,9 @@ export default function ReviewItem({
                 </div>
               )}
               <p className="text-xs text-gray-500">
-                {formatDate(review. createdAt)}
+                {formatDate(review.createdAt)}
                 {review.isEdited && review.editedAt && (
-                  <span className="ml-1 text-gray-400" title={`Edited on ${new Date(review.editedAt). toLocaleString()}`}>
+                  <span className="ml-1 text-gray-400" title={`Edited on ${new Date(review.editedAt).toLocaleString()}`}>
                     (edited)
                   </span>
                 )}
@@ -227,12 +227,12 @@ export default function ReviewItem({
         {/* Review Text */}
         {review.text && (
           <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line mb-3">
-            {review. text}
+            {review.text}
           </p>
         )}
 
         {/* Review Photos */}
-        {review. photos && review.photos.length > 0 && (
+        {review.photos && review.photos.length > 0 && (
           <div className="flex gap-2 mb-3 flex-wrap">
             {review.photos.map((photo, idx) => (
               <img

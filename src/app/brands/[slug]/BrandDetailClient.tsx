@@ -1,7 +1,9 @@
 'use client';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Star, Leaf, Flower2, Sparkles, MapPin, Globe, Package, ChevronDown, ChevronUp } from 'lucide-react';
+import { Star, Leaf, Flower2, Sparkles, MapPin, Globe, Package, ChevronDown, ChevronUp, Bell, BellOff } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { useAuthModal } from '@/components/auth/AuthModal';
 import type { BrandDoc, PerfumeDoc } from './loaders';
 
 interface Props {
@@ -13,10 +15,18 @@ interface Props {
 }
 
 export default function BrandDetailClient({ brand, perfumes: initialPerfumes, meta, filters: initialFilters, pageSize }: Props) {
+  const { data: session } = useSession();
+  const { open } = useAuthModal();
   const [selectedGender, setSelectedGender] = useState(initialFilters.gender);
   const [selectedCollection, setSelectedCollection] = useState(initialFilters.collection);
   const [selectedSort, setSelectedSort] = useState(initialFilters.sort);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  
+  // Brand Follow State
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [loadingFollow, setLoadingFollow] = useState(false);
+  const [checkingFollow, setCheckingFollow] = useState(true);
 
   const collections = useMemo(() => {
     if (brand.collections_info && Array.isArray(brand.collections_info)) {
@@ -25,11 +35,62 @@ export default function BrandDetailClient({ brand, perfumes: initialPerfumes, me
     return [];
   }, [brand.collections_info]);
 
+  // Check if user is following this brand
+  useEffect(() => {
+    if (session?.user) {
+      checkFollowStatus();
+    } else {
+      setCheckingFollow(false);
+    }
+  }, [session, brand._id]);
+
+  const checkFollowStatus = async () => {
+    try {
+      const res = await fetch(`/api/brands/follow/check?brandId=${brand._id}`);
+      const data = await res.json();
+      setIsFollowing(data.isFollowing || false);
+      setFollowerCount(data.followerCount || 0);
+    } catch (error) {
+      console.error('Error checking follow status:', error);
+    } finally {
+      setCheckingFollow(false);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!session?.user) {
+      open({ mode: 'signin', reason: `Sign in to follow ${brand.name}` });
+      return;
+    }
+
+    setLoadingFollow(true);
+    try {
+      const res = await fetch('/api/brands/follow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          brandId: brand._id.toString(), 
+          brandName: brand.name 
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setIsFollowing(data.isFollowing);
+        setFollowerCount(prev => data.isFollowing ? prev + 1 : prev - 1);
+      }
+    } catch (error) {
+      console.error('Error toggling brand follow:', error);
+    } finally {
+      setLoadingFollow(false);
+    }
+  };
+
   // CLIENT-SIDE FILTERING & SORTING
   const filteredAndSortedPerfumes = useMemo(() => {
     let result = [...initialPerfumes];
 
-    // Filter by gender - Now uses brands.perfumes.gender values
+    // Filter by gender
     if (selectedGender) {
       result = result.filter(p => p.gender?.toLowerCase() === selectedGender.toLowerCase());
     }
@@ -37,7 +98,7 @@ export default function BrandDetailClient({ brand, perfumes: initialPerfumes, me
     // Filter by collection
     if (selectedCollection) {
       result = result.filter(p => {
-        if (!p.collection) return false;
+        if (! p.collection) return false;
         return p.collection.toLowerCase().includes(selectedCollection.toLowerCase());
       });
     }
@@ -104,7 +165,7 @@ export default function BrandDetailClient({ brand, perfumes: initialPerfumes, me
               {brand.description && (
                 <div>
                   <p className="text-gray-700 leading-relaxed">
-                    {showFullDescription ? brand.description : shortDescription}
+                    {showFullDescription ?  brand.description : shortDescription}
                   </p>
                   {shouldShowViewMore && (
                     <button
@@ -131,6 +192,39 @@ export default function BrandDetailClient({ brand, perfumes: initialPerfumes, me
           </h3>
           
           <div className="space-y-4">
+            {/* Follow Brand Button */}
+            {! checkingFollow && (
+              <div>
+                <button
+                  onClick={handleFollowToggle}
+                  disabled={loadingFollow}
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all ${
+                    isFollowing
+                      ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      : 'bg-gradient-to-r from-green-500 to-orange-500 text-white hover:shadow-lg'
+                  }`}
+                >
+                  {isFollowing ? (
+                    <>
+                      <BellOff className="w-4 h-4" />
+                      Unfollow Brand
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="w-4 h-4" />
+                      Follow Brand
+                    </>
+                  )}
+                </button>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  {isFollowing 
+                    ? 'Get notified of new releases' 
+                    : `${followerCount} ${followerCount === 1 ?  'follower' : 'followers'}`
+                  }
+                </p>
+              </div>
+            )}
+            
             {brand.country && (
               <div>
                 <div className="text-sm text-gray-600 mb-1">Headquarters</div>
@@ -162,6 +256,16 @@ export default function BrandDetailClient({ brand, perfumes: initialPerfumes, me
                 {meta.total}
               </div>
             </div>
+
+            {followerCount > 0 && (
+              <div>
+                <div className="text-sm text-gray-600 mb-1">Followers</div>
+                <div className="text-gray-900 font-medium flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-orange-600" />
+                  {followerCount}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -172,7 +276,7 @@ export default function BrandDetailClient({ brand, perfumes: initialPerfumes, me
         
         {/* Filters */}
         <div className="flex flex-wrap gap-3 items-center glass-card rounded-xl p-4">
-          {/* Gender Filter - FIXED: Only Men/Female/Unisex */}
+          {/* Gender Filter */}
           <select
             value={selectedGender}
             onChange={(e) => setSelectedGender(e.target.value)}
@@ -193,7 +297,7 @@ export default function BrandDetailClient({ brand, perfumes: initialPerfumes, me
             <option value="">All Collections</option>
             {collections.map((col: any) => (
               <option key={col.name} value={col.name}>
-                {col.name} {col.perfume_count ? `(${col.perfume_count})` : ''}
+                {col.name} {col.perfume_count ?  `(${col.perfume_count})` : ''}
               </option>
             ))}
           </select>
@@ -287,7 +391,7 @@ export default function BrandDetailClient({ brand, perfumes: initialPerfumes, me
         <div className="py-12 text-center">
           <div className="glass-card rounded-xl p-8 inline-block">
             <Flower2 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-600 mb-2">No perfumes match current filters.</p>
+            <p className="text-gray-600 mb-2">No perfumes match current filters. </p>
             <p className="text-sm text-gray-500 mb-4">
               This brand has {initialPerfumes.length} perfumes total.
             </p>

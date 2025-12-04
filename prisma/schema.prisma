@@ -46,6 +46,7 @@ model User {
   sessions               Session[]
   similarVotes           SimilarPerfumeVote[]
   wardrobe               WardrobeEntry[]
+  brandFollows           BrandFollow[]
 
   @@index([email])
   @@index([username])
@@ -128,6 +129,8 @@ model Review {
   isDeleted    Boolean         @default(false)
   parentId     String?         @db.Uuid
   testData     Boolean         @default(false)
+  flaggedCount Int             @default(0)
+  isFlagged    Boolean         @default(false)
   helpful      ReviewHelpful[]
   parent       Review?         @relation("ReviewReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies      Review[]        @relation("ReviewReplies")
@@ -203,17 +206,34 @@ model WardrobeEntry {
 }
 
 model Follow {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  followerId  String   @db.Uuid
-  followingId String   @db.Uuid
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
-  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
-  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  followerId  String       @db.Uuid
+  followingId String       @db.Uuid
+  status      FollowStatus @default(PENDING)
+  createdAt   DateTime     @default(now()) @db.Timestamptz(6)
+  approvedAt  DateTime?     @db.Timestamptz(6)
+  follower    User         @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User         @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+  @@index([status])
   @@map("follows")
+}
+
+model BrandFollow {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid
+  brandId   String   @db.VarChar(255)  // MongoDB ObjectId as string
+  brandName String   @db.VarChar(200)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, brandId])
+  @@index([userId])
+  @@index([brandId])
+  @@map("brand_follows")
 }
 
 model ThreadFollow {
@@ -477,6 +497,9 @@ enum WardrobeStatus {
 
 enum NotificationType {
   NEW_FOLLOWER
+  FOLLOW_REQUEST        
+  FOLLOW_APPROVED       
+  BRAND_NEW_RELEASE     
   REVIEW_HELPFUL
   REVIEW_LIKE
   SUBMISSION_APPROVED
@@ -500,4 +523,10 @@ enum SubmissionStatus {
 enum VoteType {
   UP
   DOWN
+}
+
+enum FollowStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

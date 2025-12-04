@@ -1,34 +1,29 @@
-export const metadata = { title: "Moderation • Fragview" };
+import { requireAdmin } from '@/lib/admin/permissions';
+import ModerationQueueClient from './ModerationQueueClient';
+import { ShieldAlert } from 'lucide-react';
 
-export default function ModerationPage() {
+export const metadata = {
+  title: 'Moderation Queue | FragView Admin',
+  description: 'Review and moderate flagged content'
+};
+
+export default async function ModerationPage() {
+  await requireAdmin();
+
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-6">
-      <h1 className="text-2xl font-semibold">Moderation Queue</h1>
-      <table className="w-full table-fixed border-collapse text-sm">
-        <thead>
-          <tr className="text-left">
-            <th className="border-b p-2">Type</th>
-            <th className="border-b p-2">Preview</th>
-            <th className="border-b p-2">From</th>
-            <th className="border-b p-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <tr key={i}>
-              <td className="border-b p-2">Review</td>
-              <td className="border-b p-2">“Nice citrus, smooth oud…”</td>
-              <td className="border-b p-2">@ava</td>
-              <td className="border-b p-2">
-                <div className="flex gap-2">
-                  <button className="rounded-md bg-emerald-600 px-3 py-1 text-white">Approve</button>
-                  <button className="rounded-md bg-red-600 px-3 py-1 text-white">Reject</button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+          <ShieldAlert className="w-6 h-6 text-red-600" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Moderation Queue</h1>
+          <p className="text-gray-600">Review and moderate flagged content</p>
+        </div>
+      </div>
+
+      <ModerationQueueClient />
     </div>
   );
 }

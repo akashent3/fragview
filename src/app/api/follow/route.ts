@@ -7,48 +7,53 @@ import { createNotification } from '@/lib/notifications';
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!  session?.user) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
     const { targetUserId } = await req.json();
     
     if (!targetUserId) {
-      return NextResponse. json({ error: 'Target user ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'Target user ID required' }, { status: 400 });
     }
 
     // Can't follow yourself
     if (session.user.id === targetUserId) {
-      return NextResponse. json({ error: 'Cannot follow yourself' }, { status: 400 });
+      return NextResponse.json({ error: 'Cannot follow yourself' }, { status: 400 });
     }
 
-    // Check if already following
+    // Check if any follow relationship exists
     const existingFollow = await prisma.follow.findUnique({
       where: {
         followerId_followingId: {
-          followerId: session.user. id,
+          followerId: session.user.id,
           followingId: targetUserId
         }
       }
     });
 
     if (existingFollow) {
-      // Unfollow
+      // If exists, delete it (unfollow/cancel request)
       await prisma.follow.delete({
         where: { id: existingFollow.id }
       });
       
-      return NextResponse.json({ success: true, isFollowing: false });
+      return NextResponse.json({ 
+        success: true, 
+        status: null,
+        message: 'Unfollowed / Request cancelled'
+      });
     } else {
-      // Follow
-      await prisma.follow.create({
+      // Create NEW follow request with PENDING status
+      const followRequest = await prisma.follow.create({
         data: {
           followerId: session.user.id,
-          followingId: targetUserId
+          followingId: targetUserId,
+          status: 'PENDING'
         }
       });
 
-      // 🔔 CREATE NOTIFICATION (in-app only)
+      // Send notification to target user
       const follower = await prisma.user.findUnique({
         where: { id: session.user.id },
         select: { username: true }
@@ -57,14 +62,18 @@ export async function POST(req: NextRequest) {
       if (follower) {
         await createNotification({
           userId: targetUserId,
-          type: 'NEW_FOLLOWER',
-          message: `@${follower.username} started following you`,
+          type: 'FOLLOW_REQUEST',
+          message: `@${follower.username} wants to follow your scent journey`,
           link: `/u/${follower.username}`,
-          sendEmail: false, // In-app only
+          sendEmail: false,
         });
       }
       
-      return NextResponse.json({ success: true, isFollowing: true });
+      return NextResponse.json({ 
+        success: true, 
+        status: 'PENDING',
+        message: 'Follow request sent'
+      });
     }
   } catch (error) {
     console.error('Follow error:', error);

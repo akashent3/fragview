@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { Star, Sparkles, Leaf, Flower2, Trees, Wind, Droplets } from 'lucide-react';
 import AccordTags from '@/components/ui/AccordTags';
 import { getMongoDb } from '@/lib/mongodb';
+import prisma from '@/lib/prisma';
+import { ObjectId } from 'mongodb';
 
 // Server Component - fetch data at build time
 async function getHomePageData() {
@@ -15,42 +17,91 @@ async function getHomePageData() {
       db.collection('brands').countDocuments(),
     ]);
 
-    // Get 3 RANDOM featured perfumes
-    const featuredQuery = { 
-      $or: [
-        { featured: true },
-        { rating: { $gte: 4.0 } }
-      ]
-    };
+    // Get MANUALLY SELECTED featured perfumes from PostgreSQL
+    const manualFeatured = await prisma.featuredPerfume.findMany({
+      orderBy: { position: 'asc' },
+      take: 3
+    });
 
-    const featuredPerfumes = await db
-      .collection('perfumes')
-      .aggregate([
-        { $match: featuredQuery },
-        { $sample: { size: 3 } },
-      ])
-      .toArray();
+    let featuredPerfumes = [];
+    
+    if (manualFeatured.length > 0) {
+      // Use manually selected perfumes
+      const perfumeIds = manualFeatured.map(f => {
+        try {
+          return new ObjectId(f.perfumeId);
+        } catch {
+          return null;
+        }
+      }).filter(id => id !== null);
 
-    // Get 4 RANDOM trending brands
-    const trendingBrands = await db
-      .collection('brands')
-      .aggregate([
-        {
-          $addFields: {
-            perfumes_count: { $ifNull: ['$perfumes_count', { $size: { $ifNull: ['$perfumes', []] } }] }
-          }
-        },
-        { 
-          $match: { 
-            $or: [
-              { trending: true },
-              { perfumes_count: { $gte: 10 } }
-            ]
-          } 
-        },
-        { $sample: { size: 4 } },
-      ])
-      .toArray();
+      if (perfumeIds.length > 0) {
+        featuredPerfumes = await db
+          .collection('perfumes')
+          .find({ _id: { $in: perfumeIds } })
+          .toArray();
+      }
+    }
+    
+    // Fallback to random if no manual selections
+    if (featuredPerfumes.length === 0) {
+      featuredPerfumes = await db
+        .collection('perfumes')
+        .aggregate([
+          { $match: { $or: [{ featured: true }, { rating: { $gte: 4.0 } }] } },
+          { $sample: { size: 3 } },
+        ])
+        .toArray();
+    }
+
+    // Get MANUALLY SELECTED trending brands from PostgreSQL
+    const manualTrending = await prisma.trendingBrand.findMany({
+      orderBy: { position: 'asc' },
+      take: 4
+    });
+
+    let trendingBrands = [];
+    
+    if (manualTrending.length > 0) {
+      // Use manually selected brands
+      const brandIds = manualTrending.map(b => {
+        try {
+          return new ObjectId(b.brandId);
+        } catch {
+          return null;
+        }
+      }).filter(id => id !== null);
+
+      if (brandIds.length > 0) {
+        trendingBrands = await db
+          .collection('brands')
+          .find({ _id: { $in: brandIds } })
+          .toArray();
+      }
+    }
+    
+    // Fallback to random if no manual selections
+    if (trendingBrands.length === 0) {
+      trendingBrands = await db
+        .collection('brands')
+        .aggregate([
+          {
+            $addFields: {
+              perfumes_count: { $ifNull: ['$perfumes_count', { $size: { $ifNull: ['$perfumes', []] } }] }
+            }
+          },
+          { 
+            $match: { 
+              $or: [
+                { trending: true },
+                { perfumes_count: { $gte: 10 } }
+              ]
+            } 
+          },
+          { $sample: { size: 4 } },
+        ])
+        .toArray();
+    }
 
     return {
       perfumesCount: perfumesCount || 10000,

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Calendar, MapPin, Award, Star, ShoppingBag, MessageSquare, Users, UserPlus, UserMinus, Lock, Leaf, Flower2, Package } from 'lucide-react';
+import { Calendar, MapPin, Award, Star, ShoppingBag, MessageSquare, Users, UserPlus, UserMinus, UserCheck, Clock, Lock, Leaf, Flower2, Package } from 'lucide-react';
 import { useAuthModal } from '@/components/auth/AuthModal';
 
 interface ProfileData {
@@ -32,7 +32,7 @@ interface ProfileData {
     isActivityPublic: boolean;
     isOwnProfile: boolean;
   };
-  isFollowing: boolean;
+  followStatus: 'none' | 'pending' | 'approved';
   recentActivity: any[];
   signatureScents: any[];
   fullWardrobe: any[];
@@ -50,8 +50,8 @@ interface Props {
 }
 
 export default function PublicProfileClient({ profileData, isSignedIn }: Props) {
-  const [isFollowing, setIsFollowing] = useState(profileData.isFollowing);
-  const [followerCount, setFollowerCount] = useState(profileData.stats. followers);
+  const [followStatus, setFollowStatus] = useState<'none' | 'pending' | 'approved'>(profileData.followStatus);
+  const [followerCount, setFollowerCount] = useState(profileData.stats.followers);
   const [loading, setLoading] = useState(false);
   const { open } = useAuthModal();
 
@@ -71,7 +71,7 @@ export default function PublicProfileClient({ profileData, isSignedIn }: Props) 
 
   const handleFollowToggle = async () => {
     if (! isSignedIn) {
-      open({ mode: 'signin', reason: `Sign in to follow @${user.username}` });
+      open({ mode: 'signin', reason: `Sign in to follow @${user.username}'s scent journey` });
       return;
     }
 
@@ -86,13 +86,58 @@ export default function PublicProfileClient({ profileData, isSignedIn }: Props) 
       const result = await response.json();
       
       if (result.success) {
-        setIsFollowing(result.isFollowing);
-        setFollowerCount(prev => result.isFollowing ? prev + 1 : prev - 1);
+        if (result.status === 'PENDING') {
+          setFollowStatus('pending');
+          alert('Follow request sent! Waiting for approval.');
+        } else if (result.status === null) {
+          // Unfollowed or cancelled
+          setFollowStatus('none');
+          if (followStatus === 'approved') {
+            setFollowerCount(prev => prev - 1);
+          }
+        }
       }
     } catch (error) {
       console.error('Follow error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const renderFollowButton = () => {
+    if (followStatus === 'pending') {
+      return (
+        <button
+          onClick={handleFollowToggle}
+          disabled={loading}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300"
+        >
+          <Clock className="w-4 h-4" />
+          Request Pending
+        </button>
+      );
+    } else if (followStatus === 'approved') {
+      return (
+        <button
+          onClick={handleFollowToggle}
+          disabled={loading}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300"
+        >
+          <UserCheck className="w-4 h-4" />
+          Following Scent Journey
+        </button>
+      );
+    } else {
+      return (
+        <button
+          onClick={handleFollowToggle}
+          disabled={loading}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all bg-gradient-to-r from-green-500 to-orange-500 text-white hover:shadow-lg"
+        >
+          <UserPlus className="w-4 h-4" />
+          Follow Scent Journey
+        </button>
+      );
     }
   };
 
@@ -111,11 +156,11 @@ export default function PublicProfileClient({ profileData, isSignedIn }: Props) 
         <div className="flex flex-col md:flex-row gap-6 items-start relative z-10">
           <div className="shrink-0">
             <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-200 rounded-full overflow-hidden ring-4 ring-white shadow-lg">
-              {user.image ?  (
+              {user.image ? (
                 <img src={user.image} alt={user.username} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-gray-400">
-                  {user.username.charAt(0). toUpperCase()}
+                  {user.username.charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
@@ -130,29 +175,7 @@ export default function PublicProfileClient({ profileData, isSignedIn }: Props) 
                 )}
               </div>
               
-              {! privacy.isOwnProfile && (
-                <button
-                  onClick={handleFollowToggle}
-                  disabled={loading}
-                  className={`flex items-center gap-2 px-6 py-2. 5 rounded-lg font-semibold transition-all ${
-                    isFollowing
-                      ?  'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      : 'bg-gradient-to-r from-green-500 to-orange-500 text-white hover:shadow-lg'
-                  }`}
-                >
-                  {isFollowing ? (
-                    <>
-                      <UserMinus className="w-4 h-4" />
-                      Following
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="w-4 h-4" />
-                      Follow
-                    </>
-                  )}
-                </button>
-              )}
+              {! privacy.isOwnProfile && renderFollowButton()}
             </div>
 
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
@@ -236,7 +259,7 @@ export default function PublicProfileClient({ profileData, isSignedIn }: Props) 
                 <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 mb-2 flex items-center justify-center p-2">
                   {scent.image ? (
                     <img 
-                      src={scent. image} 
+                      src={scent.image} 
                       alt={scent.name}
                       className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform"
                     />
@@ -302,16 +325,16 @@ export default function PublicProfileClient({ profileData, isSignedIn }: Props) 
           </div>
           
           <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-8 gap-3">
-            {fullWardrobe. slice(0, 24).map((item: any) => (
+            {fullWardrobe.slice(0, 24).map((item: any) => (
               <Link
                 key={item.id}
                 href={`/perfumes/${item.slug}`}
                 className="group"
               >
-                <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 mb-2 flex items-center justify-center p-1. 5">
-                  {item. image ? (
+                <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 mb-2 flex items-center justify-center p-1.5">
+                  {item.image ? (
                     <img 
-                      src={item. image} 
+                      src={item.image} 
                       alt={item.name}
                       className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform"
                     />
@@ -322,13 +345,13 @@ export default function PublicProfileClient({ profileData, isSignedIn }: Props) 
                 <p className="text-[10px] font-semibold text-gray-900 line-clamp-1">{item.name}</p>
                 <p className="text-[9px] text-gray-500 line-clamp-1">{item.brand}</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <span className={`text-[8px] px-1. 5 py-0.5 rounded-full ${
+                  <span className={`text-[8px] px-1.5 py-0.5 rounded-full ${
                     item.status === 'CURRENTLY_USING' ? 'bg-green-100 text-green-700' :
                     item.status === 'WISH_LIST' ? 'bg-blue-100 text-blue-700' :
-                    item. status === 'IN_COLLECTION' ? 'bg-purple-100 text-purple-700' :
+                    item.status === 'IN_COLLECTION' ? 'bg-purple-100 text-purple-700' :
                     'bg-gray-100 text-gray-700'
                   }`}>
-                    {item.status. replace(/_/g, ' ').toLowerCase()}
+                    {item.status.replace(/_/g, ' ').toLowerCase()}
                   </span>
                 </div>
               </Link>
@@ -348,23 +371,26 @@ export default function PublicProfileClient({ profileData, isSignedIn }: Props) 
       <div className="glass-card rounded-2xl shadow-sm p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Activity</h2>
         
-        {! privacy.isActivityPublic && (
+        {! privacy.isActivityPublic && followStatus !== 'approved' && (
           <div className="text-center py-12">
             <Lock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">This user&apos;s activity is private</p>
+            <p className="text-gray-500">
+              {followStatus === 'pending' 
+                ? 'Waiting for approval to view activity' 
+                : 'Follow this user to see their scent journey'}
+            </p>
           </div>
         )}
 
-        {privacy.isActivityPublic && recentActivity.length === 0 && (
+        {(privacy.isActivityPublic || followStatus === 'approved') && recentActivity.length === 0 && (
           <p className="text-center py-8 text-gray-500">No recent activity</p>
         )}
 
-        {privacy. isActivityPublic && recentActivity.length > 0 && (
+        {(privacy.isActivityPublic || followStatus === 'approved') && recentActivity.length > 0 && (
           <div className="space-y-4">
             {recentActivity.map((activity) => {
               const isReview = activity.type === 'review';
               
-              // Properly check for valid values
               const hasStarRating = isReview && typeof activity.rating === 'number' && activity.rating > 0;
               const hasSillage = isReview && typeof activity.sillage === 'number' && activity.sillage > 0;
               const hasLongevity = isReview && typeof activity.longevity === 'number' && activity.longevity > 0;
@@ -382,7 +408,7 @@ export default function PublicProfileClient({ profileData, isSignedIn }: Props) 
               
               if (hasSillage) {
                 const sillageLabel = activity.sillage <= 1.5 ? 'Intimate' : activity.sillage <= 3.5 ? 'Moderate' : 'Strong';
-                actionBadges. push({
+                actionBadges.push({
                   icon: '🌬️',
                   text: `${sillageLabel} Sillage`,
                   color: 'bg-cyan-100 text-cyan-700 border-cyan-200'
@@ -453,13 +479,13 @@ export default function PublicProfileClient({ profileData, isSignedIn }: Props) 
                     <p className="text-sm text-gray-600 line-clamp-1 mb-2">{activity.brand}</p>
                     
                     {actionBadges.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-1. 5 mb-2">
+                      <div className="flex flex-wrap items-center gap-1.5 mb-2">
                         {actionBadges.map((badge, idx) => (
                           <span 
                             key={idx}
                             className={`text-[10px] font-medium px-2 py-1 rounded-full border ${badge.color}`}
                           >
-                            {badge. icon} {badge.text}
+                            {badge.icon} {badge.text}
                           </span>
                         ))}
                       </div>

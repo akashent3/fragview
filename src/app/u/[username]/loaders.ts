@@ -95,10 +95,10 @@ export async function loadPublicProfile(username: string, currentUserId?: string
       prisma.follow.count({ where: { followingId: userRecord.id } })
     ]);
 
-    // 3.  Check if current user is following this profile
-    let isFollowing = false;
+    // 3. Check follow status (UPDATED)
+    let followStatus: 'none' | 'pending' | 'approved' = 'none';
     if (currentUserId && ! isOwnProfile) {
-      const followRecord = await prisma.follow.findUnique({
+      const followRecord = await prisma.follow. findUnique({
         where: {
           followerId_followingId: {
             followerId: currentUserId,
@@ -106,7 +106,9 @@ export async function loadPublicProfile(username: string, currentUserId?: string
           }
         }
       });
-      isFollowing = !!followRecord;
+      if (followRecord) {
+        followStatus = followRecord.status.toLowerCase() as 'pending' | 'approved';
+      }
     }
 
     // 4.  Aggregate Review Stats
@@ -353,7 +355,7 @@ export async function loadPublicProfile(username: string, currentUserId?: string
           isActivityPublic: userRecord.isActivityPublic,
           isOwnProfile: isOwnProfile
         },
-        isFollowing: isFollowing,
+        followStatus: followStatus,
         recentActivity: activities,
         signatureScents: signatureScents,
         fullWardrobe: fullWardrobe,
@@ -468,7 +470,7 @@ export async function loadPublicProfile(username: string, currentUserId?: string
           isActivityPublic: userRecord.isActivityPublic,
           isOwnProfile: isOwnProfile
         },
-        isFollowing: isFollowing,
+        followStatus: followStatus,
         recentActivity: activities,
         signatureScents: signatureScents,
         fullWardrobe: [],

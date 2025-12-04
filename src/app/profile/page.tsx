@@ -7,6 +7,8 @@ import { useSession } from 'next-auth/react';
 import { useAuthModal } from '@/components/auth/AuthModal';
 import { getProfileData, ProfileData, ActivityItem } from '@/app/actions/profile';
 import EditProfileModal from '@/components/profile/EditProfileModal';
+import FollowRequestsWidget from '@/components/profile/FollowRequestsWidget';
+import FollowedBrandsWidget from '@/components/profile/FollowedBrandsWidget';
 
 type TabId = 'overview' | 'reviews' | 'achievements';
 
@@ -18,6 +20,7 @@ const ProfilePage = () => {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [activityFilter, setActivityFilter] = useState<'all' | 'reviews' | 'wardrobe'>('all');
 
   // --- AUTH & FETCH ---
   useEffect(() => {
@@ -63,10 +66,10 @@ const ProfilePage = () => {
             {activity.fragranceName}
           </div>
           
-          {/* 2. Brand Name */}
+          {/* 2.  Brand Name */}
           <div className="text-xs text-gray-500 mb-2">{activity.brand}</div>
           
-          {/* 3. Action Row (Replaces the "0") */}
+          {/* 3.  Action Row */}
           <div className="flex flex-wrap items-center gap-2">
             {isReview ? (
               <>
@@ -102,9 +105,16 @@ const ProfilePage = () => {
 
   // --- LOADING ---
   if (status === 'loading' || loading) return <div className="min-h-screen flex items-center justify-center bg-[#FAFFF5]"><Loader2 className="w-8 h-8 text-green-600 animate-spin" /></div>;
-  if (!session || !profile) return <div className="min-h-screen bg-[#FAFFF5]" />;
+  if (! session || ! profile) return <div className="min-h-screen bg-[#FAFFF5]" />;
 
   const { user, stats, gamification, nudge, recentActivity, signatureScents } = profile;
+
+  const filteredActivity = recentActivity.filter(activity => {
+    if (activityFilter === 'all') return true;
+    if (activityFilter === 'reviews') return activity.type === 'review';
+    if (activityFilter === 'wardrobe') return activity.type !== 'review';
+    return true;
+  });
 
   return (
     <div className="min-h-screen relative overflow-hidden py-8" style={{ backgroundColor: '#FAFFF5' }}>
@@ -115,7 +125,10 @@ const ProfilePage = () => {
 
       <div className="max-w-7xl mx-auto px-4 relative z-10">
         
-        {/* 1. HERO CARD */}
+        {/* Follow Requests Widget */}
+        <FollowRequestsWidget />
+        
+        {/* 1.  HERO CARD */}
         <div className="glass-card rounded-2xl shadow-sm p-8 mb-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 opacity-5"><Trees size={200} /></div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
@@ -140,11 +153,11 @@ const ProfilePage = () => {
                   </div>
 
                   <p className="text-gray-700 leading-relaxed mb-4 max-w-lg text-sm">
-                    {user.bio || <span className="italic text-gray-400">No bio yet.</span>}
+                    {user.bio || <span className="italic text-gray-400">No bio yet. </span>}
                   </p>
 
                   <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wider flex items-center gap-1 ${gamification.level === 'Novice' ? 'bg-gray-100 text-gray-600' : 'bg-gradient-to-r from-amber-100 to-orange-100 text-orange-800'}`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wider flex items-center gap-1 ${gamification.level === 'Novice' ? 'bg-gray-100 text-gray-600' : 'bg-gradient-to-r from-green-400 to-orange-400 text-white'}`}>
                       <Award className="w-3 h-3" /> {gamification.level}
                     </span>
                     <span className="text-xs text-gray-500 font-medium">{gamification.xp} XP</span>
@@ -175,14 +188,14 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {/* 2. SUBTLE NUDGE (Fixed) */}
-        {!nudge.isComplete && (
+        {/* 2. SUBTLE NUDGE */}
+        {! nudge.isComplete && (
           <div className="mb-8 mx-auto max-w-3xl">
             <div className="bg-white/80 backdrop-blur-sm border border-green-100 rounded-full p-1.5 pl-5 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full border-2 border-gray-200 border-t-green-500 animate-spin" style={{ animationDuration: '3s' }}></div>
                 <span className="text-sm text-gray-600">
-                  Profile <span className="font-bold text-gray-900">{nudge.completionPercentage}%</span> complete. 
+                  Profile <span className="font-bold text-gray-900">{nudge.completionPercentage}%</span> complete.  
                   <span className="hidden sm:inline"> Missing: {nudge.missingFields.slice(0, 2).join(', ')}...</span>
                 </span>
               </div>
@@ -196,7 +209,7 @@ const ProfilePage = () => {
           </div>
         )}
 
-        {/* 3. TABS */}
+        {/* 3.  TABS */}
         <div className="glass-card rounded-2xl shadow-sm mb-8">
           <div className="border-b border-green-100 flex px-8 overflow-x-auto">
             {[
@@ -208,7 +221,7 @@ const ProfilePage = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as TabId)}
                 className={`px-4 py-4 border-b-2 text-sm font-medium flex items-center gap-2 transition-colors whitespace-nowrap
-                  ${activeTab === tab.id ? 'border-green-500 text-green-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                  ${activeTab === tab.id ?  'border-green-500 text-green-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
               >
                 <tab.icon className="w-4 h-4" /> {tab.label}
               </button>
@@ -220,10 +233,49 @@ const ProfilePage = () => {
             {activeTab === 'overview' && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
-                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Activity Feed</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Activity Feed</h3>
+                    
+                    {/* Activity Filters */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setActivityFilter('all')}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                          activityFilter === 'all'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => setActivityFilter('reviews')}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                          activityFilter === 'reviews'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Reviews
+                      </button>
+                      <button
+                        onClick={() => setActivityFilter('wardrobe')}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                          activityFilter === 'wardrobe'
+                            ? 'bg-orange-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Wardrobe
+                      </button>
+                    </div>
+                  </div>
+                  
                   <div className="space-y-2">
-                    {recentActivity.length > 0 ? recentActivity.map(renderActivityItem) : (
-                      <div className="text-sm text-gray-500 italic p-4 bg-gray-50 rounded-lg text-center">No recent activity.</div>
+                    {filteredActivity.length > 0 ? filteredActivity.map(renderActivityItem) : (
+                      <div className="text-sm text-gray-500 italic p-4 bg-gray-50 rounded-lg text-center">
+                        No {activityFilter === 'all' ? '' : activityFilter} activity yet.
+                      </div>
                     )}
                   </div>
                 </div>
@@ -233,35 +285,38 @@ const ProfilePage = () => {
                   {signatureScents.length > 0 ? (
                     <div className="grid grid-cols-3 lg:grid-cols-2 gap-3 mb-8">
                       {signatureScents.map((scent: any) => (
-                        <Link href={`/perfumes/${scent.id}`} key={scent.id} className="group aspect-square rounded-xl bg-white border border-gray-100 p-2 flex items-center justify-center hover:border-green-200 hover:shadow-md transition-all">
+                        <Link href={`/perfumes/${scent.id}`} key={scent.id} className="group aspect-square rounded-xl bg-white border border-gray-100 p-2 flex items-center justify-center hover:border-green-300 transition-colors">
                            {scent.image ? <img src={scent.image} className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform" /> : <ShoppingBag className="text-gray-200" />}
                         </Link>
                       ))}
                     </div>
                   ) : (
                     <div className="text-sm text-gray-500 italic mb-8 bg-gray-50 p-4 rounded-xl text-center border border-gray-100">
-                      Add your Top 5 in settings.
+                      Add your Top 5 in settings. 
                     </div>
                   )}
 
-                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Taste Profile</h3>
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Following Brands</h3>
+                  <FollowedBrandsWidget />
+
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 mt-6">Taste Profile</h3>
                   <div className="space-y-5">
                     <div>
                       <div className="text-xs font-semibold text-gray-900 mb-2">Favorite Notes</div>
                       <div className="flex flex-wrap gap-1.5">
-                        {user.favNotes.length > 0 ? user.favNotes.map(n => <span key={n} className="bg-white border border-gray-200 text-gray-600 px-2.5 py-1 rounded-md text-xs font-medium">{n}</span>) : <span className="text-xs text-gray-400">-</span>}
+                        {user.favNotes.length > 0 ? user.favNotes.map(n => <span key={n} className="bg-white border border-gray-200 text-gray-600 px-2.5 py-1 rounded-md text-xs font-medium">{n}</span>) : <span className="text-xs text-gray-400 italic">None selected</span>}
                       </div>
                     </div>
                     <div>
                       <div className="text-xs font-semibold text-gray-900 mb-2">Favorite Accords</div>
                       <div className="flex flex-wrap gap-1.5">
-                        {user.favAccords.length > 0 ? user.favAccords.map(n => <span key={n} className="bg-orange-50 border border-orange-100 text-orange-700 px-2.5 py-1 rounded-md text-xs font-medium">{n}</span>) : <span className="text-xs text-gray-400">-</span>}
+                        {user.favAccords.length > 0 ? user.favAccords.map(n => <span key={n} className="bg-orange-50 border border-orange-100 text-orange-700 px-2.5 py-1 rounded-md text-xs font-medium">{n}</span>) : <span className="text-xs text-gray-400 italic">None selected</span>}
                       </div>
                     </div>
                     <div>
                       <div className="text-xs font-semibold text-gray-900 mb-2">Favorite Perfumers</div>
                       <div className="flex flex-wrap gap-1.5">
-                        {user.favPerfumers.length > 0 ? user.favPerfumers.map(n => <span key={n} className="bg-blue-50 border border-blue-100 text-blue-700 px-2.5 py-1 rounded-md text-xs font-medium">{n}</span>) : <span className="text-xs text-gray-400">-</span>}
+                        {user.favPerfumers.length > 0 ? user.favPerfumers.map(n => <span key={n} className="bg-blue-50 border border-blue-100 text-blue-700 px-2.5 py-1 rounded-md text-xs font-medium">{n}</span>) : <span className="text-xs text-gray-400 italic">None selected</span>}
                       </div>
                     </div>
                   </div>

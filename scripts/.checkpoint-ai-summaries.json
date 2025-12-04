@@ -1,10 +1,10 @@
 {
-  "lastProcessedId": "68a82b833169f4885c064932",
-  "lastProcessedName": "Gio Antonelli",
-  "timestamp": "2025-12-04T09:30:30.225Z",
-  "totalProcessed": 8585,
+  "lastProcessedId": "68a82ce13169f4885c0651ae",
+  "lastProcessedName": "Hammurabi",
+  "timestamp": "2025-12-04T09:30:50.818Z",
+  "totalProcessed": 8600,
   "stats": {
-    "generated": 7800,
+    "generated": 7815,
     "skipped": 785,
     "failed": 0
   }

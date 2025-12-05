@@ -43,7 +43,7 @@ export async function sendVerificationEmail(
   username: string,
   token: string
 ) {
-  const verificationUrl = `${BASE_URL}/verify-email? token=${token}`;
+  const verificationUrl = `${BASE_URL}/verify-email?token=${token}`;
 
   console.log('📧 Attempting to send verification email.. .');
   console.log('   To:', email);

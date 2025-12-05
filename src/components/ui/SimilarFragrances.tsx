@@ -42,11 +42,17 @@ export default function SimilarFragrances({ currentPerfumeId }: Props) {
   const [searching, setSearching] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isFetchingRef = useRef(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
   useEffect(() => {
-    fetchSimilarFragrances();
+  // Reset the ref first
+  isFetchingRef.current = false;
+  setLoading(true);
+  
+  // Then fetch
+  fetchSimilarFragrances();
   }, [currentPerfumeId]);
 
   useEffect(() => {
@@ -83,7 +89,9 @@ export default function SimilarFragrances({ currentPerfumeId }: Props) {
     };
   }, [fragrances]);
 
-  const fetchSimilarFragrances = async () => {
+    const fetchSimilarFragrances = async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     try {
       const response = await fetch(`/api/similar-fragrances?perfumeId=${currentPerfumeId}`);
       const data = await response.json();
@@ -92,6 +100,7 @@ export default function SimilarFragrances({ currentPerfumeId }: Props) {
       console.error('Error fetching similar fragrances:', error);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   };
 

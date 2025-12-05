@@ -3,19 +3,40 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { createNotification } from '@/lib/notifications';
+import { rateLimit } from '@/lib/rate-limit';
+import { z } from 'zod';
+
+// Rate limit: 30 follow actions per minute
+const limiter = rateLimit({ interval: 60000, uniqueTokenPerInterval: 30 });
+
+// Validation schema
+const followSchema = z.object({
+  targetUserId: z.string().uuid(),
+});
 
 export async function POST(req: NextRequest) {
   try {
+    // Check rate limit
+    const rateLimitResult = await limiter(req);
+    if (rateLimitResult) return rateLimitResult;
+
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const { targetUserId } = await req.json();
-    
-    if (!targetUserId) {
-      return NextResponse.json({ error: 'Target user ID required' }, { status: 400 });
+    const body = await req.json();
+
+    // Validate input
+    const validation = followSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json({ 
+        error: 'Invalid input', 
+        details: validation.error.issues 
+      }, { status: 400 });
     }
+
+    const { targetUserId } = validation.data;
 
     // Can't follow yourself
     if (session.user.id === targetUserId) {
@@ -64,7 +85,7 @@ export async function POST(req: NextRequest) {
           userId: targetUserId,
           type: 'FOLLOW_REQUEST',
           message: `@${follower.username} wants to follow your scent journey`,
-          link: `/u/${follower.username}?followId=${followRequest.id}`, // ✅ ADD followId
+          link: `/u/${follower.username}?followId=${followRequest.id}`,
           sendEmail: false,
         });
       }

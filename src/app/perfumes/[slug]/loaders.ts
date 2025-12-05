@@ -35,12 +35,12 @@ const XP_RULES = {
 const calculateProfileXP = (user: any) => {
   let score = 0;
   if (user.image) score += XP_RULES.PROFILE.PHOTO;
-  if (user.location) score += XP_RULES. PROFILE.LOCATION;
-  if (user.bio) score += XP_RULES. PROFILE.BIO;
-  if (user.favPerfumeIds && user.favPerfumeIds.length > 0) score += XP_RULES. PROFILE.FAV_PERFUMES;
+  if (user.location) score += XP_RULES.PROFILE.LOCATION;
+  if (user.bio) score += XP_RULES.PROFILE.BIO;
+  if (user.favPerfumeIds && user.favPerfumeIds.length > 0) score += XP_RULES.PROFILE.FAV_PERFUMES;
   if (user.favNotes && user.favNotes.length > 0) score += XP_RULES.PROFILE.FAV_NOTES;
   if (user.favAccords && user.favAccords.length > 0) score += XP_RULES.PROFILE.FAV_ACCORDS;
-  if (user.favPerfumers && user.favPerfumers. length > 0) score += XP_RULES.PROFILE. FAV_PERFUMERS;
+  if (user.favPerfumers && user.favPerfumers.length > 0) score += XP_RULES.PROFILE.FAV_PERFUMERS;
   return score;
 };
 
@@ -54,67 +54,42 @@ const calculateBadges = (user: any, stats: { reviewCount: number, photoReviewCou
 
   if (stats.reviewCount >= 50) badges.add('Active Reviewer');
   if (stats.photoReviewCount >= 25) badges.add('Photo Contributor');
-  if (stats.helpfulCount >= 100) badges. add('Community Helper');
+  if (stats.helpfulCount >= 100) badges.add('Community Helper');
 
   return Array.from(badges);
 };
 
 export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
-  const perfumeRaw = await getPerfumeBySlug(slug);
-  if (!perfumeRaw) return null;
-  const perfume = sanitizeSingleDoc(perfumeRaw);
-
-  const perfumeIdCandidates = Array.from(
-    new Set([slug, (perfume as any)._id, (perfume as any).slug]. filter(Boolean). map(String))
-  );
-
-  // 🆕 UPDATED: Fetch Reviews with Replies
-  const prismaReviews = await prisma.review.findMany({
-    where: { 
-      OR: perfumeIdCandidates. map((v) => ({ perfumeId: v })),
-      parentId: null, // 🆕 Only fetch top-level reviews
-    },
-    select: { 
-      id: true,
-      rating: true, 
-      text: true, 
-      createdAt: true, 
-      longevity: true, 
-      sillage: true,
-      helpfulCount: true,
-      photos: true,
-      userId: true,
-      isEdited: true,      // 🆕 NEW
-      editedAt: true,      // 🆕 NEW
-      isDeleted: true,     // 🆕 NEW
-      user: {
-        select: {
-          id: true,         // 🆕 NEW
-          username: true,
-          image: true,
-          experiencePoints: true,
-          badges: true,
-          favPerfumeIds: true,
-          favNotes: true,
-          favAccords: true,
-          favPerfumers: true,
-          bio: true,
-          location: true,
-          createdAt: true,
-        }
-      },
-      // 🆕 NEW: Include nested replies
-      replies: {
-        select: {
+  // ✅ ONLY CHANGE: Fetch perfume and reviews in parallel (same logic, just parallel)
+  const [perfumeRaw, prismaReviews, isFollowingThread] = await Promise.all([
+    getPerfumeBySlug(slug),
+    
+    (async () => {
+      const perfumeRaw = await getPerfumeBySlug(slug);
+      if (! perfumeRaw) return [];
+      const perfume = sanitizeSingleDoc(perfumeRaw);
+      const perfumeIdCandidates = Array.from(
+        new Set([slug, (perfume as any)._id, (perfume as any).slug].filter(Boolean).map(String))
+      );
+      
+      return prisma.review.findMany({
+        where: { 
+          OR: perfumeIdCandidates.map((v) => ({ perfumeId: v })),
+          parentId: null,
+        },
+        select: { 
           id: true,
-          rating: true,
-          text: true,
-          createdAt: true,
+          rating: true, 
+          text: true, 
+          createdAt: true, 
+          longevity: true, 
+          sillage: true,
+          helpfulCount: true,
+          photos: true,
+          userId: true,
           isEdited: true,
           editedAt: true,
           isDeleted: true,
-          photos: true,
-          userId: true,
           user: {
             select: {
               id: true,
@@ -131,26 +106,58 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
               createdAt: true,
             }
           },
+          replies: {
+            select: {
+              id: true,
+              rating: true,
+              text: true,
+              createdAt: true,
+              isEdited: true,
+              editedAt: true,
+              isDeleted: true,
+              photos: true,
+              userId: true,
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  image: true,
+                  experiencePoints: true,
+                  badges: true,
+                  favPerfumeIds: true,
+                  favNotes: true,
+                  favAccords: true,
+                  favPerfumers: true,
+                  bio: true,
+                  location: true,
+                  createdAt: true,
+                }
+              },
+            },
+            orderBy: { createdAt: 'asc' },
+          },
+          helpful: currentUserId ? {
+            where: { userId: currentUserId },
+            select: { id: true }
+          } : false
         },
-        orderBy: { createdAt: 'asc' },
-      },
-      helpful: currentUserId ? {
-        where: { userId: currentUserId },
-        select: { id: true }
-      } : false
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 20,
-  });
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      });
+    })(),
+    
+    currentUserId ? checkThreadFollowStatus(slug, currentUserId) : Promise.resolve(false)
+  ]);
 
-  // 2. Check if current user is following this thread
-  let isFollowingThread = false;
-  if (currentUserId) {
-    isFollowingThread = await checkThreadFollowStatus(slug, currentUserId);
-  }
+  if (!perfumeRaw) return null;
+  const perfume = sanitizeSingleDoc(perfumeRaw);
 
-  // --- AGGREGATION LOGIC ---
-  const mongoVotes = (perfume. votes || 0); 
+  const perfumeIdCandidates = Array.from(
+    new Set([slug, (perfume as any)._id, (perfume as any).slug].filter(Boolean).map(String))
+  );
+
+  // --- AGGREGATION LOGIC (UNCHANGED) ---
+  const mongoVotes = (perfume.votes || 0); 
   const mongoRating = (perfume.rating || 0);
   const mongoLongevity = (perfume.longevity || 0);
   const mongoSillage = (perfume.sillage || 0);
@@ -163,7 +170,7 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
   const newLongevitySum = newLongevityReviews.reduce((sum, r) => sum + (r.longevity || 0), 0);
   const newLongevityCount = newLongevityReviews.length;
 
-  const newSillageReviews = prismaReviews.filter(r => r. sillage && r.sillage > 0);
+  const newSillageReviews = prismaReviews.filter(r => r.sillage && r.sillage > 0);
   const newSillageSum = newSillageReviews.reduce((sum, r) => sum + (r.sillage || 0), 0);
   const newSillageCount = newSillageReviews.length;
 
@@ -176,7 +183,7 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
 
   const totalLongevityVotes = mongoVotes + newLongevityCount;
   const aggregateLongevity = totalLongevityVotes > 0
-    ? ((mongoLongevity * mongoVotes) + newLongevitySum) / totalLongevityVotes
+    ?  ((mongoLongevity * mongoVotes) + newLongevitySum) / totalLongevityVotes
     : 0;
 
   const totalSillageVotes = mongoVotes + newSillageCount;
@@ -184,7 +191,7 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
     ? ((mongoSillage * mongoVotes) + newSillageSum) / totalSillageVotes
     : 0;
 
-  // 🆕 Helper function to calculate user stats and process review/reply
+  // 🆕 Helper function to calculate user stats and process review/reply (UNCHANGED)
   const processUserData = async (userId: string, userData: any) => {
     const userReviewStats = await prisma.review.aggregate({
       where: { userId },
@@ -192,20 +199,20 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
       _count: { _all: true }
     });
 
-    const reviewsWithPhotos = await prisma.review. count({
+    const reviewsWithPhotos = await prisma.review.count({
       where: {
         userId,
         NOT: { photos: { equals: [] } }
       }
     });
 
-    const wardrobeCount = await prisma. wardrobeEntry.count({ where: { userId } });
+    const wardrobeCount = await prisma.wardrobeEntry.count({ where: { userId } });
 
     const reviewCount = userReviewStats._count._all;
-    const totalHelpful = userReviewStats._sum. helpfulCount || 0;
-    const totalLikes = userReviewStats._sum. likeCount || 0;
+    const totalHelpful = userReviewStats._sum.helpfulCount || 0;
+    const totalLikes = userReviewStats._sum.likeCount || 0;
 
-    const xpFromReviews = reviewCount * XP_RULES. ACTIVITY.REVIEW_BASE;
+    const xpFromReviews = reviewCount * XP_RULES.ACTIVITY.REVIEW_BASE;
     const xpFromPhotos = reviewsWithPhotos * XP_RULES.ACTIVITY.REVIEW_PHOTO;
     const xpFromHelpful = totalHelpful * XP_RULES.ACTIVITY.HELPFUL_VOTE;
     const xpFromLikes = totalLikes * XP_RULES.ACTIVITY.LIKE;
@@ -227,30 +234,30 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
     return { totalXP, levelInfo, badges };
   };
 
-  // 3. Process reviews with replies
+  // 3. Process reviews with replies (UNCHANGED LOGIC)
   const reviews = await Promise.all(prismaReviews.map(async (r) => {
-    const { totalXP, levelInfo, badges } = await processUserData(r.userId, r. user);
+    const { totalXP, levelInfo, badges } = await processUserData(r.userId, r.user);
 
     // Process replies
-    const processedReplies = r.replies ?  await Promise.all(
+    const processedReplies = r.replies ? await Promise.all(
       r.replies.map(async (reply) => {
-        const replyStats = await processUserData(reply. userId, reply.user);
+        const replyStats = await processUserData(reply.userId, reply.user);
 
         return {
           id: reply.id,
           rating: reply.rating,
           text: reply.text,
           photos: reply.photos || [],
-          createdAt: reply.createdAt. toISOString(),
+          createdAt: reply.createdAt.toISOString(),
           isEdited: reply.isEdited || false,
           editedAt: reply.editedAt?.toISOString() || null,
           isDeleted: reply.isDeleted || false,
           user: {
-            id: reply. user.id,
+            id: reply.user.id,
             username: reply.user.username || 'User',
             image: reply.user.image,
             xp: replyStats.totalXP,
-            level: replyStats.levelInfo. title,
+            level: replyStats.levelInfo.title,
             badges: replyStats.badges
           }
         };
@@ -276,13 +283,13 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
         level: levelInfo.title,
         badges: badges
       },
-      replies: processedReplies, // 🆕 NEW
+      replies: processedReplies,
     };
   }));
 
   return {
     perfume: {
-      ... perfume,
+      ...perfume,
       rating: fmt(aggregateRating), 
       votes: totalVotes, 
       longevity: fmt(aggregateLongevity),

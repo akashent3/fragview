@@ -30,6 +30,8 @@ export default withAuth(
         // ✅ PUBLIC API ROUTES (No authentication required)
         const publicApiRoutes = [
           '/api/auth',
+          '/api/register',              // ✅ ADD THIS LINE
+          '/api/verify-email', 
           '/api/search',
           '/api/search/autocomplete',           // ✅ ADDED
           '/api/search/random',                 // ✅ ADDED

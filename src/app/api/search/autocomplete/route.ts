@@ -1,27 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { typesenseAutocomplete } from '@/lib/typesense';
+import { rateLimit } from '@/lib/rate-limit';
+
+// Rate limit: 60 searches per minute (generous for autocomplete)
+const limiter = rateLimit({ interval: 60000, uniqueTokenPerInterval: 60 });
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const query = searchParams.get('q') || '';
-  const type = searchParams.get('type') || 'all'; // 'brands', 'perfumes', or 'all'
-
-  if (!query.trim() || query.length < 2) {
-    return NextResponse.json({ brands: [], perfumes: [] });
-  }
-
   try {
+    // Check rate limit
+    const rateLimitResult = await limiter(req);
+    if (rateLimitResult) return rateLimitResult;
+
+    const { searchParams } = new URL(req.url);
+    const query = searchParams.get('q') || '';
+    const type = searchParams.get('type') || 'all'; // 'brands', 'perfumes', or 'all'
+
+    // Sanitize and validate query
+    const sanitizedQuery = query.trim().slice(0, 200);
+
+    if (!sanitizedQuery || sanitizedQuery.length < 2) {
+      return NextResponse.json({ brands: [], perfumes: [] });
+    }
+
     const results: { brands: any[]; perfumes: any[] } = {
       brands: [],
       perfumes: [],
     };
 
-    // 🔧 Parallel fetch for speed (both collections at once)
+    // Parallel fetch for speed (both collections at once)
     const promises: Promise<any>[] = [];
 
     if (type === 'brands' || type === 'all') {
       promises.push(
-        typesenseAutocomplete('brands', query, 5, 'name,description,country')
+        typesenseAutocomplete('brands', sanitizedQuery, 5, 'name,description,country')
           .then((hits) => {
             results.brands = hits.map((b: any) => ({
               _id: b._id || b.id,
@@ -39,7 +50,7 @@ export async function GET(req: NextRequest) {
 
     if (type === 'perfumes' || type === 'all') {
       promises.push(
-        typesenseAutocomplete('perfumes', query, 5, 'variant_name,brand_name')
+        typesenseAutocomplete('perfumes', sanitizedQuery, 5, 'variant_name,brand_name')
           .then((hits) => {
             results.perfumes = hits.map((p: any) => ({
               _id: p._id || p.id,

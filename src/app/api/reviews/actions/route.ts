@@ -3,26 +3,47 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { rateLimit } from '@/lib/rate-limit';
+import { z } from 'zod';
+
+// Rate limit: 10 review actions per minute
+const limiter = rateLimit({ interval: 60000, uniqueTokenPerInterval: 10 });
+
+// Validation schemas
+const reviewEditSchema = z.object({
+  reviewId: z.string().uuid(),
+  text: z.string().min(10).max(5000),
+});
+
+const reviewDeleteSchema = z.object({
+  reviewId: z.string().uuid(),
+});
 
 // EDIT Review
 export async function PATCH(req: NextRequest) {
   try {
+    // Check rate limit
+    const rateLimitResult = await limiter(req);
+    if (rateLimitResult) return rateLimitResult;
+
     const session = await getServerSession(authOptions);
     
-    if (!session?. user) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const { reviewId, text } = await req.json();
+    const body = await req.json();
 
-    // Validation
-    if (!reviewId || ! text?. trim()) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    // Validate input
+    const validation = reviewEditSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json({ 
+        error: 'Invalid input', 
+        details: validation.error.issues 
+      }, { status: 400 });
     }
 
-    if (text.trim().length < 10) {
-      return NextResponse.json({ error: 'Review must be at least 10 characters' }, { status: 400 });
-    }
+    const { reviewId, text } = validation.data;
 
     // Verify ownership
     const review = await prisma.review.findUnique({
@@ -43,7 +64,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Update review
-    const updatedReview = await prisma.review. update({
+    const updatedReview = await prisma.review.update({
       where: { id: reviewId },
       data: {
         text: text.trim(),
@@ -65,26 +86,35 @@ export async function PATCH(req: NextRequest) {
 // DELETE Review (Soft Delete)
 export async function DELETE(req: NextRequest) {
   try {
+    // Check rate limit
+    const rateLimitResult = await limiter(req);
+    if (rateLimitResult) return rateLimitResult;
+
     const session = await getServerSession(authOptions);
     
-    if (!session?. user) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req. url);
+    const { searchParams } = new URL(req.url);
     const reviewId = searchParams.get('reviewId');
 
-    if (!reviewId) {
-      return NextResponse. json({ error: 'Review ID required' }, { status: 400 });
+    // Validate input
+    const validation = reviewDeleteSchema.safeParse({ reviewId });
+    if (!validation.success) {
+      return NextResponse.json({ 
+        error: 'Invalid review ID', 
+        details: validation.error.issues 
+      }, { status: 400 });
     }
 
     // Verify ownership
     const review = await prisma.review.findUnique({
-      where: { id: reviewId },
+      where: { id: reviewId!  },
       select: { userId: true, perfumeId: true, isDeleted: true },
     });
 
-    if (! review) {
+    if (!review) {
       return NextResponse.json({ error: 'Review not found' }, { status: 404 });
     }
 
@@ -98,7 +128,7 @@ export async function DELETE(req: NextRequest) {
 
     // Soft delete
     await prisma.review.update({
-      where: { id: reviewId },
+      where: { id: reviewId! },
       data: {
         isDeleted: true,
         deletedAt: new Date(),

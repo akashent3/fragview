@@ -8,9 +8,6 @@ import { ObjectId } from 'mongodb';
 // ✅ ADD THIS: Cache for 5 minutes (300 seconds)
 export const revalidate = 300;
 
-// ✅ ADD THIS: Allow dynamic params (perfumeId)
-export const dynamic = 'force-dynamic';
-
 function escapeRegex(string: string): string {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -24,20 +21,46 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'perfumeId required' }, { status: 400 });
     }
 
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
+    let userId: string | undefined;
+    try {
+      const session = await getServerSession(authOptions);
+      userId = session?.user?.id;
+    } catch (error) {
+      userId = undefined;
+    }
 
-    // Get votes from PostgreSQL
-    const votes = await prisma.similarPerfumeVote.findMany({
-      where: {
-        sourcePerfumeId: perfumeId,
-      },
-      select: {
-        similarPerfumeId: true,
-        voteType: true,
-        userId: true,
-      },
-    });
+    // ✅ REPLACE WITH (Parallel execution):
+    const [votes, sourcePerfumeData] = await Promise.all([
+      prisma.similarPerfumeVote.findMany({
+        where: {
+          sourcePerfumeId: perfumeId,
+        },
+        select: {
+          similarPerfumeId: true,
+          voteType: true,
+          userId: true,
+        },
+      }),
+      
+      (async () => {
+        try {
+          const { db } = await connectMongoDB();
+          const sourcePerfumeObjectId = new ObjectId(perfumeId);
+          return await db
+            .collection('perfumes')
+            .findOne(
+              { _id: sourcePerfumeObjectId },
+              { projection: { reminds_me: 1 } }
+            );
+        } catch (error) {
+          return null;
+        }
+      })()
+    ]);
+
+    if (! sourcePerfumeData) {
+      return NextResponse.json({ error: 'Perfume not found' }, { status: 404 });
+    }
 
     // Aggregate votes by perfume
     const voteMap = new Map<string, { upvotes: number; downvotes: number; userVote: string | null }>();
@@ -62,34 +85,17 @@ export async function GET(request: NextRequest) {
       voteMap.set(vote.similarPerfumeId, existing);
     });
 
-    // Get perfume IDs from votes
     let perfumeIds = Array.from(voteMap.keys());
 
-    // FALLBACK: If no votes, get from MongoDB reminds_me field
     const { db } = await connectMongoDB();
-    
-    // Convert perfumeId string to ObjectId if needed
-    let sourcePerfumeObjectId;
-    try {
-      sourcePerfumeObjectId = new ObjectId(perfumeId);
-    } catch (error) {
-      return NextResponse.json({ error: 'Invalid perfume ID format' }, { status: 400 });
-    }
-
-    const sourcePerfume = await db
-      .collection('perfumes')
-      .findOne(
-        { _id: sourcePerfumeObjectId },
-        { projection: { reminds_me: 1 } }
-      );
 
     // If we have reminds_me data, add those perfumes
-    if (sourcePerfume?.reminds_me && Array.isArray(sourcePerfume.reminds_me)) {
-      console.log(`Found ${sourcePerfume.reminds_me.length} reminds_me entries`);
+    if (sourcePerfumeData?.reminds_me && Array.isArray(sourcePerfumeData.reminds_me)) {
+      console.log(`Found ${sourcePerfumeData.reminds_me.length} reminds_me entries`);
       
       // Strategy: Search by creating a case-insensitive regex for each name
       // But use $in for better performance with indexes
-      const searchPatterns = sourcePerfume.reminds_me
+      const searchPatterns = sourcePerfumeData.reminds_me
         .filter(name => name && typeof name === 'string')
         .map(name => name.trim());
 
@@ -119,7 +125,7 @@ export async function GET(request: NextRequest) {
           ])
           .toArray();
 
-        console.log(`Successfully matched ${remindsOfPerfumes.length} out of ${sourcePerfume.reminds_me.length} reminds_me entries`);
+        console.log(`Successfully matched ${remindsOfPerfumes.length} out of ${sourcePerfumeData.reminds_me.length} reminds_me entries`);
 
         // Add reminds_me perfumes to the list if not already there
         remindsOfPerfumes.forEach((p) => {
@@ -200,7 +206,14 @@ export async function GET(request: NextRequest) {
         return b!.similarityScore - a!.similarityScore;
       });
 
-    return NextResponse.json({ fragrances });
+    return NextResponse.json(
+    { fragrances },
+    {
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+      },
+    }
+  );
   } catch (error) {
     console.error('Error fetching similar fragrances:', error);
     return NextResponse.json({ 

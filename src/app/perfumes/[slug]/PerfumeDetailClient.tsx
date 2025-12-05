@@ -12,6 +12,8 @@ import MentionTextarea from '@/components/ui/MentionTextarea';
 import { useAuthModal } from '@/components/auth/AuthModal';
 import { submitReview } from './actions';
 import EditReviewModal from '@/components/reviews/EditReviewModal';
+import { parseReviewMentions } from '@/lib/parseMentions';
+import AddToWardrobeModal from '@/components/perfumes/AddToWardrobeModal';
 
 // INLINE DEBOUNCE HELPER
 function debounceFunc<T extends (...args: any[]) => any>(func: T, wait: number) {
@@ -112,7 +114,7 @@ const getAccordColor = (accordName: string): string => {
     floral: '#ec4899',
   };
 
-  const lowerName = accordName.toLowerCase(). trim();
+  const lowerName = accordName.toLowerCase().trim();
   if (colors[lowerName]) return colors[lowerName];
   
   for (const [key, color] of Object.entries(colors)) {
@@ -174,6 +176,9 @@ export default function PerfumeDetailClient({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const snapshotRef = useRef<HTMLDivElement>(null);
 
+  const [showWardrobeModal, setShowWardrobeModal] = useState(false);
+  const [wardrobeSuccess, setWardrobeSuccess] = useState(false);
+
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [editingReviewText, setEditingReviewText] = useState('');
 
@@ -202,7 +207,7 @@ export default function PerfumeDetailClient({
   }, [perfume.created_at]);
 
   const transformedAccords =
-    perfume.accords?. map((a) => ({
+    perfume.accords?.map((a) => ({
       name: a.name,
       strength:
         typeof a.strength === 'number'
@@ -213,9 +218,9 @@ export default function PerfumeDetailClient({
       width: a.width,
     })) || [];
 
-  const topNotes = perfume.pyramids?.top?. map((n) => ({ name: n })) || [];
+  const topNotes = perfume.pyramids?.top?.map((n) => ({ name: n })) || [];
   const middleNotes = perfume.pyramids?.middle?.map((n) => ({ name: n })) || [];
-  const baseNotes = perfume.pyramids?. base?.map((n) => ({ name: n })) || [];
+  const baseNotes = perfume.pyramids?.base?.map((n) => ({ name: n })) || [];
 
   // --- DEBOUNCED SUBMIT HANDLER ---
   const debouncedSubmit = useCallback(
@@ -223,7 +228,7 @@ export default function PerfumeDetailClient({
       if (isCoolingPeriodActive) return;
       const formData = new FormData();
       formData.append(field, String(value));
-      submitReview(slug, formData). then((res) => {
+      submitReview(slug, formData).then((res) => {
         if (! res.ok) console.error("Auto-save failed:", res.error);
       });
     }, 500), 
@@ -286,7 +291,7 @@ export default function PerfumeDetailClient({
   const handleSnapshot = async () => {
     if (!snapshotRef.current) return;
     try {
-      const [{ default: html2canvas }, { default: QRCode }] = await Promise. all([
+      const [{ default: html2canvas }, { default: QRCode }] = await Promise.all([
         import('html2canvas'),
         import('qrcode')
       ]);
@@ -298,7 +303,7 @@ export default function PerfumeDetailClient({
         try {
           const img = new Image();
           img.crossOrigin = 'anonymous';
-          img.src = perfume. image;
+          img.src = perfume.image;
           await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; setTimeout(reject, 5000); });
           imageDataUrl = perfume.image;
         } catch (err) { imageDataUrl = ''; }
@@ -321,7 +326,7 @@ export default function PerfumeDetailClient({
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 28px;">
             <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
               <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1. 5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">RATING</p>
-              <div style="display: flex; gap: 5px; margin-bottom: 12px; justify-content: center;">${[1,2,3,4,5]. map(star => `<span style="color: ${star <= Math.round(userRating || rating) ? '#fb923c' : '#d1d5db'}; font-size: 24px;">★</span>`).join('')}</div>
+              <div style="display: flex; gap: 5px; margin-bottom: 12px; justify-content: center;">${[1,2,3,4,5].map(star => `<span style="color: ${star <= Math.round(userRating || rating) ? '#fb923c' : '#d1d5db'}; font-size: 24px;">★</span>`).join('')}</div>
               <p style="font-size: 36px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">${(userRating || rating).toFixed(1)}</p>
             </div>
             <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
@@ -339,7 +344,7 @@ export default function PerfumeDetailClient({
           <div style="margin-top: auto; padding-top: 24px; border-top: 4px solid #10b981; display: flex; justify-content: space-between; align-items: center;">
             <div style="font-size: 17px; color: #4b5563; font-weight: 600; line-height: 1.6;">
               <div style="margin-bottom: 8px;"><span style="font-weight: 800; color: #1f2937;">Gender:</span> ${perfume.gender || '—'}</div>
-              <div><span style="font-weight: 800; color: #1f2937;">Perfumer:</span> ${perfume.perfumers?. join(', ') || '—'}</div>
+              <div><span style="font-weight: 800; color: #1f2937;">Perfumer:</span> ${perfume.perfumers?.join(', ') || '—'}</div>
             </div>
             <div style="text-align: right; font-size: 15px; color: #9ca3af; font-weight: 600;">fragview.com/perfumes/${slug}</div>
           </div>
@@ -357,14 +362,14 @@ export default function PerfumeDetailClient({
         dialog.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:24px;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.2);z-index:9999;max-width:90vw;';
         dialog.innerHTML = `<h3 style="margin:0 0 16px 0;font-size:18px;font-weight:600;color:#1f2937;">Share Perfume Card</h3><div style="display:flex;gap:12px;flex-direction:column;"><button id="share-whatsapp" style="padding:12px 24px;background:linear-gradient(to right,#10b981,#f97316);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">Share via WhatsApp</button><button id="share-download" style="padding:12px 24px;background:#6b7280;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">Download Image</button><button id="share-close" style="padding:12px 24px;background:white;color:#6b7280;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">Close</button></div>`;
         document.body.appendChild(overlay);
-        document.body. appendChild(dialog);
+        document.body.appendChild(dialog);
         const cleanup = () => { document.body.removeChild(overlay); document.body.removeChild(dialog); URL.revokeObjectURL(url); };
         document.getElementById('share-whatsapp')! .onclick = () => {
-          const link = document.createElement('a'); link.href = url; link.download = `${perfume.variant_name}-fragview. jpg`; link.click();
+          const link = document.createElement('a'); link.href = url; link.download = `${perfume.variant_name}-fragview.jpg`; link.click();
           setTimeout(() => window.open(`https://wa.me/?text=Check out ${perfume.variant_name} on Fragview!  https://fragview.com/perfumes/${slug}`), 500); cleanup();
         };
         document.getElementById('share-download')! .onclick = () => {
-          const link = document.createElement('a'); link.href = url; link.download = `${perfume. variant_name}-fragview.jpg`; link.click(); cleanup();
+          const link = document.createElement('a'); link.href = url; link.download = `${perfume.variant_name}-fragview.jpg`; link.click(); cleanup();
         };
         document.getElementById('share-close')! .onclick = cleanup; overlay.onclick = cleanup;
       }, 'image/jpeg', 0.95);
@@ -387,7 +392,7 @@ export default function PerfumeDetailClient({
       if (userSillage > 0) formData.set('sillage', String(userSillage));
       
       if (uploadedPhotos.length > 0) {
-        formData.set('photos', JSON. stringify(uploadedPhotos));
+        formData.set('photos', JSON.stringify(uploadedPhotos));
       }
       
       const result = await submitReview(slug, formData);
@@ -420,8 +425,8 @@ export default function PerfumeDetailClient({
 
   const similarPerfumes = React.useMemo(() => {
     if (!perfume.reminds_me || perfume.reminds_me.length === 0) return [];
-    return perfume.reminds_me. map((name, idx) => {
-      const slug = name.toLowerCase().replace(/\s+/g, '-'). replace(/[^a-z0-9-]/g, '');
+    return perfume.reminds_me.map((name, idx) => {
+      const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       return {
         id: idx + 1000,
         name: name,
@@ -474,6 +479,8 @@ export default function PerfumeDetailClient({
                   onClick={() => {
                     if (! isSignedIn) {
                       open({ mode: 'signin', reason: 'Sign in to add to wardrobe', callbackUrl: `/perfumes/${slug}` });
+                    } else {
+                      setShowWardrobeModal(true);
                     }
                   }}
                   className="flex-1 rounded-md lg:rounded-lg bg-gradient-to-r from-green-500 to-orange-500 px-1.5 lg:px-3 py-1.5 lg:py-2 font-semibold text-white text-[9px] lg:text-sm hover:shadow-lg transition-all flex items-center justify-center gap-0.5 lg:gap-1"
@@ -486,9 +493,16 @@ export default function PerfumeDetailClient({
                   <Camera className="h-3 w-3 lg:h-4 lg:w-4 text-green-600" />
                 </button>
               </div>
+              
+              {/* ✅ ADD SUCCESS MESSAGE BELOW */}
+              {wardrobeSuccess && (
+                <div className="mt-2 p-2 bg-green-100 border border-green-300 rounded-lg text-xs text-green-800 font-medium text-center relative">
+                  ✓ Added to wardrobe! 
+                </div>
+              )}
             </div>
 
-            <div className="space-y-1. 5 lg:space-y-4 flex flex-col">
+            <div className="space-y-1.5 lg:space-y-4 flex flex-col">
               <div>
                 <h1 className="text-base lg:text-3xl font-bold bg-gradient-to-r from-green-600 to-orange-500 bg-clip-text text-transparent leading-tight">
                   {perfume.variant_name}
@@ -503,7 +517,7 @@ export default function PerfumeDetailClient({
                 </div>
               )}
 
-              {(topNotes. length || middleNotes.length || baseNotes.length) > 0 && (
+              {(topNotes.length || middleNotes.length || baseNotes.length) > 0 && (
                 <div className="hidden lg:block">
                   <h3 className="text-sm font-semibold text-gray-800 mb-2">Notes Pyramid</h3>
                   <NotesPyramid topNotes={topNotes} middleNotes={middleNotes} baseNotes={baseNotes} />
@@ -633,7 +647,7 @@ export default function PerfumeDetailClient({
         {perfume.perfume_overview && (
           <div className="glass-card rounded-xl p-5 shadow-sm">
             <h3 className="text-xl font-bold text-gray-800 mb-3">About This Fragrance</h3>
-            <p className="text-gray-700 leading-relaxed">{perfume. perfume_overview}</p>
+            <p className="text-gray-700 leading-relaxed">{perfume.perfume_overview}</p>
           </div>
         )}
 
@@ -647,7 +661,7 @@ export default function PerfumeDetailClient({
             summary={reviewsSummary}
             aiGeneratedSummary={perfume.ai_summary.summary}
             reviewCount={perfume.ai_summary.review_count || reviewCount}
-            lastUpdated={perfume.ai_summary. last_updated ? new Date(perfume.ai_summary.last_updated) : undefined}
+            lastUpdated={perfume.ai_summary.last_updated ? new Date(perfume.ai_summary.last_updated) : undefined}
           />
         </div>
         )}
@@ -670,7 +684,7 @@ export default function PerfumeDetailClient({
 
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-bold text-gray-800">Leave Your Review</h3>
-            <button onClick={toggleFollowThread} className={`text-xs font-medium px-3 py-1. 5 rounded-full border ${isFollowing ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-600 border-gray-200 hover:border-green-300'} transition-all flex items-center gap-1. 5`}>
+            <button onClick={toggleFollowThread} className={`text-xs font-medium px-3 py-1.5 rounded-full border ${isFollowing ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-600 border-gray-200 hover:border-green-300'} transition-all flex items-center gap-1.5`}>
               <Bell className={`w-3 h-3 ${isFollowing ? 'fill-current' : ''}`} />
               {isFollowing ? 'Following' : 'Follow Thread'}
             </button>
@@ -697,7 +711,7 @@ export default function PerfumeDetailClient({
               <MentionTextarea 
                 value={reviewText} 
                 onChange={setReviewText} 
-                placeholder="Share your experience...  Type @ to mention users" 
+                placeholder="Share your experience...  Type @ to mention users and # to reference perfumes." 
                 className="w-full rounded-xl border border-green-200 px-4 py-3 focus:ring-2 focus:ring-green-400 outline-none bg-white/80"
               />
               <div className="space-y-2">
@@ -706,7 +720,7 @@ export default function PerfumeDetailClient({
                   {uploadedPhotos.map((url, i) => (
                     <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 shrink-0">
                       <img src={url} className="w-full h-full object-cover" alt="Review" />
-                      <button type="button" onClick={() => setUploadedPhotos(p => p.filter((_, idx) => idx !== i))} className="absolute top-0. 5 right-0.5 bg-black/50 text-white rounded-full p-0.5"><X className="w-3 h-3" /></button>
+                      <button type="button" onClick={() => setUploadedPhotos(p => p.filter((_, idx) => idx !== i))} className="absolute top-0.5 right-0.5 bg-black/50 text-white rounded-full p-0.5"><X className="w-3 h-3" /></button>
                     </div>
                   ))}
                   {uploadedPhotos.length < 3 && (
@@ -725,7 +739,7 @@ export default function PerfumeDetailClient({
               {successMessage && <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg">{successMessage}</div>}
               <button
                 type="submit"
-                disabled={pending || !reviewText. trim()}
+                disabled={pending || !reviewText.trim()}
                 className="rounded-lg bg-gradient-to-r from-green-500 to-orange-500 px-6 py-3 font-semibold text-white disabled:opacity-50 hover:shadow-lg transition-all"
               >
                 {pending ?  'Submitting...' : 'Submit Review'}
@@ -761,11 +775,11 @@ export default function PerfumeDetailClient({
                       {/* User Info - Inline Compact */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <a href={`/u/${r. user.username}`} className="text-sm font-bold text-gray-900 hover:text-green-600 transition-colors">
+                          <a href={`/u/${r.user.username}`} className="text-sm font-bold text-gray-900 hover:text-green-600 transition-colors">
                             @{r.user.username}
                           </a>
                           
-                          <span className={`text-[9px] font-bold px-1. 5 py-0.5 rounded-full ${
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                             r.user.level === 'Master' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white' :
                             r.user.level === 'Expert' ? 'bg-gradient-to-r from-purple-400 to-pink-500 text-white' :
                             r.user.level === 'Connoisseur' ? 'bg-gradient-to-r from-blue-400 to-cyan-500 text-white' :
@@ -779,7 +793,7 @@ export default function PerfumeDetailClient({
                             {r.user.xp} XP
                           </span>
                           
-                          {r.user.badges. slice(0, 2).map((badge, idx) => (
+                          {r.user.badges.slice(0, 2).map((badge, idx) => (
                             <span key={idx} className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-gradient-to-r from-green-100 to-orange-100 text-gray-700 border border-green-200" title={badge}>
                               {badge === 'Early Adopter' && '🌱'}
                               {badge === 'Active Reviewer' && '⭐'}
@@ -789,7 +803,7 @@ export default function PerfumeDetailClient({
                           ))}
                           
                           <span className="text-[10px] text-gray-400">
-                            {new Date(r.createdAt). toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                             {r.isEdited && <span className="ml-1 text-orange-600 font-medium">(edited)</span>}
                           </span>
                         </div>
@@ -810,7 +824,10 @@ export default function PerfumeDetailClient({
                     </div>
                   ) : (
                     <>
-                      <p className="text-gray-700 text-sm leading-relaxed mb-3">{r.text}</p>
+                      <div 
+                        className="text-gray-700 text-sm leading-relaxed mb-3"
+                        dangerouslySetInnerHTML={{ __html: parseReviewMentions(r.text || '') }}
+                      />
 
                       {/* Review Photos - Compact */}
                       {r.photos && r.photos.length > 0 && (
@@ -824,14 +841,14 @@ export default function PerfumeDetailClient({
                       {/* Action Buttons - Perfectly Aligned */}
                       <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
                         <ReviewActionButtons 
-                          reviewId={r. id} 
+                          reviewId={r.id} 
                           initialHelpfulCount={r.helpfulCount || 0} 
                           userVote={r.userVote}
                           isLoggedIn={isSignedIn} 
                         />
 
                         {/* Edit/Delete - Only for own reviews */}
-                        {isSignedIn && session?.user?. id === r.user.id && (
+                        {isSignedIn && session?.user?.id === r.user.id && (
                           <>
                             <div className="w-px h-5 bg-gray-300"></div>
                             
@@ -840,10 +857,10 @@ export default function PerfumeDetailClient({
                                 setEditingReviewId(r.id);
                                 setEditingReviewText(r.text || '');
                               }}
-                              className="flex items-center gap-1. 5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2. 828l8.586-8. 586z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                               <span>Edit</span>
                             </button>
@@ -889,7 +906,22 @@ export default function PerfumeDetailClient({
             onSuccess={() => {
               setEditingReviewId(null);
               setEditingReviewText('');
-              window. location.reload();
+              window.location.reload();
+            }}
+          />
+        )}
+
+         {/* ✅ ADD TO WARDROBE MODAL - ADD THIS ENTIRE BLOCK */}
+        {showWardrobeModal && (
+          <AddToWardrobeModal
+            perfumeId={perfume._id.toString()}
+            perfumeName={perfume.variant_name}
+            perfumeBrand={perfume.brand_name}
+            perfumeImage={perfume.image}
+            onClose={() => setShowWardrobeModal(false)}
+            onSuccess={() => {
+              setWardrobeSuccess(true);
+              setTimeout(() => setWardrobeSuccess(false), 3000);
             }}
           />
         )}

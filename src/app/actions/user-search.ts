@@ -6,6 +6,7 @@ export type UserSearchResult = {
   id: string;
   username: string;
   image: string | null;
+  experiencePoints: number;
 };
 
 export async function searchUsersForMention(query: string): Promise<UserSearchResult[]> {
@@ -24,6 +25,7 @@ export async function searchUsersForMention(query: string): Promise<UserSearchRe
         id: true,
         username: true,
         image: true,
+        experiencePoints: true,
       },
     });
 

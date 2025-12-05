@@ -12,6 +12,7 @@ import { ObjectId } from 'mongodb';
 export type WardrobeEntryHydrated = {
   id: string;
   perfumeId: string;
+  slug: string;
   name: string;
   brand: string;
   image: string;
@@ -60,7 +61,8 @@ export async function getWardrobe(): Promise<WardrobeEntryHydrated[]> {
         rating: 1, 
         rating_count: 1, 
         accords: 1, 
-        main_accords: 1 
+        main_accords: 1, 
+        slug: 1
       })
       .toArray();
 
@@ -81,9 +83,12 @@ export async function getWardrobe(): Promise<WardrobeEntryHydrated[]> {
       const rawAccords = p?.accords || p?.main_accords || [];
       const accords = rawAccords.map((a: any) => typeof a === 'string' ? { name: a } : a);
 
+      const slug = p?.slug || entry.perfumeId;
+
       return {
         id: entry.id,
         perfumeId: entry.perfumeId,
+        slug,
         name,
         brand: brandName,
         image,

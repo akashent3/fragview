@@ -205,7 +205,7 @@ export async function loadPublicProfile(username: string, currentUserId?: string
       total: 0
     };
 
-    if (isOwnProfile || userRecord.isWardrobePublic) {
+    if (isOwnProfile || userRecord.isWardrobePublic || followStatus === 'approved') {
       const wardrobeEntries = await prisma.wardrobeEntry.findMany({
         where: { userId: userRecord. id },
         select: {

@@ -61,6 +61,9 @@ export async function createNotification({
 function getEmailSubject(type: NotificationType): string {
   const subjects: Record<NotificationType, string> = {
     NEW_FOLLOWER: '👥 You have a new follower on FragView',
+    FOLLOW_REQUEST: '🤝 Someone wants to follow you on FragView', // ✅ ADD THIS
+    FOLLOW_APPROVED: '✅ Your follow request was approved', // ✅ ADD THIS
+    BRAND_NEW_RELEASE: '🎉 New perfume from a brand you follow', // ✅ ADD THIS
     REVIEW_HELPFUL: '👍 Your review was marked helpful',
     REVIEW_LIKE: '❤️ Someone liked your review',
     REVIEW_REPLY: '💬 Someone mentioned you in a review',

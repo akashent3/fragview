@@ -265,7 +265,7 @@ const WardrobePage = () => {
 
                     <div className={`flex-1 flex flex-col justify-between p-1.5 ${viewMode === 'list' ? 'p-4 md:p-0 md:flex-row md:items-center' : ''}`}>
                       <div className="flex-1 min-w-0">
-                        <Link href={`/perfumes/${item.perfumeId}`} className="font-semibold text-gray-900 hover:text-green-600 block truncate text-[10px] sm:text-xs leading-tight">
+                        <Link href={`/perfumes/${item.slug}`} className="font-semibold text-gray-900 hover:text-green-600 block truncate text-[10px] sm:text-xs leading-tight">
                           {item.name}
                         </Link>
                         <p className="text-[8px] text-gray-500 truncate">{item.brand}</p>

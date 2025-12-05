@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, CheckCheck, Loader2 } from 'lucide-react';
+import { Bell, CheckCheck, Loader2, Check, X } from 'lucide-react';
 import Link from 'next/link';
 
 interface Notification {
   id: string;
   type: string;
   message: string;
-  link?: string | null;
+  link: string;
   read: boolean;
   createdAt: string;
 }
@@ -22,6 +22,7 @@ export default function NotificationDropdown({ onClose, onCountChange }: Props) 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [marking, setMarking] = useState(false);
+  const [actioningId, setActioningId] = useState<string | null>(null); // ✅ NEW
 
   useEffect(() => {
     fetchNotifications();
@@ -31,10 +32,10 @@ export default function NotificationDropdown({ onClose, onCountChange }: Props) 
     try {
       const res = await fetch('/api/notifications');
       const data = await res.json();
-      setNotifications(data. notifications?. slice(0, 10) || []);
+      setNotifications(data.notifications?.slice(0, 10) || []);
       onCountChange(data.unreadCount || 0);
     } catch (error) {
-      console. error('Failed to fetch notifications:', error);
+      console.error('Failed to fetch notifications:', error);
     } finally {
       setLoading(false);
     }
@@ -70,6 +71,39 @@ export default function NotificationDropdown({ onClose, onCountChange }: Props) 
     } finally {
       setMarking(false);
     }
+  };
+
+  // ✅ NEW: Handle follow request approve/reject
+  const handleFollowRequest = async (notificationId: string, followId: string, action: 'approve' | 'reject') => {
+    setActioningId(notificationId);
+    try {
+      const response = await fetch('/api/follow/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ followId, action }),
+      });
+
+      if (response.ok) {
+        // Remove notification from list after action
+        setNotifications(prev => prev.filter(n => n.id !== notificationId));
+        const unreadCount = notifications.filter(n => !n.read && n.id !== notificationId).length;
+        onCountChange(unreadCount);
+      } else {
+        alert('Failed to process request');
+      }
+    } catch (error) {
+      console.error('Error processing follow request:', error);
+      alert('Network error');
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  // ✅ NEW: Extract followId from notification link
+  const extractFollowId = (link: string): string | null => {
+    // Example link: /u/username? followId=abc123
+    const match = link.match(/followId=([^&]+)/);
+    return match ? match[1] : null;
   };
 
   const getIcon = (type: string) => {
@@ -116,64 +150,99 @@ export default function NotificationDropdown({ onClose, onCountChange }: Props) 
           <button
             onClick={markAllAsRead}
             disabled={marking || notifications.every(n => n.read)}
-            className="text-xs font-medium text-green-600 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            className="text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
           >
             {marking ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
+              <>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Marking... 
+              </>
             ) : (
-              <CheckCheck className="w-3 h-3" />
+              <>
+                <CheckCheck className="w-3 h-3" />
+                Mark all read
+              </>
             )}
-            Mark all read
           </button>
         </div>
       </div>
 
-      {/* Notification List */}
-      <div className="max-h-[400px] overflow-y-auto">
+      {/* Content */}
+      <div className="max-h-96 overflow-y-auto">
         {loading ? (
-          <div className="py-10 text-center">
-            <Loader2 className="w-6 h-6 text-gray-400 animate-spin mx-auto mb-2" />
-            <p className="text-sm text-gray-500">Loading... </p>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 text-green-600 animate-spin" />
           </div>
         ) : notifications.length === 0 ? (
-          <div className="py-10 text-center">
-            <Bell className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">No notifications yet</p>
+          <div className="text-center py-8 text-gray-400">
+            <Bell className="w-12 h-12 mx-auto mb-2 opacity-20" />
+            <p className="text-sm">No notifications</p>
           </div>
         ) : (
-          notifications.map((notif) => (
-            <div
-              key={notif.id}
-              className={`p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
-                ! notif.read ? 'bg-green-50/30' : ''
-              }`}
-              onClick={() => {
-                if (! notif.read) markAsRead(notif.id);
-                if (notif.link) {
-                  window.location.href = notif.link;
-                  onClose();
-                }
-              }}
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-xl shrink-0">{getIcon(notif.type)}</span>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm leading-relaxed ${! notif.read ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
-                    {notif.message}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">{formatTime(notif.createdAt)}</p>
+          notifications.map((notif) => {
+            // ✅ Check if this is a follow request notification
+            const isFollowRequest = notif.type === 'FOLLOW_REQUEST';
+            const followId = isFollowRequest ? extractFollowId(notif.link) : null;
+            const isActioning = actioningId === notif.id;
+
+            return (
+              <div
+                key={notif.id}
+                className={`p-4 border-b border-gray-100 hover:bg-green-50/30 transition-colors ${
+                  ! notif.read ? 'bg-green-50/50' : ''
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">{getIcon(notif.type)}</span>
+                  <div className="flex-1 min-w-0">
+                    <Link
+                      href={notif.link}
+                      onClick={() => {
+                        markAsRead(notif.id);
+                        onClose();
+                      }}
+                      className="text-sm text-gray-900 hover:text-green-600 block mb-1"
+                    >
+                      {notif.message}
+                    </Link>
+                    <p className="text-xs text-gray-500">
+                      {formatTime(notif.createdAt)}
+                    </p>
+
+                    {/* ✅ NEW: Show approve/reject buttons for follow requests */}
+                    {isFollowRequest && followId && (
+                      <div className="flex items-center gap-2 mt-3">
+                        <button
+                          onClick={() => handleFollowRequest(notif.id, followId, 'approve')}
+                          disabled={isActioning}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Check className="w-3 h-3" />
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleFollowRequest(notif.id, followId, 'reject')}
+                          disabled={isActioning}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <X className="w-3 h-3" />
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {! notif.read && (
+                    <div className="w-2 h-2 bg-green-500 rounded-full shrink-0 mt-1" />
+                  )}
                 </div>
-                {! notif.read && (
-                  <span className="w-2 h-2 bg-green-500 rounded-full shrink-0 mt-1" />
-                )}
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
       {/* Footer */}
-      <div className="p-3 border-t border-gray-200 bg-gray-50">
+      <div className="p-3 border-t border-gray-200 bg-gradient-to-r from-green-50 to-orange-50">
         <Link
           href="/notifications"
           onClick={onClose}

@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
           userId: targetUserId,
           type: 'FOLLOW_REQUEST',
           message: `@${follower.username} wants to follow your scent journey`,
-          link: `/u/${follower.username}`,
+          link: `/u/${follower.username}?followId=${followRequest.id}`, // ✅ ADD followId
           sendEmail: false,
         });
       }

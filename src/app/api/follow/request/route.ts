@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     const { followId, action } = await req.json();
     
-    if (!followId || !['approve', 'reject'].includes(action)) {
+    if (! followId || !['approve', 'reject'].includes(action)) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       where: { id: followId },
       include: {
         follower: {
-          select: { username: true }
+          select: { username: true, id: true }
         }
       }
     });
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         }
       });
 
-      // Notify the follower
+      // ✅ Notify the follower (person who sent the request)
       await createNotification({
         userId: followRequest.followerId,
         type: 'FOLLOW_APPROVED',
@@ -87,11 +87,51 @@ export async function POST(req: NextRequest) {
         sendEmail: false,
       });
 
+      // ✅ NEW: Create notification for the approver (person who approved)
+      await createNotification({
+        userId: session.user.id,
+        type: 'FOLLOW_APPROVED',
+        message: `You approved @${followRequest.follower.username}'s follow request. They can now see your activity.`,
+        link: `/u/${followRequest.follower.username}`,
+        sendEmail: false,
+      });
+
+      // Delete the original FOLLOW_REQUEST notification
+      await prisma.notification.deleteMany({
+        where: {
+          userId: session.user.id,
+          type: 'FOLLOW_REQUEST',
+          link: {
+            contains: `followId=${followId}`
+          }
+        }
+      });
+
       return NextResponse.json({ success: true, action: 'approved' });
     } else {
       // Reject and delete the follow request
       await prisma.follow.delete({
         where: { id: followId }
+      });
+
+      // ✅ NEW: Create notification for the rejecter (person who rejected)
+      await createNotification({
+        userId: session.user.id,
+        type: 'SYSTEM_ANNOUNCEMENT',
+        message: `You rejected @${followRequest.follower.username}'s follow request.`,
+        link: '#',
+        sendEmail: false,
+      });
+
+      // Delete the FOLLOW_REQUEST notification
+      await prisma.notification.deleteMany({
+        where: {
+          userId: session.user.id,
+          type: 'FOLLOW_REQUEST',
+          link: {
+            contains: `followId=${followId}`
+          }
+        }
       });
 
       return NextResponse.json({ success: true, action: 'rejected' });

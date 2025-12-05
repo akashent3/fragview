@@ -1,11 +1,11 @@
 {
-  "lastProcessedId": "68a82ce13169f4885c0651ae",
-  "lastProcessedName": "Hammurabi",
-  "timestamp": "2025-12-04T09:30:50.818Z",
-  "totalProcessed": 8600,
+  "lastProcessedId": "68a8718678c7340f5b6eb44b",
+  "lastProcessedName": "Queen Of Hearts",
+  "timestamp": "2025-12-05T05:21:08.446Z",
+  "totalProcessed": 3665,
   "stats": {
-    "generated": 7815,
-    "skipped": 785,
+    "generated": 3001,
+    "skipped": 664,
     "failed": 0
   }
 }

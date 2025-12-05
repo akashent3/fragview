@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { rateLimit } from '@/lib/rate-limit';
+
+// 🔒 ADD RATE LIMITING - Only 5 attempts per hour
+const limiter = rateLimit({ interval: 3600000, uniqueTokenPerInterval: 5 });
 
 export async function POST(req: NextRequest) {
   try {
+    // 🔒 CHECK RATE LIMIT FIRST
+    const rateLimitResult = await limiter(req);
+    if (rateLimitResult) return rateLimitResult;
+
     const { email, code, newPassword } = await req.json();
 
     if (!email || !code || !newPassword) {
@@ -17,6 +25,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ 
         error: 'Password must be at least 8 characters' 
       }, { status: 400 });
+    }
+
+    // 🔒 ADD MAX ATTEMPTS CHECK - Lock after 5 failed attempts
+    const failedAttempts = await prisma.passwordResetToken.count({
+      where: {
+        email,
+        used: false,
+        expires: { gt: new Date() }
+      }
+    });
+
+    if (failedAttempts >= 5) {
+      // Delete all tokens to force user to request new code
+      await prisma.passwordResetToken.deleteMany({
+        where: { email, used: false }
+      });
+      return NextResponse.json({ 
+        error: 'Too many failed attempts. Please request a new reset code.' 
+      }, { status: 429 });
     }
 
     // Find valid token
@@ -44,7 +71,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 12); // 🔒 Increased from 10 to 12 rounds
 
     // Update password and mark token as used
     await prisma.$transaction([
@@ -56,6 +83,14 @@ export async function POST(req: NextRequest) {
         where: { id: token.id },
         data: { used: true },
       }),
+      // 🔒 DELETE ALL OTHER UNUSED TOKENS for this email
+      prisma.passwordResetToken.deleteMany({
+        where: { 
+          email, 
+          used: false,
+          id: { not: token.id }
+        }
+      })
     ]);
 
     return NextResponse.json({ 

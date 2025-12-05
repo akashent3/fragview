@@ -15,5 +15,8 @@
         }
       ]
     }
-  ]
+  ],
+  "env": {
+    "CRON_SECRET": "@cron-secret"
+  }
 }

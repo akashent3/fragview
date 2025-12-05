@@ -21,7 +21,10 @@
     "test:drydown": "playwright test tests/e2e/drydown-blog.spec.ts",
     "test:seed": "tsx tests/fixtures/seed-runner.ts",
     "test:cleanup": "tsx tests/fixtures/cleanup-runner.ts",
-    "test:report": "playwright show-report test-results/html"
+    "test:report": "playwright show-report test-results/html",
+    "security:audit": "npm audit --audit-level=moderate",
+    "security:fix": "npm audit fix",
+    "security:check": "npm outdated"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

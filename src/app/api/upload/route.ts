@@ -4,12 +4,14 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
 
-const limiter = rateLimit({ interval: 60000, uniqueTokenPerInterval: 5 });
+// 🔒 STRICTER RATE LIMITING - 10 uploads per hour
+const limiter = rateLimit({ interval: 3600000, uniqueTokenPerInterval: 10 });
 
 export async function POST(req: NextRequest) {
   try {
     const rateLimitResult = await limiter(req);
     if (rateLimitResult) return rateLimitResult;
+
     // Check authentication
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -24,48 +26,80 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File;
     const folder = formData.get('folder') as string || 'misc';
 
-    const originalFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '');
+    // 🔒 VALIDATE FILE EXISTS FIRST
     if (!file) {
-      if (originalFilename.length === 0) {
-        return NextResponse.json(
-          { error: 'Invalid filename' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: 'Invalid file type. Only JPEG, PNG, and WebP are allowed.' },
+        { error: 'No file provided' },
         { status: 400 }
       );
     }
 
-    // Validate file size (5MB max)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    // 🔒 VALIDATE FILENAME
+    const originalFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '');
+    if (originalFilename.length === 0) {
+      return NextResponse.json(
+        { error: 'Invalid filename' },
+        { status: 400 }
+      );
+    }
+
+    // 🔒 VALIDATE FILE EXTENSION (more secure than MIME type alone)
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+    const extension = originalFilename.split('.').pop()?.toLowerCase();
+    
+    if (!extension || !allowedExtensions.includes(extension)) {
+      return NextResponse.json(
+        { error: 'Invalid file type.  Only JPG, PNG, and WebP are allowed.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate MIME type (belt and suspenders approach)
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json(
+        { error: 'Invalid file MIME type. Only JPEG, PNG, and WebP are allowed.' },
+        { status: 400 }
+      );
+    }
+
+    // 🔒 VALIDATE FILE SIZE (3MB max - reduced from 5MB for better performance)
+    const maxSize = 3 * 1024 * 1024; // 3MB
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'File too large. Maximum size is 5MB.' },
+        { error: 'File too large. Maximum size is 3MB.' },
+        { status: 400 }
+      );
+    }
+
+    // 🔒 VALIDATE FILE CONTENT (check magic bytes for real file type)
+    const buffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(buffer);
+    
+    // Check magic bytes to verify actual file type
+    if (! isValidImageFile(uint8Array, extension)) {
+      return NextResponse.json(
+        { error: 'File content does not match file extension.  Possible file tampering detected.' },
         { status: 400 }
       );
     }
 
     // Generate filename
     const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 8);
-    const extension = originalFilename.split('.').pop();
+    const randomString = Math.random().toString(36).substring(2, 15);
     
-    // Sanitize folder name to prevent path traversal
-    const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, '');
+    // 🔒 STRICT FOLDER SANITIZATION - only allow specific folders
+    const allowedFolders = ['reviews', 'avatars', 'articles', 'misc'];
+    const safeFolder = allowedFolders.includes(folder) ? folder : 'misc';
+    
     const filename = `${safeFolder}/${session.user.id}/${timestamp}-${randomString}.${extension}`;
 
     // Upload to Vercel Blob
     const blob = await put(filename, file, {
       access: 'public',
       token: process.env.BLOB_READ_WRITE_TOKEN,
-      contentType: file.type, // Enforce correct content type
+      contentType: file.type,
+      addRandomSuffix: false, // We already have random suffix
     });
 
     return NextResponse.json({
@@ -81,4 +115,25 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// 🔒 HELPER FUNCTION: Validate file by magic bytes
+function isValidImageFile(bytes: Uint8Array, extension: string): boolean {
+  // JPEG magic bytes: FF D8 FF
+  if (extension === 'jpg' || extension === 'jpeg') {
+    return bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF;
+  }
+  
+  // PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
+  if (extension === 'png') {
+    return bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47;
+  }
+  
+  // WebP magic bytes: RIFF.... WEBP
+  if (extension === 'webp') {
+    return bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+           bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+  }
+  
+  return false;
 }

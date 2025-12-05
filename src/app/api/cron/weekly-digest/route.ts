@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const BASE_URL = process.env. NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://fragview.com';
+const BASE_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://fragview.com';
 const LOGO_URL = `${BASE_URL}/logo-white.png`;
 
 // Logo configuration (Option 1 - Large, Professional) - SAME AS MAIN EMAIL FILE
@@ -22,7 +22,7 @@ function getLogoHTML() {
   return `
     <table role="presentation" cellspacing="0" cellpadding="0" border="0">
       <tr>
-        <td align="center" style="width:${LOGO_CONFIG.containerWidth}px;height:${LOGO_CONFIG. containerHeight}px;margin:0 auto ${LOGO_CONFIG.containerMargin}px;background:rgba(255,255,255,0.25);border-radius:50%;box-shadow:0 8px 32px rgba(0,0,0,0.1);border:2px solid rgba(255,255,255,0.3);">
+        <td align="center" style="width:${LOGO_CONFIG.containerWidth}px;height:${LOGO_CONFIG.containerHeight}px;margin:0 auto ${LOGO_CONFIG.containerMargin}px;background:rgba(255,255,255,0.25);border-radius:50%;">
           <img src="${LOGO_URL}" alt="FragView" width="${LOGO_CONFIG.width}" height="${LOGO_CONFIG.height}" style="display:block;margin:${(LOGO_CONFIG.containerHeight - LOGO_CONFIG.height) / 2}px auto;" />
         </td>
       </tr>
@@ -32,19 +32,56 @@ function getLogoHTML() {
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron secret
+    // 🔒 SECURITY CHECK #1: Verify cron secret from Vercel
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process. env.CRON_SECRET}`) {
-      return NextResponse. json({ error: 'Unauthorized' }, { status: 401 });
+    
+    // Check if CRON_SECRET is configured
+    if (!process.env.CRON_SECRET) {
+      console.error('❌ CRON_SECRET not configured! ');
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+    
+    // Verify the authorization header matches
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      console.warn('⚠️ Unauthorized cron attempt:', {
+        ip: request.ip || request.headers.get('x-forwarded-for'),
+        userAgent: request.headers.get('user-agent'),
+      });
+      
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    console.log('📬 Starting weekly digest job.. .');
+    // 🔒 SECURITY CHECK #2: Rate limit protection (prevent abuse even with valid secret)
+    const lastRunKey = 'weekly-digest-last-run';
+    const lastRun = global[lastRunKey as keyof typeof global] as number | undefined;
+    const now = Date.now();
+    const oneHour = 60 * 60 * 1000;
+
+    if (lastRun && (now - lastRun) < oneHour) {
+      console.warn('⚠️ Cron called too frequently');
+      return NextResponse.json(
+        { error: 'Cron job already ran recently. Please wait.' },
+        { status: 429 }
+      );
+    }
+
+    // Update last run time
+    (global as any)[lastRunKey] = now;
+
+    console.log('📬 Starting weekly digest job...');
 
     // Get users who want weekly digest
     const users = await prisma.user.findMany({
       where: {
         emailNotifWeeklyDigest: true,
         unsubscribedFromAll: false,
+        emailVerified: { not: null }, // 🔒 Only send to verified emails
       },
       select: {
         id: true,
@@ -53,13 +90,19 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Filter out users without email
-    const usersWithEmail = users.filter(user => user.email !== null && user.email !== '');
+    // Filter out users without valid email
+    const usersWithEmail = users.filter(user => {
+      if (!user.email) return false;
+      // 🔒 Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(user.email);
+    });
 
     console.log(`📧 Found ${usersWithEmail.length} users to send digest`);
 
     let sentCount = 0;
     let errorCount = 0;
+    const errors: string[] = [];
 
     for (const user of usersWithEmail) {
       try {
@@ -71,6 +114,7 @@ export async function GET(request: NextRequest) {
           where: {
             userId: user.id,
             createdAt: { gte: sevenDaysAgo },
+            testData: false, // 🔒 Exclude test data
           },
           orderBy: { createdAt: 'desc' },
           take: 10,
@@ -80,6 +124,8 @@ export async function GET(request: NextRequest) {
         const newReviewsCount = await prisma.review.count({
           where: {
             createdAt: { gte: sevenDaysAgo },
+            isDeleted: false, // 🔒 Exclude deleted reviews
+            testData: false, // 🔒 Exclude test data
           },
         });
 
@@ -87,6 +133,8 @@ export async function GET(request: NextRequest) {
         const reviewedPerfumes = await prisma.review.findMany({
           where: {
             createdAt: { gte: sevenDaysAgo },
+            isDeleted: false, // 🔒 Exclude deleted reviews
+            testData: false, // 🔒 Exclude test data
           },
           select: {
             perfumeId: true,
@@ -96,15 +144,19 @@ export async function GET(request: NextRequest) {
 
         const newPerfumesCount = reviewedPerfumes.length;
 
-        if (notifications.length === 0) {
+        // Skip if no activity
+        if (notifications.length === 0 && newReviewsCount === 0) {
           console.log(`⏭️ Skipping ${user.email} - no activity`);
           continue;
         }
 
+        // 🔒 SECURITY: Sanitize data before sending to email
+        const sanitizedUsername = sanitizeForEmail(user.username);
+
         // Send email
         await sendWeeklyDigest(
           user.email! ,
-          user.username,
+          sanitizedUsername,
           notifications,
           newPerfumesCount,
           newReviewsCount
@@ -113,28 +165,50 @@ export async function GET(request: NextRequest) {
         sentCount++;
         console.log(`✅ Sent digest to ${user.email}`);
 
+        // 🔒 Rate limit between sends to avoid triggering email provider limits
+        await new Promise(resolve => setTimeout(resolve, 100));
+
       } catch (error) {
         console.error(`❌ Failed to send to ${user.email}:`, error);
         errorCount++;
+        errors.push(`${user.email}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
 
-    console. log(`📊 Weekly digest complete: ${sentCount} sent, ${errorCount} errors`);
+    console.log(`📊 Weekly digest complete: ${sentCount} sent, ${errorCount} errors`);
+
+    // 🔒 Log errors for monitoring
+    if (errors.length > 0) {
+      console.error('📋 Error details:', errors);
+    }
 
     return NextResponse.json({
       success: true,
       sent: sentCount,
       errors: errorCount,
       total: usersWithEmail.length,
+      timestamp: new Date().toISOString(),
     });
 
   } catch (error) {
-    console. error('❌ Weekly digest job failed:', error);
+    console.error('❌ Weekly digest job failed:', error);
+    
+    // 🔒 Don't expose internal error details
     return NextResponse.json(
       { error: 'Failed to run weekly digest' },
       { status: 500 }
     );
   }
+}
+
+// 🔒 HELPER: Sanitize data for email display
+function sanitizeForEmail(input: string): string {
+  return input
+    .replace(/[<>]/g, '') // Remove angle brackets
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .slice(0, 100); // Limit length
 }
 
 async function sendWeeklyDigest(
@@ -151,6 +225,9 @@ async function sendWeeklyDigest(
     .map((notif) => {
       const icon = getNotifIcon(notif.type);
       const date = new Date(notif.createdAt);
+      // 🔒 Sanitize notification message
+      const safeMessage = sanitizeForEmail(notif.message);
+      
       return `
         <tr>
           <td style="padding:12px;border-bottom:1px solid #f3f4f6;">
@@ -161,7 +238,7 @@ async function sendWeeklyDigest(
                 </td>
                 <td style="vertical-align:top;">
                   <p style="margin:0 0 4px 0;color:#1f2937;font-size:14px;line-height:1.5;">
-                    ${notif.message}
+                    ${safeMessage}
                   </p>
                   <p style="margin:0;color:#9ca3af;font-size:12px;">
                     ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -295,6 +372,9 @@ async function sendWeeklyDigest(
 function getNotifIcon(type: string): string {
   const icons: Record<string, string> = {
     NEW_FOLLOWER: '👤',
+    FOLLOW_REQUEST: '🙋',
+    FOLLOW_APPROVED: '✅',
+    BRAND_NEW_RELEASE: '🆕',
     REVIEW_HELPFUL: '👍',
     REVIEW_LIKE: '❤️',
     REVIEW_REPLY: '💬',

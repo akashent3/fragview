@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma'; // ✅ Default import
-import { connectMongoDB } from '@/lib/mongodb'; // ✅ Correct function name
+import prisma from '@/lib/prisma';
+import { connectMongoDB } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 
-// ✅ ADD THIS: Cache for 5 minutes (300 seconds)
+// ✅ Cache for 5 minutes
 export const revalidate = 300;
+
+// 🚀 IN-MEMORY CACHE for similar fragrances
+const cache = new Map<string, { 
+  fragrances: any[]; 
+  voteMap: Map<string, { upvotes: number; downvotes: number }>;
+  timestamp: number;
+}>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 function escapeRegex(string: string): string {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -21,6 +29,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'perfumeId required' }, { status: 400 });
     }
 
+    // 🚀 Get user session
     let userId: string | undefined;
     try {
       const session = await getServerSession(authOptions);
@@ -29,7 +38,58 @@ export async function GET(request: NextRequest) {
       userId = undefined;
     }
 
-    // ✅ REPLACE WITH (Parallel execution):
+    // 🚀 CHECK CACHE FIRST
+    const cacheKey = perfumeId;
+    const cached = cache.get(cacheKey);
+    const now = Date.now();
+
+    if (cached && (now - cached.timestamp) < CACHE_TTL) {
+      // Cache hit!  Just need to add user-specific votes
+      if (userId) {
+        // Fetch only user's votes (fast query)
+        const userVotes = await prisma.similarPerfumeVote.findMany({
+          where: {
+            sourcePerfumeId: perfumeId,
+            userId: userId,
+          },
+          select: {
+            similarPerfumeId: true,
+            voteType: true,
+          },
+        });
+
+        const userVoteMap = new Map(userVotes.map(v => [v.similarPerfumeId, v.voteType]));
+
+        // Add user votes to cached fragrances
+        const fragrancesWithUserVotes = cached.fragrances.map(f => ({
+          ...f,
+          userVote: userVoteMap.get(f.perfumeId) || null,
+        }));
+
+        return NextResponse.json(
+          { fragrances: fragrancesWithUserVotes },
+          {
+            headers: {
+              'X-Cache': 'HIT',
+              'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+            },
+          }
+        );
+      } else {
+        // No user, return cached data as-is
+        return NextResponse.json(
+          { fragrances: cached.fragrances },
+          {
+            headers: {
+              'X-Cache': 'HIT',
+              'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+            },
+          }
+        );
+      }
+    }
+
+    // 🚀 CACHE MISS - Fetch everything
     const [votes, sourcePerfumeData] = await Promise.all([
       prisma.similarPerfumeVote.findMany({
         where: {
@@ -58,7 +118,7 @@ export async function GET(request: NextRequest) {
       })()
     ]);
 
-    if (! sourcePerfumeData) {
+    if (!sourcePerfumeData) {
       return NextResponse.json({ error: 'Perfume not found' }, { status: 404 });
     }
 
@@ -86,21 +146,17 @@ export async function GET(request: NextRequest) {
     });
 
     let perfumeIds = Array.from(voteMap.keys());
-
     const { db } = await connectMongoDB();
 
-    // If we have reminds_me data, add those perfumes
+    // Process reminds_me
     if (sourcePerfumeData?.reminds_me && Array.isArray(sourcePerfumeData.reminds_me)) {
       console.log(`Found ${sourcePerfumeData.reminds_me.length} reminds_me entries`);
       
-      // Strategy: Search by creating a case-insensitive regex for each name
-      // But use $in for better performance with indexes
       const searchPatterns = sourcePerfumeData.reminds_me
         .filter(name => name && typeof name === 'string')
         .map(name => name.trim());
 
       if (searchPatterns.length > 0) {
-        // Use aggregation pipeline for better performance
         const remindsOfPerfumes = await db
           .collection('perfumes')
           .aggregate([
@@ -127,12 +183,10 @@ export async function GET(request: NextRequest) {
 
         console.log(`Successfully matched ${remindsOfPerfumes.length} out of ${sourcePerfumeData.reminds_me.length} reminds_me entries`);
 
-        // Add reminds_me perfumes to the list if not already there
         remindsOfPerfumes.forEach((p) => {
           const id = p._id.toString();
-          if (!voteMap.has(id)) {
+          if (! voteMap.has(id)) {
             perfumeIds.push(id);
-            // Initialize with 0 votes for reminds_me perfumes
             voteMap.set(id, {
               upvotes: 0,
               downvotes: 0,
@@ -147,7 +201,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ fragrances: [] });
     }
 
-    // Get perfume details from MongoDB
+    // Get perfume details
     const perfumes = await db
       .collection('perfumes')
       .find({ 
@@ -164,22 +218,21 @@ export async function GET(request: NextRequest) {
       .project({ _id: 1, variant_name: 1, perfume_name: 1, brand_name: 1, image: 1, slug: 1 })
       .toArray();
 
-    // Calculate Bayesian Average for each perfume
+    // Calculate scores
     const fragrances = perfumes
       .map((perfume) => {
         const perfumeIdStr = perfume._id.toString();
         const voteData = voteMap.get(perfumeIdStr);
 
-        if (!voteData) return null;
+        if (! voteData) return null;
 
         const { upvotes, downvotes, userVote } = voteData;
 
-        // Bayesian Average calculation
-        const C = 5; // Confidence threshold
-        const m = 0.5; // Prior probability (50%)
+        const C = 5;
+        const m = 0.5;
         const total = upvotes + downvotes;
 
-        let similarityScore = 50; // Default 50% for new items
+        let similarityScore = 50;
         if (total > 0) {
           const bayesianAvg = (C * m + upvotes) / (C + total);
           similarityScore = Math.round(bayesianAvg * 100);
@@ -199,26 +252,47 @@ export async function GET(request: NextRequest) {
       })
       .filter((f) => f !== null)
       .sort((a, b) => {
-        // Sort by similarity score (highest first)
-        // But prioritize perfumes with votes over reminds_me (0 votes)
         if (a! .upvotes + a!.downvotes === 0 && b!.upvotes + b!.downvotes > 0) return 1;
         if (b!.upvotes + b! .downvotes === 0 && a!.upvotes + a!.downvotes > 0) return -1;
         return b!.similarityScore - a!.similarityScore;
       });
 
-    return NextResponse.json(
-    { fragrances },
-    {
-      headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-      },
+    // 🚀 STORE IN CACHE (without user votes)
+    const fragrancesForCache = fragrances.map(f => ({ ...f, userVote: null }));
+    const voteMapForCache = new Map(
+      Array.from(voteMap.entries()).map(([id, data]) => [id, { upvotes: data.upvotes, downvotes: data.downvotes }])
+    );
+
+    cache.set(cacheKey, {
+      fragrances: fragrancesForCache,
+      voteMap: voteMapForCache,
+      timestamp: now,
+    });
+
+    // 🚀 CLEANUP
+    if (cache.size > 1000) {
+      const entries = Array.from(cache.entries());
+      entries.forEach(([key, value]) => {
+        if (now - value.timestamp > CACHE_TTL) {
+          cache.delete(key);
+        }
+      });
     }
-  );
+
+    return NextResponse.json(
+      { fragrances },
+      {
+        headers: {
+          'X-Cache': 'MISS',
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error fetching similar fragrances:', error);
     return NextResponse.json({ 
       error: 'Failed to fetch similar fragrances',
-      details: error instanceof Error ?  error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

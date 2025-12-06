@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { Search, Loader2, Sparkles } from 'lucide-react';
 
@@ -22,6 +22,7 @@ export default function SearchAutocomplete({
     perfumes: [],
   });
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -34,38 +35,63 @@ export default function SearchAutocomplete({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounced search
+  // 🚀 OPTIMIZED: Debounced search with abort controller
   useEffect(() => {
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
     if (query.trim().length < 2) {
       setResults({ brands: [], perfumes: [] });
       setIsOpen(false);
+      setLoading(false);
       return;
     }
 
     setLoading(true);
+    
+    // 🚀 INCREASED DEBOUNCE: 500ms instead of 300ms (less API calls)
     const timer = setTimeout(async () => {
+      // Create new abort controller for this request
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       try {
-        const res = await fetch(`/api/search/autocomplete?q=${encodeURIComponent(query)}`);
+        const res = await fetch(
+          `/api/search/autocomplete?q=${encodeURIComponent(query)}`,
+          { signal: controller.signal }
+        );
+        
+        if (!res.ok) throw new Error('Search failed');
+        
         const data = await res.json();
         setResults(data);
         setIsOpen(true);
-      } catch (error) {
-        console.error('Search error:', error);
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error('Search error:', error);
+        }
       } finally {
         setLoading(false);
       }
-    }, 300);
+    }, 500); // 🚀 Increased from 300ms to 500ms
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [query]);
 
-  const handleSelect = (item: any, type: 'brand' | 'perfume') => {
+  const handleSelect = useCallback((item: any, type: 'brand' | 'perfume') => {
     if (onSelect) {
       onSelect({ ...item, type });
     }
     setQuery('');
     setIsOpen(false);
-  };
+  }, [onSelect]);
 
   const hasResults = results.brands.length > 0 || results.perfumes.length > 0;
 
@@ -86,7 +112,7 @@ export default function SearchAutocomplete({
         )}
       </div>
 
-      {/* Autocomplete Dropdown - BOTANICAL THEME */}
+      {/* Autocomplete Dropdown */}
       {isOpen && hasResults && (
         <div className="absolute top-full left-0 right-0 z-50 mt-2 max-h-96 overflow-y-auto rounded-lg border border-green-200 bg-white/95 backdrop-blur-sm shadow-lg">
           {/* Brands Section */}
@@ -141,8 +167,8 @@ export default function SearchAutocomplete({
         </div>
       )}
 
-      {/* No Results - BOTANICAL THEME */}
-      {isOpen && !loading && query.length >= 2 && !hasResults && (
+      {/* No Results */}
+      {isOpen && !loading && query.length >= 2 && ! hasResults && (
         <div className="absolute top-full left-0 right-0 z-50 mt-2 rounded-lg border border-green-200 bg-white/95 backdrop-blur-sm p-4 text-center text-sm text-gray-600 shadow-lg">
           No results found for "{query}"
         </div>

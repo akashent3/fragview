@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ThumbsUp, ThumbsDown, Plus, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
@@ -43,34 +43,50 @@ export default function SimilarFragrances({ currentPerfumeId }: Props) {
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isFetchingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null); // 🚀 ADD THIS
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
+  // 🚀 OPTIMIZED: Fetch similar fragrances only once
   useEffect(() => {
-  // Reset the ref first
-  isFetchingRef.current = false;
-  setLoading(true);
-  
-  // Then fetch
-  fetchSimilarFragrances();
+    const initialDelay = setTimeout(() => {
+    // Reset the ref first
+      isFetchingRef.current = false;
+      setLoading(true);    
+    // Then fetch
+      fetchSimilarFragrances();
+    }, 500);
+    return () => clearTimeout(initialDelay);
   }, [currentPerfumeId]);
 
+  // 🚀 OPTIMIZED: Debounced search with abort controller
   useEffect(() => {
+    // Cancel previous search
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
     if (searchQuery.length < 2) {
       setSearchResults([]);
       return;
     }
 
+    // 🚀 Increased debounce from 300ms to 400ms
     const timer = setTimeout(() => {
       searchPerfumes();
-    }, 300);
+    }, 400);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [searchQuery]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
-    if (! container) return;
+    if (!container) return;
 
     const checkScroll = () => {
       setCanScrollLeft(container.scrollLeft > 0);
@@ -89,11 +105,20 @@ export default function SimilarFragrances({ currentPerfumeId }: Props) {
     };
   }, [fragrances]);
 
-    const fetchSimilarFragrances = async () => {
+  // 🚀 OPTIMIZED: Prevent duplicate fetches
+  const fetchSimilarFragrances = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
+    
     try {
-      const response = await fetch(`/api/similar-fragrances?perfumeId=${currentPerfumeId}`);
+      const response = await fetch(
+        `/api/similar-fragrances?perfumeId=${currentPerfumeId}`,
+        {
+          // 🚀 ADD CACHING: Use browser cache
+          cache: 'force-cache',
+          next: { revalidate: 300 }
+        }
+      );
       const data = await response.json();
       setFragrances(data.fragrances || []);
     } catch (error) {
@@ -102,28 +127,78 @@ export default function SimilarFragrances({ currentPerfumeId }: Props) {
       setLoading(false);
       isFetchingRef.current = false;
     }
-  };
+  }, [currentPerfumeId]);
 
-  const searchPerfumes = async () => {
+  // 🚀 OPTIMIZED: Search with abort controller
+  const searchPerfumes = useCallback(async () => {
     setSearching(true);
+    
+    // Create new abort controller
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const response = await fetch(
-        `/api/perfumes/search-similar?q=${encodeURIComponent(searchQuery)}&exclude=${currentPerfumeId}`
+        `/api/perfumes/search-similar?q=${encodeURIComponent(searchQuery)}&exclude=${currentPerfumeId}`,
+        { signal: controller.signal }
       );
       const data = await response.json();
       setSearchResults(data.results || []);
-    } catch (error) {
-      console.error('Error searching perfumes:', error);
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('Error searching perfumes:', error);
+      }
     } finally {
       setSearching(false);
     }
-  };
+  }, [searchQuery, currentPerfumeId]);
 
-  const handleVote = async (perfumeId: string, voteType: 'UP' | 'DOWN') => {
-    if (!session) {
+  // 🚀 OPTIMIZED: Optimistic UI updates for voting
+  const handleVote = useCallback(async (perfumeId: string, voteType: 'UP' | 'DOWN') => {
+    if (! session) {
       open({ mode: 'signin', reason: 'Sign in to vote on similar fragrances' });
       return;
     }
+
+    // 🚀 OPTIMISTIC UPDATE: Update UI immediately
+    setFragrances((prev) =>
+      prev.map((f) => {
+        if (f.perfumeId !== perfumeId) return f;
+
+        const wasUpvote = f.userVote === 'UP';
+        const wasDownvote = f.userVote === 'DOWN';
+        const isUpvote = voteType === 'UP';
+
+        let newUpvotes = f.upvotes;
+        let newDownvotes = f.downvotes;
+
+        if (f.userVote === voteType) {
+          // Remove vote
+          if (isUpvote) newUpvotes--;
+          else newDownvotes--;
+          
+          return {
+            ...f,
+            upvotes: newUpvotes,
+            downvotes: newDownvotes,
+            userVote: null,
+          };
+        } else {
+          // Change or add vote
+          if (wasUpvote) newUpvotes--;
+          if (wasDownvote) newDownvotes--;
+          if (isUpvote) newUpvotes++;
+          else newDownvotes++;
+
+          return {
+            ...f,
+            upvotes: newUpvotes,
+            downvotes: newDownvotes,
+            userVote: voteType,
+          };
+        }
+      })
+    );
 
     try {
       const response = await fetch('/api/similar-fragrances/vote', {
@@ -136,16 +211,19 @@ export default function SimilarFragrances({ currentPerfumeId }: Props) {
         }),
       });
 
-      if (response.ok) {
+      if (!response.ok) {
+        // 🚀 ROLLBACK: If request fails, refetch to get accurate state
         fetchSimilarFragrances();
       }
     } catch (error) {
       console.error('Error voting:', error);
+      // 🚀 ROLLBACK on error
+      fetchSimilarFragrances();
     }
-  };
+  }, [session, open, currentPerfumeId, fetchSimilarFragrances]);
 
-  const handleAddSimilar = async (perfumeId: string) => {
-    if (!session) {
+  const handleAddSimilar = useCallback(async (perfumeId: string) => {
+    if (! session) {
       open({ mode: 'signin', reason: 'Sign in to suggest similar fragrances' });
       return;
     }
@@ -172,9 +250,9 @@ export default function SimilarFragrances({ currentPerfumeId }: Props) {
     } catch (error) {
       console.error('Error adding similar fragrance:', error);
     }
-  };
+  }, [session, open, currentPerfumeId, fetchSimilarFragrances]);
 
-  const scroll = (direction: 'left' | 'right') => {
+  const scroll = useCallback((direction: 'left' | 'right') => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
@@ -187,13 +265,13 @@ export default function SimilarFragrances({ currentPerfumeId }: Props) {
       left: newScrollLeft,
       behavior: 'smooth',
     });
-  };
+  }, []);
 
-  const getStrengthColor = (score: number): string => {
+  const getStrengthColor = useCallback((score: number): string => {
     if (score >= 70) return 'from-green-500 to-emerald-500';
     if (score >= 40) return 'from-yellow-500 to-orange-500';
     return 'from-red-500 to-rose-500';
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -309,10 +387,10 @@ export default function SimilarFragrances({ currentPerfumeId }: Props) {
                     <div className="flex items-center gap-1.5 pt-1">
                       <button
                         onClick={() => handleVote(frag.perfumeId, 'UP')}
-                        disabled={! session}
+                        disabled={!session}
                         className={`flex-1 flex items-center justify-center gap-0.5 px-1.5 py-1 rounded text-[10px] font-semibold transition-all ${
                           frag.userVote === 'UP'
-                            ? 'bg-green-500 text-white'
+                            ?  'bg-green-500 text-white'
                             : 'bg-white/80 text-gray-700 hover:bg-green-100 border border-green-200'
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
@@ -352,7 +430,7 @@ export default function SimilarFragrances({ currentPerfumeId }: Props) {
         )}
       </div>
 
-      {/* Add Similar Modal - UNCHANGED */}
+      {/* Add Similar Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-gradient-to-br from-green-50/95 to-orange-50/95 backdrop-blur-xl rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl border border-white/40">
@@ -402,7 +480,7 @@ export default function SimilarFragrances({ currentPerfumeId }: Props) {
                 </div>
               )}
 
-              {! searching && searchResults.length > 0 && (
+              {!searching && searchResults.length > 0 && (
                 <div className="space-y-2">
                   {searchResults.map((result) => (
                     <button

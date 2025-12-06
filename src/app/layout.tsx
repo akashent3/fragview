@@ -8,7 +8,6 @@ import Footer from '@/components/layout/Footer';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-// If you want to explicitly force dynamic behavior (ensure always fresh session):
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
@@ -18,12 +17,16 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Fetch session on the server so the initial render knows if user is signed in.
   const session = await getServerSession(authOptions);
 
   return (
     <html lang="en">
       <head>
+        {/* 🚀 Performance Optimizations */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
+        
         {/* Favicons */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/favicon-16x16.png" sizes="16x16" type="image/png" />
@@ -31,8 +34,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
   
-        {/* Font */}
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet" />
+        {/* 🚀 Optimized Font Loading */}
+        <link 
+          rel="preload" 
+          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" 
+          as="style"
+        />
+        <link 
+          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" 
+          rel="stylesheet"
+        />
       </head>
       <body className="min-h-screen">
         <RootProviders session={session}>

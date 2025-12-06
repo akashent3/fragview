@@ -137,6 +137,8 @@ model Review {
   user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([perfumeId])
+  @@index([userId, helpfulCount, likeCount])
+  @@index([userId, photos])
   @@index([parentId])
   @@index([userId])
   @@index([createdAt(sort: Desc)])

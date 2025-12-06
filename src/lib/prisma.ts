@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
-const prismaClientSingleton = () =>
-  new PrismaClient({
+const prismaClientSingleton = () => {
+  const client = new PrismaClient({
     datasources: {
       db: {
         url: process.env.DATABASE_URL_DIRECT || process.env.DATABASE_URL,
@@ -9,6 +9,14 @@ const prismaClientSingleton = () =>
     },
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   });
+
+  // Connect immediately to avoid cold starts
+  client.$connect().catch((err) => {
+    console.error('Failed to connect to database:', err);
+  });
+
+  return client;
+};
 
 declare global {
   // eslint-disable-next-line no-var

@@ -22,11 +22,12 @@ const categories = ['All', 'Review', 'Guide', 'News', 'Interview', 'Deep Dive', 
 export default async function DrydownPage({
   searchParams,
 }: {
-  searchParams: { category?: string; page?: string };
+  searchParams: Promise<{ category?: string; page?: string }>;
 }) {
   const session = await auth();
-  const selectedCategory = searchParams.category;
-  const currentPage = parseInt(searchParams.page || '1');
+  const resolvedParams = await searchParams;
+  const selectedCategory = resolvedParams.category;
+  const currentPage = parseInt(resolvedParams.page || '1');
 
   // Fetch articles with pagination
   const { articles, total, totalPages } = await getArticles(

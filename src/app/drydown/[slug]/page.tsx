@@ -7,8 +7,9 @@ import { getArticleComments } from '@/app/actions/drydown-comments';
 import ShareButtons from '@/components/drydown/ShareButtons';
 import ArticleComments from '@/components/drydown/ArticleComments';
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-  const data = await getArticleBySlug(params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const data = await getArticleBySlug(slug);
   if (!data) return { title: 'Article Not Found • The Drydown' };
   
   return {
@@ -20,8 +21,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function ArticlePage({ params }: { params: { slug: string } }) {
-  const data = await getArticleBySlug(params.slug);
+export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const data = await getArticleBySlug(slug);
   
   if (!data) {
     return notFound();

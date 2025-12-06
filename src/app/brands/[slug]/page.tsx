@@ -4,8 +4,8 @@ import { notFound } from 'next/navigation';
 
 export const revalidate = 300;
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-  const slug = params.slug;
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   const url = `https://fragviewvercel.vercel.app/brands/${slug}`;
   return {
     title: `Brand: ${slug} | FragView`,
@@ -18,10 +18,12 @@ export default async function BrandDetailPage({
   params,
   searchParams,
 }: {
-  params: { slug: string };
-  searchParams: Record<string, string | string[] | undefined>;
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const data = await loadBrandDetail(params.slug, searchParams);
+  const { slug } = await params;
+  const resolvedSearchParams = await searchParams;
+  const data = await loadBrandDetail(slug, resolvedSearchParams);
   if (!data) return notFound();
 
   return (

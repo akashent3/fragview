@@ -96,7 +96,7 @@ export default async function PerfumeDetailPage({
 }) {
   const { slug } = await params; // 🚀 AWAIT params
   
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const sessionToken = cookieStore.get('next-auth.session-token') || 
                         cookieStore.get('__Secure-next-auth.session-token');
   

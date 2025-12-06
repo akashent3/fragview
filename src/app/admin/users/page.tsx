@@ -10,13 +10,14 @@ export const metadata = {
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: { search?: string; role?: string; page?: string };
+  searchParams: Promise<{ search?: string; role?: string; page?: string }>;
 }) {
   await requireAdmin();
   
-  const page = parseInt(searchParams.page || '1');
-  const search = searchParams.search || '';
-  const roleFilter = searchParams.role || 'all';
+  const resolvedParams = await searchParams;
+  const page = parseInt(resolvedParams. page || '1');
+  const search = resolvedParams.search || '';
+  const roleFilter = resolvedParams.role || 'all';
 
   const { users, total } = await getUsers({ search, role: roleFilter, page, limit: 50 });
 

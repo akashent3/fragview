@@ -11,7 +11,7 @@ export const metadata = {
 export default async function BrandApplicationsPage({
   searchParams,
 }: {
-  searchParams: { status?: string };
+  searchParams: Promise<{ status?: string }>;
 }) {
   await requireAdmin();
   
@@ -30,7 +30,7 @@ export default async function BrandApplicationsPage({
 
       {/* Applications List */}
       <Suspense fallback={<div>Loading... </div>}>
-        <BrandApplicationsListContent searchParams={searchParams} />
+        <BrandApplicationsListContent searchParams={await searchParams} />
       </Suspense>
     </div>
   );

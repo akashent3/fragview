@@ -10,7 +10,7 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
 export function rateLimit(config: RateLimitConfig = { interval: 60000, uniqueTokenPerInterval: 10 }) {
   return async function middleware(req: NextRequest): Promise<NextResponse | null> {
-    const ip = req.ip || req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'anonymous';
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'anonymous';
     const token = `${ip}:${req.nextUrl.pathname}`;
     
     const now = Date.now();

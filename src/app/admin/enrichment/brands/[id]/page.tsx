@@ -10,10 +10,11 @@ export const metadata = {
 export default async function BrandEnrichmentPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   await requireAdmin();
-  const brand = await getBrandForEnrichment(params.id);
+   const { id } = await params;
+  const brand = await getBrandForEnrichment(id);
 
   if (!brand) {
     notFound();

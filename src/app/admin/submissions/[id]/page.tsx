@@ -10,10 +10,11 @@ export const metadata = {
 export default async function SubmissionReviewPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   await requireAdmin();
-  const submission = await getSubmissionById(params.id);
+  const { id } = await params;
+  const submission = await getSubmissionById(id);
 
   if (!submission) {
     notFound();

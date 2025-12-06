@@ -14,9 +14,10 @@ type BrandItem = {
 export default async function BrandsPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const data = await loadBrands(searchParams);
+  const resolvedParams = await searchParams;
+  const data = await loadBrands(resolvedParams);
   return (
     <div className="min-h-screen relative overflow-hidden py-8" style={{ backgroundColor: '#FAFFF5' }}>
       {/* Animated Background Elements - ADDED */}

@@ -7,13 +7,13 @@ export const metadata = {
   title: 'Review Brand Application | Admin',
 };
 
-export default async function BrandApplicationReviewPage({
-  params,
+export default async function BrandApplicationReviewPage({ params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   await requireAdmin();
-  const application = await getBrandApplicationById(params.id);
+  const { id } = await params;
+  const application = await getBrandApplicationById(id);
 
   if (! application) {
     notFound();

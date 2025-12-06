@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     // Verify the authorization header matches
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
       console.warn('⚠️ Unauthorized cron attempt:', {
-        ip: request.ip || request.headers.get('x-forwarded-for'),
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
         userAgent: request.headers.get('user-agent'),
       });
       

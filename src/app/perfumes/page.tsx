@@ -3,9 +3,10 @@ import PerfumesClient from './PerfumesClient';
 
 export const revalidate = 300;
 
-export async function generateMetadata({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
+export async function generateMetadata({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const baseUrl = 'https://fragviewvercel.vercel.app/perfumes';
-  const q = typeof searchParams.q === 'string' ? searchParams.q : '';
+  const resolvedParams = await searchParams;
+  const q = typeof resolvedParams.q === 'string' ?  resolvedParams.q : '';
   const title = q ? `Perfumes matching "${q}" | FragView` : 'Perfume Listing | FragView';
   const description =
     'Discover perfumes on FragView. Filter by brand, gender, rating and explore fragrance details.';
@@ -16,8 +17,9 @@ export async function generateMetadata({ searchParams }: { searchParams: Record<
   };
 }
 
-export default async function PerfumesPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
-  const data = await loadPerfumes(searchParams);
+export default async function PerfumesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const resolvedParams = await searchParams;
+  const data = await loadPerfumes(resolvedParams);
   return (
     <div className="min-h-screen relative overflow-hidden py-6" style={{ backgroundColor: '#FAFFF5' }}>
       {/* Animated Background Elements - ADDED */}

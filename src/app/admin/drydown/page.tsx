@@ -11,7 +11,7 @@ export const metadata = {
 export default async function DrydownPage({
   searchParams,
 }: {
-  searchParams: { published?: string; category?: string };
+  searchParams: Promise<{ published?: string; category?: string }>;
 }) {
   const session = await requireAdmin();
   
@@ -27,8 +27,9 @@ export default async function DrydownPage({
     );
   }
 
-  const published = searchParams.published === 'true' ?  true : searchParams.published === 'false' ? false : undefined;
-  const category = searchParams.category;
+  const resolvedParams = await searchParams;
+  const published = resolvedParams.published === 'true' ? true : resolvedParams.published === 'false' ? false : undefined;
+  const category = resolvedParams.category;
 
   const articles = await getArticles({ published, category });
 

@@ -5,10 +5,11 @@ import { Star, Calendar, MapPin, Filter } from 'lucide-react';
 import AccordTags from '@/components/ui/AccordTags';
 
 interface BrandPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
-const BrandPage: React.FC<BrandPageProps> = ({ params }) => {
+const BrandPage: React. FC<BrandPageProps> = async ({ params }) => {
+  const { slug } = await params;
   const [sortBy, setSortBy] = useState('name');
   const [filterGender, setFilterGender] = useState('all');
 

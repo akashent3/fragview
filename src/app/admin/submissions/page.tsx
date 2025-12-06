@@ -11,7 +11,7 @@ export const metadata = {
 export default async function SubmissionsPage({
   searchParams,
 }: {
-  searchParams: { status?: string; type?: string };
+  searchParams: Promise<{ status?: string; type?: string }>;
 }) {
   await requireAdmin();
   
@@ -30,7 +30,7 @@ export default async function SubmissionsPage({
 
       {/* Submissions List */}
       <Suspense fallback={<div>Loading...</div>}>
-        <SubmissionsListContent searchParams={searchParams} />
+        <SubmissionsListContent searchParams={await searchParams} />
       </Suspense>
     </div>
   );

@@ -12,7 +12,7 @@ export const metadata = {
 export default async function EditArticlePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const session = await requireAdmin();
   
@@ -28,7 +28,8 @@ export default async function EditArticlePage({
     );
   }
 
-  const article = await getArticleById(params.id);
+  const { id } = await params;
+  const article = await getArticleById(id);
 
   if (!article) {
     notFound();

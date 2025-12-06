@@ -10,10 +10,11 @@ export const metadata = {
 export default async function PerfumeEnrichmentPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   await requireAdmin();
-  const perfume = await getPerfumeForEnrichment(params.id);
+  const { id } = await params;
+  const perfume = await getPerfumeForEnrichment(id);
 
   if (!perfume) {
     notFound();

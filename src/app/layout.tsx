@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Playfair_Display } from 'next/font/google'; // 1. Import the font tool
 import './globals.css';
 
 import RootProviders from './providers';
@@ -8,7 +9,16 @@ import Footer from '@/components/layout/Footer';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-export const dynamic = 'force-dynamic';
+// 2. REMOVE THIS LINE: export const dynamic = 'force-dynamic'; 
+// Why? This line prevents Vercel from caching your site. By removing it, 
+// your site can serve instant copies of pages.
+
+// 3. Configure the font here instead of in the <head>
+const playfair = Playfair_Display({ 
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-playfair', // Optional: if you use Tailwind variables
+});
 
 export const metadata: Metadata = {
   title: 'FragView — Perfume Reviews & Discovery',
@@ -20,30 +30,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const session = await getServerSession(authOptions);
 
   return (
-    <html lang="en">
+    <html lang="en" className={playfair.className}> 
       <head>
-        {/* 🚀 Performance Optimizations */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
-        
-        {/* Favicons */}
+        {/* 4. Removed the manual Google Font links here. 
+           Next.js handles it automatically now with the code above. */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/favicon-16x16.png" sizes="16x16" type="image/png" />
         <link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
-  
-        {/* 🚀 Optimized Font Loading */}
-        <link 
-          rel="preload" 
-          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" 
-          as="style"
-        />
-        <link 
-          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" 
-          rel="stylesheet"
-        />
       </head>
       <body className="min-h-screen">
         <RootProviders session={session}>

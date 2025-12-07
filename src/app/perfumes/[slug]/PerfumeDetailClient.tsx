@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useTransition, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import Image from 'next/image';
 import { Star, Plus, LogIn, Leaf, Flower2, Droplets, Wind, Sparkles, Camera, X, Bell, Clock, MessageCircle } from 'lucide-react';
 import NotesPyramid from '@/components/ui/NotesPyramid';
 import AccordTags from '@/components/ui/AccordTags';
@@ -301,7 +302,7 @@ export default function PerfumeDetailClient({
       let imageDataUrl = '';
       if (perfume.image) {
         try {
-          const img = new Image();
+          const img = new window.Image();
           img.crossOrigin = 'anonymous';
           img.src = perfume.image;
           await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; setTimeout(reject, 5000); });
@@ -453,9 +454,16 @@ export default function PerfumeDetailClient({
         <div ref={snapshotRef} className="glass-card rounded-xl p-3 lg:p-5 shadow-sm">
           <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 lg:gap-6">
             <div className="space-y-2 lg:space-y-3">
-              <div className="aspect-[3/4] w-full max-w-[150px] mx-auto lg:max-w-[280px] rounded-lg lg:rounded-xl overflow-hidden bg-gradient-to-br from-green-50/50 to-orange-50/50">
+              <div className="relative aspect-[3/4] w-full max-w-[150px] mx-auto lg:max-w-[280px] rounded-lg lg:rounded-xl overflow-hidden bg-gradient-to-br from-green-50/50 to-orange-50/50">
                 {perfume.image ? (
-                  <img src={perfume.image} alt={perfume.variant_name} className="h-full w-full object-cover" />
+                  <Image 
+                    src={perfume.image} 
+                    alt={perfume.variant_name} 
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 150px, 280px"
+                    priority
+                  />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center">
                     <Sparkles className="w-6 h-6 lg:w-12 lg:h-12 text-green-300" />
@@ -644,6 +652,7 @@ export default function PerfumeDetailClient({
           </div>
         </div>
 
+      <div style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 1000px' }}>
         {perfume.perfume_overview && (
           <div className="glass-card rounded-xl p-5 shadow-sm">
             <h3 className="text-xl font-bold text-gray-800 mb-3">About This Fragrance</h3>
@@ -719,7 +728,7 @@ export default function PerfumeDetailClient({
                 <div className="flex flex-wrap gap-2 items-start">
                   {uploadedPhotos.map((url, i) => (
                     <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 shrink-0">
-                      <img src={url} className="w-full h-full object-cover" alt="Review" />
+                      <Image src={url} alt="Review" fill className="object-cover" sizes="96px" />
                       <button type="button" onClick={() => setUploadedPhotos(p => p.filter((_, idx) => idx !== i))} className="absolute top-0.5 right-0.5 bg-black/50 text-white rounded-full p-0.5"><X className="w-3 h-3" /></button>
                     </div>
                   ))}
@@ -763,13 +772,20 @@ export default function PerfumeDetailClient({
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {/* Avatar */}
                       <a href={`/u/${r.user.username}`} className="shrink-0 group">
-                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm font-bold text-gray-500 overflow-hidden ring-2 ring-transparent group-hover:ring-green-400 transition-all">
-                          {r.user.image ? (
-                            <img src={r.user.image} alt={r.user.username} className="w-full h-full object-cover" />
-                          ) : (
-                            <span>{r.user.username.charAt(0).toUpperCase()}</span>
-                          )}
-                        </div>
+                        {/* Added 'relative' to the container div */}
+                      <div className="relative w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm font-bold text-gray-500 overflow-hidden ring-2 ring-transparent group-hover:ring-green-400 transition-all">
+                        {r.user.image ? (
+                          <Image 
+                            src={r.user.image} 
+                            alt={r.user.username} 
+                            fill
+                            sizes="40px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <span>{r.user.username.charAt(0).toUpperCase()}</span>
+                        )}
+                      </div>
                       </a>
 
                       {/* User Info - Inline Compact */}
@@ -833,7 +849,15 @@ export default function PerfumeDetailClient({
                       {r.photos && r.photos.length > 0 && (
                         <div className="flex gap-2 mb-3">
                           {r.photos.map((p, idx) => (
-                            <img key={idx} src={p} className="w-16 h-16 object-cover rounded-lg border border-gray-200 cursor-pointer hover:scale-105 transition-transform" alt={`Photo ${idx + 1}`} />
+                            <div key={idx} className="relative w-16 h-16 shrink-0">
+                              <Image 
+                                src={p} 
+                                alt={`Photo ${idx + 1}`}
+                                fill
+                                className="object-cover rounded-lg border border-gray-200 cursor-pointer hover:scale-105 transition-transform"
+                                sizes="64px"
+                              />
+                            </div>
                           ))}
                         </div>
                       )}
@@ -892,6 +916,7 @@ export default function PerfumeDetailClient({
               ))}
             </div>
           )}
+        </div>
         </div>
 
         {/* Edit Modal */}

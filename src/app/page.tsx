@@ -5,6 +5,7 @@ import AccordTags from '@/components/ui/AccordTags';
 import { getMongoDb } from '@/lib/mongodb';
 import prisma from '@/lib/prisma';
 import { ObjectId } from 'mongodb';
+import Image from 'next/image';
 
 // Server Component - fetch data at build time
 async function getHomePageData() {
@@ -143,9 +144,9 @@ export default async function HomePage() {
       {/* Animated Background Elements */}
       <div className="fixed inset-0 pointer-events-none">
         {/* Gradient Blobs */}
-        <div className="absolute top-20 left-10 w-96 h-96 bg-green-200/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-200/20 rounded-full blur-3xl animate-pulse animate-delay-2" />
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-yellow-200/10 rounded-full blur-3xl animate-pulse animate-delay-4" />
+        <div className="absolute top-20 left-10 w-96 h-96 bg-green-200/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-200/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-yellow-200/10 rounded-full blur-3xl" />
         
         {/* Floating Leaves Pattern */}
         <svg className="absolute inset-0 w-full h-full opacity-[0.03]" xmlns="http://www.w3.org/2000/svg">
@@ -159,13 +160,13 @@ export default async function HomePage() {
         </svg>
 
         {/* Animated Floating Icons */}
-        <div className="absolute top-10 left-20 animate-float">
+        <div className="absolute top-10 left-20">
           <Leaf size={24} className="text-green-300/30" />
         </div>
-        <div className="absolute top-40 right-32 animate-float animate-delay-2">
+        <div className="absolute top-40 right-32">
           <Flower2 size={20} className="text-orange-300/25" />
         </div>
-        <div className="absolute bottom-32 left-40 animate-float animate-delay-3">
+        <div className="absolute bottom-32 left-40">
           <Trees size={28} className="text-green-400/20" />
         </div>
       </div>
@@ -246,20 +247,26 @@ export default async function HomePage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {data.featuredPerfumes.length > 0 ? (
-              data.featuredPerfumes.map((perfume: any) => (
+              data.featuredPerfumes.map((perfume: any, i: number) => (
                 <div key={perfume._id} className="glass-card rounded-xl hover:shadow-lg transition-all duration-300 overflow-hidden group hover:scale-[1.02]">
                   <div className="aspect-w-3 aspect-h-4 relative h-56 overflow-hidden flex items-center justify-center bg-gradient-to-br from-green-50/50 to-orange-50/50">
                     {perfume.image ? (
-                      <img
+                      <div className="relative w-full h-full p-4 group-hover:scale-110 transition-transform duration-500">
+                      <Image
                         src={perfume.image}
                         alt={perfume.name}
-                        className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-500"
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        className="object-contain"
+                        priority={i < 6}  
                       />
+                    </div>
                     ) : (
                       <Droplets size={48} className="text-green-300" />
                     )}
                   </div>
                   
+      
                   <div className="p-5 flex flex-col flex-1">
                     <div className="mb-2">
                       <h3 className="text-lg font-semibold text-gray-900 group-hover:text-green-600 transition-colors">

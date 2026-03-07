@@ -58,16 +58,17 @@ export default function BrandPerfumesSection({
     return brandPerfumesMap[brandKey] || [];
   }, [brandPerfumesMap, selectedBrand]);
 
-  if (brands.length === 0) {
-    return null;
-  }
-
+  // Must be before the conditional return — hooks cannot come after return
   const visiblePerfumes = useMemo(() => {
     const start = page * ITEMS_PER_PAGE;
     return filteredPerfumes.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredPerfumes, page]);
 
   const totalPages = Math.ceil(filteredPerfumes.length / ITEMS_PER_PAGE);
+
+  if (brands.length === 0) {
+    return null;
+  }
 
   const handleNext = () => {
     if (page < totalPages - 1) {

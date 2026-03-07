@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { put } from '@vercel/blob';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
+
+const s3Client = new S3Client({ region: process.env.AWS_REGION || 'ap-south-1' });
 
 // 🔒 STRICTER RATE LIMITING - 10 uploads per hour
 const limiter = rateLimit({ interval: 3600000, uniqueTokenPerInterval: 10 });
@@ -95,16 +97,19 @@ export async function POST(req: NextRequest) {
     const filename = `${safeFolder}/${session.user.id}/${timestamp}-${randomString}.${extension}`;
 
     // Upload to Vercel Blob
-    const blob = await put(filename, file, {
-      access: 'public',
-      token: process.env.BLOB_READ_WRITE_TOKEN,
-      contentType: file.type,
-      addRandomSuffix: false, // We already have random suffix
-    });
+    // Upload to AWS S3
+    await s3Client.send(new PutObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET!,
+      Key: filename,
+      Body: Buffer.from(buffer),   // buffer is already in scope from line 76
+      ContentType: file.type,
+    }));
+
+    const url = `https://${process.env.AWS_CLOUDFRONT_DOMAIN}/${filename}`;
 
     return NextResponse.json({
       success: true,
-      url: blob.url,
+      url,
       filename: filename,
     });
 

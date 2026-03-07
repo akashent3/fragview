@@ -7,7 +7,12 @@ export default withAuth(
     const pathname = req.nextUrl.pathname;
 
     // Admin route protection
-    if (pathname.startsWith('/admin')) {
+    // Allow EDITORs access to the Drydown admin pages, but keep other admin routes ADMIN-only
+    if (pathname.startsWith('/admin/drydown')) {
+      if (token?.role !== 'ADMIN' && token?.role !== 'EDITOR') {
+        return NextResponse.redirect(new URL('/', req.url));
+      }
+    } else if (pathname.startsWith('/admin')) {
       if (token?.role !== 'ADMIN') {
         return NextResponse.redirect(new URL('/', req.url));
       }
@@ -40,6 +45,7 @@ export default withAuth(
           '/api/stats',                         // ✅ ADDED
           '/api/similar-fragrances',            // ✅ ADDED (GET only - view similar)
           '/api/notifications/count',           // ✅ ADDED (for bell icon)
+          '/api/brands/by-letter',              // ✅ ADDED (brands pagination)
         ];
 
         // Check if pathname starts with any public API route
@@ -61,7 +67,8 @@ export default withAuth(
           pathname.startsWith('/u/') ||
           pathname.startsWith('/drydown') ||
           pathname.startsWith('/_next') ||
-          pathname.startsWith('/static')
+          pathname.startsWith('/static') ||
+          pathname.startsWith('/contact')
         ) {
           return true;
         }
@@ -75,6 +82,14 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    '/((?!api/public|_next/static|_next/image|favicon.ico|logo|public).*)',
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder files (images, etc.)
+     * - Static assets (.svg, .png, .jpg, .jpeg, .gif, .webp, .ico)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };

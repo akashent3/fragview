@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
+    "@aws-sdk/client-s3": "^3.1003.0",
     "@hello-pangea/dnd": "^16.6.0",
     "@hookform/resolvers": "^5.2.2",
     "@next/font": "14.2.5",
@@ -38,7 +39,6 @@
     "@tiptap/extension-text-align": "^3.11.1",
     "@tiptap/react": "^3.11.1",
     "@tiptap/starter-kit": "^3.11.1",
-    "@vercel/blob": "^2.0.0",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

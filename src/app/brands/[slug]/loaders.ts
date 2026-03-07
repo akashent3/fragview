@@ -65,13 +65,18 @@ export async function loadBrandDetail(
     brand: brand.name,
   });
 
+  // ✅ PERF: Build a lookup Map once — O(n) — so every iteration below
+  //    is O(1) instead of the previous O(m) Array.find() per perfume.
+  //    Logic, data shape, and output are completely unchanged.
+  const brandPerfumeMap = new Map<string, NonNullable<BrandDoc['perfumes']>[number]>(
+    (brand.perfumes ?? []).map(bp => [bp.name.toLowerCase().trim(), bp])
+  );
+
   // MERGE gender AND collection data from brand.perfumes into the actual perfume docs
   const perfumesWithCorrectData = sanitizePerfumeDocs(items).map((perfume: any) => {
-    // Find matching perfume in brand.perfumes array by name
-    const brandPerfume = brand.perfumes?.find(
-      bp => bp.name.toLowerCase().trim() === perfume.variant_name.toLowerCase().trim()
-    );
-    
+    // O(1) Map lookup (was O(m) Array.find() on every iteration)
+    const brandPerfume = brandPerfumeMap.get(perfume.variant_name.toLowerCase().trim());
+
     // Override with correct data from brand.perfumes
     return {
       ...perfume,

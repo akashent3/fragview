@@ -14,11 +14,15 @@ export async function generateStaticParams() {
     const { connectMongoDB } = await import('@/lib/mongodb');
     const { db } = await connectMongoDB();
     
+    // ✅ PERF: Pre-build top 100 perfume pages at deploy time.
+    //    Any slug not in this list still works via ISR (revalidate=3600),
+    //    but the first visitor pays the generation cost instead of seeing
+    //    a cached response instantly. More pre-built = faster for users.
     const perfumes = await db
       .collection('perfumes')
       .find({}, { projection: { slug: 1 } })
       .sort({ createdAt: -1 })
-      .limit(50)
+      .limit(100)
       .toArray();
 
     return perfumes.map((p) => ({
@@ -50,7 +54,7 @@ export async function generateMetadata({
     const description =
       (perfume as any).description?.slice(0, 160) ||
       `${(perfume as any).variant_name} by ${(perfume as any).brand_name} – fragrance details, accords, notes, ratings, and reviews on FragView. `;
-    const url = `https://fragviewvercel.vercel.app/perfumes/${slug}`;
+    const url = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.fragview.com'}/perfumes/${slug}`;
     
     const jsonLd: any = {
       '@context': 'https://schema.org',
@@ -114,8 +118,8 @@ export default async function PerfumeDetailPage({
   const isSignedIn = !!session?.user;
   const canRate = isSignedIn;
 
-  const { perfume, rating, reviewCount, reviews, isFollowingThread } = data;
-  const url = `https://fragviewvercel.vercel.app/perfumes/${slug}`;
+  const { perfume, rating, reviewCount, reviews, isFollowingThread, userReview } = data;
+  const url = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.fragview.com'}/perfumes/${slug}`;
   
   const jsonLd: any = {
     '@context': 'https://schema.org',
@@ -138,28 +142,22 @@ export default async function PerfumeDetailPage({
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#FAFFF5' }}>
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-20 left-10 w-96 h-96 bg-green-200/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-orange-200/10 rounded-full blur-3xl animate-pulse animate-delay-2" />
-      </div>
-      
-      <div className="relative z-10">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-        <PerfumeDetailClient
-          perfume={data.perfume}
-          rating={data.rating}
-          isSignedIn={isSignedIn}
-          canRate={canRate}
-          reviews={data.reviews}
-          reviewCount={data.reviewCount}
-          slug={slug}
-          initialIsFollowing={isFollowingThread}
-        />
-      </div>
+    <div className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <PerfumeDetailClient
+        perfume={data.perfume}
+        rating={data.rating}
+        isSignedIn={isSignedIn}
+        canRate={canRate}
+        reviews={data.reviews}
+        reviewCount={data.reviewCount}
+        slug={slug}
+        initialIsFollowing={isFollowingThread}
+        userReview={userReview}
+      />
     </div>
   );
 }

@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { extractMentions, createNotification } from '@/lib/notifications';
+import { getPerfumeBySlug } from '@/lib/data/perfumes';
+
 
 export async function submitReview(slug: string, formData: FormData) {
   const session = await getServerSession(authOptions);
@@ -29,7 +31,27 @@ export async function submitReview(slug: string, formData: FormData) {
   if (rating !== undefined && (rating < 1 || rating > 5)) return { ok: false, error: 'Rating must be 1-5.' };
   if (longevity !== undefined && (longevity < 0 || longevity > 5)) return { ok: false, error: 'Longevity must be 0-5.' };
   if (sillage !== undefined && (sillage < 0 || sillage > 5)) return { ok: false, error: 'Sillage must be 0-5.' };
-
+    // Server-side cooldown enforcement — mirrors the client-side isCoolingPeriodActive check
+    // Server-side cooldown enforcement — only blocks text review submissions (not slider/rating autosaves)
+  const submittedText = text ? String(text).trim() : '';
+  if (submittedText.length > 0) {
+    try {
+      const perfumeData = await getPerfumeBySlug(slug);
+      if (perfumeData?.created_at) {
+        const createdTime = typeof perfumeData.created_at === 'number'
+          ? perfumeData.created_at * 1000
+          : new Date(perfumeData.created_at as string).getTime();
+        const diffDays = Math.ceil(Math.abs(Date.now() - createdTime) / (1000 * 60 * 60 * 24));
+        if (diffDays < 30) {
+          return { ok: false, error: 'This perfume is in its 30-day review cooldown period.' };
+        }
+      }
+    } catch {
+      // Non-critical: if the cooldown check fails, allow the submission through
+    }
+  }
+  
+  
   try {
     // Parse photos
     let photos: string[] = [];
@@ -53,8 +75,8 @@ export async function submitReview(slug: string, formData: FormData) {
     // 2.  Prepare data object
     const dataToSave: any = {};
     if (rating !== undefined) dataToSave.rating = Math.round(rating);
-    if (longevity !== undefined) dataToSave.longevity = longevity;
-    if (sillage !== undefined) dataToSave.sillage = sillage;
+    if (longevity !== undefined) dataToSave.longevity = Math.round(longevity);
+    if (sillage !== undefined) dataToSave.sillage = Math.round(sillage);
     if (text !== null && text !== undefined) {
         const strText = String(text). trim();
         if (strText.length > 0) dataToSave.text = strText;

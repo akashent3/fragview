@@ -3,7 +3,7 @@ import fs from 'fs';
 import fsp from 'fs/promises';
 import path from 'path';
 import { MongoClient } from 'mongodb';
-import { put } from '@vercel/blob';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 /* ===== CONFIG ===== */
 const BASE_DIR = process.env.PERFUME_IMAGES_DIR || path.join(process.cwd(), 'local_images');
@@ -19,10 +19,12 @@ if (!process.env.MONGODB_URI) {
   console.error('❌ MONGODB_URI missing in .env');
   process.exit(1);
 }
-if (!process.env.BLOB_READ_WRITE_TOKEN) {
-  console.error('❌ BLOB_READ_WRITE_TOKEN missing in .env');
+if (!process.env.AWS_S3_BUCKET) {
+  console.error('❌ AWS_S3_BUCKET missing in .env');
   process.exit(1);
 }
+
+const s3 = new S3Client({ region: process.env.AWS_REGION || 'ap-south-1' });
 
 /* ===== HELPERS ===== */
 function toKebab(input = '') {
@@ -290,20 +292,22 @@ async function main() {
 
       try {
         const buf = await withRetry(() => fsp.readFile(localPath), `read ${localPath}`);
-        const blobName = `perfumes/${mongoId}${ext}`; // Use DB _id for deterministic uniqueness
-        const uploaded = await withRetry(
+        const blobName = `perfumes/${mongoId}${ext}`;
+        await withRetry(
           () =>
-            put(blobName, buf, {
-              access: 'public',
-              contentType,
-              token: process.env.BLOB_READ_WRITE_TOKEN,
-              addRandomSuffix: false,
-            }),
+            s3.send(new PutObjectCommand({
+              Bucket: process.env.AWS_S3_BUCKET,
+              Key: blobName,
+              Body: buf,
+              ContentType: contentType,
+            })),
           `upload ${blobName}`
         );
 
+        const imageUrl = `https://${process.env.AWS_CLOUDFRONT_DOMAIN}/${blobName}`;
+
         await withRetry(
-            () => perfumesCol.updateOne({ _id: mongoId }, { $set: { image: uploaded.url } }),
+            () => perfumesCol.updateOne({ _id: mongoId }, { $set: { image: imageUrl } }),
             `mongo update ${mongoId}`
           );
 

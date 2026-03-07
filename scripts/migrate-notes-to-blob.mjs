@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { put } from '@vercel/blob';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import mime from 'mime';
@@ -8,10 +8,13 @@ const NOTES_DIR = process.env.NOTES_DIR || path.join(process.cwd(), 'public', 'n
 const OUTPUT_MAP = path.join(process.cwd(), 'src', 'data', 'note-images.json');
 
 // Ensure token available
-if (!process.env.BLOB_READ_WRITE_TOKEN) {
-  console.error('Missing BLOB_READ_WRITE_TOKEN. Add it to your .env.local or Vercel project settings.');
+if (!process.env.AWS_S3_BUCKET) {
+  console.error('Missing AWS_S3_BUCKET. Add it to your .env.local');
   process.exit(1);
 }
+
+const s3 = new S3Client({ region: process.env.AWS_REGION || 'ap-south-1' });
+
 
 function slugifyBase(name) {
   return String(name)
@@ -63,13 +66,14 @@ async function main() {
     const blobKey = `notes/${slug}${ext}`;
 
     console.log(`Uploading ${rel} -> ${blobKey}`);
-    const blob = await put(blobKey, fileBuffer, {
-      access: 'public',
-      contentType,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
-    });
+    await s3.send(new PutObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET,
+      Key: blobKey,
+      Body: fileBuffer,
+      ContentType: contentType,
+    }));
 
-    map[slug] = blob.url;
+    map[slug] = `https://${process.env.AWS_CLOUDFRONT_DOMAIN}/${blobKey}`;
     count++;
   }
 

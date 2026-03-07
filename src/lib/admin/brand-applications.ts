@@ -3,6 +3,9 @@ import { connectMongoDB } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { logAdminAction } from './stats';
 import { sendBrandApplicationApprovedEmail, sendBrandApplicationRejectedEmail } from '@/lib/email';
+import { createNotification } from '@/lib/notifications';
+import { toKebab } from '@/lib/slug';
+
 
 /**
  * Get all brand owner applications
@@ -135,6 +138,31 @@ export async function approveBrandApplicationAction(
       perfumeCount = perfumesResult.insertedCount;
       
       console.log(`✅ Inserted ${perfumeCount} perfumes for brand ${application.brandName}`);
+            // 🔔 Notify users who follow this brand about the new perfumes
+      if (perfumeCount > 0) {
+        try {
+          const brandFollowers = await prisma.brandFollow.findMany({
+            where: { brandId: brandResult.insertedId.toString() },
+            select: { userId: true },
+          });
+          if (brandFollowers.length > 0) {
+            const brandSlug = toKebab(application.brandName);
+            for (const follower of brandFollowers) {
+              await createNotification({
+                userId: follower.userId,
+                type: 'BRAND_NEW_RELEASE',
+                message: `${application.brandName} just added ${perfumeCount} new perfume${perfumeCount > 1 ? 's' : ''} to FragView!`,
+                link: `/brands/${brandSlug}`,
+                sendEmail: false,
+              });
+            }
+            console.log(`🔔 Notified ${brandFollowers.length} follower(s) for brand ${application.brandName}`);
+          }
+        } catch (notifError) {
+          // Non-critical: don't fail the approval if notifications fail
+          console.error('Failed to create brand new release notifications:', notifError);
+        }
+      } 
     }
 
     // Update application status

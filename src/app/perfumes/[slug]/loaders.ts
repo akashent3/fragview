@@ -337,6 +337,11 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
     };
   });
 
+  // Extract the current user's own review for pre-populating client state
+  const ownReview = currentUserId
+    ? prismaReviews.find(r => r.userId === currentUserId) ?? null
+    : null;
+
   return {
     perfume: {
       ...perfume,
@@ -349,5 +354,8 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
     reviewCount: totalVotes,
     reviews,
     isFollowingThread,
+    userReview: ownReview
+      ? { rating: ownReview.rating, longevity: ownReview.longevity ?? null, sillage: ownReview.sillage ?? null }
+      : null,
   };
 }

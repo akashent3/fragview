@@ -4,26 +4,23 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const BASE_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://fragview.com';
-const LOGO_URL = `${BASE_URL}/logo-white.png`;
+// Use the main Logo.png (full-colour) — same file as used in the share snapshot
+const LOGO_URL = `${BASE_URL}/Logo.png`;
 
-// Logo configuration (Option 1 - Large, Professional) - SAME AS MAIN EMAIL FILE
-const LOGO_CONFIG = {
-  width: 100,
-  height: 100,
-  containerWidth: 140,
-  containerHeight: 140,
-  containerMargin: 20
-};
+// Logo display width; height is kept auto so the logo scales proportionally
+const LOGO_WIDTH = 160;
 
 // ===================================
 // HELPER FUNCTION: Generate Logo HTML
 // ===================================
+// Renders the logo inside a cream (#FFF9EF) pill so it reads clearly against
+// the dark #211F1C header.  Width is fixed; height is auto (proportional).
 function getLogoHTML() {
   return `
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto 20px;">
       <tr>
-        <td align="center" style="width:${LOGO_CONFIG.containerWidth}px;height:${LOGO_CONFIG.containerHeight}px;margin:0 auto ${LOGO_CONFIG.containerMargin}px;background:rgba(255,255,255,0.25);border-radius:50%;">
-          <img src="${LOGO_URL}" alt="FragView" width="${LOGO_CONFIG.width}" height="${LOGO_CONFIG.height}" style="display:block;margin:${(LOGO_CONFIG.containerHeight - LOGO_CONFIG.height) / 2}px auto;" />
+        <td align="center" style="background:#FFF9EF;border-radius:16px;padding:14px 28px;">
+          <img src="${LOGO_URL}" alt="FragView" width="${LOGO_WIDTH}" style="display:block;width:${LOGO_WIDTH}px;height:auto;max-width:100%;" />
         </td>
       </tr>
     </table>
@@ -253,22 +250,22 @@ async function sendWeeklyDigest(
     .join('');
 
   const html = `
-<! DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Weekly Digest</title>
 </head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#f5f5f5;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f5f5f5;">
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#FFF9EF;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#FFF9EF;">
     <tr>
       <td align="center" style="padding:40px 20px;">
         <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color:#ffffff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);max-width:600px;">
           
           <!-- Header with Professional Logo -->
           <tr>
-            <td align="center" style="padding:50px 40px 30px;background:linear-gradient(135deg,#10b981 0%,#f97316 100%);border-radius:16px 16px 0 0;">
+            <td align="center" style="padding:50px 40px 30px;background:#211F1C;border-radius:16px 16px 0 0;">
               ${getLogoHTML()}
               <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;text-align:center;">
                 📬 Your Weekly Digest
@@ -283,7 +280,7 @@ async function sendWeeklyDigest(
           <tr>
             <td style="padding:30px;">
               <p style="margin:0 0 16px;color:#374151;font-size:16px;">
-                Hi <strong style="color:#10b981;">${username}</strong>,
+                Hi <strong style="color:#211F1C;">${username}</strong>,
               </p>
               
               <p style="margin:0 0 24px;color:#6b7280;font-size:14px;line-height:1.6;">
@@ -293,12 +290,12 @@ async function sendWeeklyDigest(
               <!-- Stats Grid -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:24px;">
                 <tr>
-                  <td width="48%" style="padding:16px;background:linear-gradient(135deg,#d1fae5 0%,#fed7aa 100%);border-radius:8px;vertical-align:top;">
+                  <td width="48%" style="padding:16px;background:#FFF9EF;border:1px solid #ECE0CF;border-radius:8px;vertical-align:top;">
                     <p style="margin:0 0 4px 0;color:#6b7280;font-size:12px;text-align:center;">New Perfumes</p>
                     <p style="margin:0;color:#1f2937;font-size:24px;font-weight:700;text-align:center;">${newPerfumes}</p>
                   </td>
                   <td width="4%"></td>
-                  <td width="48%" style="padding:16px;background:linear-gradient(135deg,#fef3c7 0%,#ddd6fe 100%);border-radius:8px;vertical-align:top;">
+                  <td width="48%" style="padding:16px;background:#FFF9EF;border:1px solid #ECE0CF;border-radius:8px;vertical-align:top;">
                     <p style="margin:0 0 4px 0;color:#6b7280;font-size:12px;text-align:center;">New Reviews</p>
                     <p style="margin:0;color:#1f2937;font-size:24px;font-weight:700;text-align:center;">${newReviews}</p>
                   </td>
@@ -316,7 +313,7 @@ async function sendWeeklyDigest(
 
               ${notifications.length > 10 ? `
               <p style="margin:16px 0 0 0;text-align:center;">
-                <a href="${BASE_URL}/notifications" style="color:#10b981;text-decoration:none;font-size:14px;font-weight:600;">
+                <a href="${BASE_URL}/notifications" style="color:#B28845;text-decoration:none;font-size:14px;font-weight:600;">
                   View all ${notifications.length} notifications →
                 </a>
               </p>
@@ -325,7 +322,7 @@ async function sendWeeklyDigest(
               <!-- CTA -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:32px 0;">
                 <tr>
-                  <td align="center" style="border-radius:8px;background:linear-gradient(135deg,#10b981 0%,#f97316 100%);">
+                  <td align="center" style="border-radius:8px;background:#211F1C;">
                     <a href="${BASE_URL}" style="display:inline-block;padding:14px 32px;color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;border-radius:8px;">
                       Explore FragView
                     </a>
@@ -343,7 +340,7 @@ async function sendWeeklyDigest(
           <tr>
             <td style="background:#f9fafb;padding:24px 30px;border-top:1px solid #e5e7eb;border-radius:0 0 16px 16px;">
               <p style="margin:0 0 12px 0;color:#6b7280;font-size:12px;line-height:1.5;text-align:center;">
-                <a href="${unsubscribeUrl}" style="color:#10b981;text-decoration:none;">Email Preferences</a>
+                <a href="${unsubscribeUrl}" style="color:#B28845;text-decoration:none;">Email Preferences</a>
                 •
                 <a href="${unsubscribeUrl}" style="color:#9ca3af;text-decoration:none;">Unsubscribe from Digest</a>
               </p>

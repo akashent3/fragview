@@ -363,80 +363,126 @@ export default function PerfumeDetailClient({
         {
           width: 100,
           margin: 1,
-          color: { dark: "#10b981", light: "#ffffff" },
+          color: { dark: "#B28845", light: "#ffffff" },
         },
       );
       let imageDataUrl = "";
       if (perfume.image) {
         try {
-          const img = new window.Image();
-          img.crossOrigin = "anonymous";
-          img.src = perfume.image;
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            setTimeout(reject, 5000);
+          const nextImgUrl = `/_next/image?url=${encodeURIComponent(perfume.image)}&w=1080&q=90`;
+          const resp = await fetch(nextImgUrl);
+          const blob = await resp.blob();
+          imageDataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
           });
-          imageDataUrl = perfume.image;
         } catch (err) {
           imageDataUrl = "";
         }
       }
+      // Fetch logo as base64 so html2canvas can render it reliably
+      let logoDataUrl = "";
+      try {
+        const logoResp = await fetch("/Logo.png");
+        const logoBlob = await logoResp.blob();
+        logoDataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(logoBlob);
+        });
+      } catch (err) {
+        logoDataUrl = "";
+      }
+      // Extract fragrance notes (prefixed to avoid shadowing outer scope variables)
+      const snapTopNotes: string[] = perfume.pyramids?.top || [];
+      const snapMiddleNotes: string[] = perfume.pyramids?.middle || [];
+      const snapBaseNotes: string[] = perfume.pyramids?.base || [];
+      const snapHasNotes = snapTopNotes.length > 0 || snapMiddleNotes.length > 0 || snapBaseNotes.length > 0;
       const postcard = document.createElement("div");
-      postcard.style.cssText = `position: absolute; left: -9999px; width: 1080px; height: 1920px; padding: 50px; background: linear-gradient(135deg, #FAFFF5 0%, #F0FDF4 100%); font-family: system-ui, -apple-system, sans-serif;`;
+      postcard.style.cssText = `position: absolute; left: -9999px; width: 1080px; height: 1920px; padding: 50px; background: #FFF9EF; font-family: system-ui, -apple-system, sans-serif;`;
       postcard.innerHTML = `
         <div style="display: flex; flex-direction: column; height: 100%;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-            <img src="/logo.svg" alt="FragView Logo" style="height: 180px; width: auto;" />
-            <img src="${qrCodeDataUrl}" style="width: 100px; height: 100px;" alt="QR Code" />
-          </div>
-          <div style="background: linear-gradient(135deg, #d1fae5 0%, #fed7aa 100%); border-radius: 20px; padding: 30px; margin-bottom: 30px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; min-height: 550px;">
-            ${imageDataUrl ? `<img src="${imageDataUrl}" style="max-width: 100%; max-height: 550px; object-fit: contain; border-radius: 16px;" crossorigin="anonymous" />` : `<div style="width: 100%; height: 550px; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 72px;">✨</div>`}
-          </div>
-          <div style="background: linear-gradient(to right, #10b981, #f97316); border-radius: 12px; padding: 28px 40px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); text-align: center;">
-            <h1 style="font-size: 58px; font-weight: 900; color: #1f2937; margin: 0 0 8px 0; line-height: 1.1; letter-spacing: 1px;">${perfume.variant_name}</h1>
-            <p style="font-size: 38px; color: #374151; font-weight: 700; margin: 0; letter-spacing: 0.5px;">${perfume.brand_name}</p>
-          </div>
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 28px;">
-            <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-              <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1. 5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">RATING</p>
-              <div style="display: flex; gap: 5px; margin-bottom: 12px; justify-content: center;">${[1, 2, 3, 4, 5].map((star) => `<span style="color: ${star <= Math.round(userRating || rating) ? "#fb923c" : "#d1d5db"}; font-size: 24px;">★</span>`).join("")}</div>
-              <p style="font-size: 36px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">${(userRating || rating).toFixed(1)}</p>
+
+          <!-- HEADER: Logo + QR -->
+          <div style="background: #ffffff; border: 2px solid #ECE0CF; padding: 32px 40px; border-radius: 20px; margin-bottom: 28px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              ${logoDataUrl ? `<img src="${logoDataUrl}" alt="FragView" style="height: 140px; width: auto; display: block; object-fit: contain;" />` : `<div style="height:140px;display:flex;align-items:center;color:#211F1C;font-size:52px;font-weight:900;letter-spacing:3px;">FRAGVIEW</div>`}
+              <p style="margin:0; color: #B28845; font-size: 16px; font-weight: 700; letter-spacing: 5px; text-transform: uppercase;">FRAGRANCE PASSPORT</p>
             </div>
-            <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-              <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">SILLAGE</p>
-              <div style="height: 14px; background: #e5e7eb; border-radius: 7px; overflow: hidden; margin-bottom: 12px;"><div style="height: 100%; width: ${getPosition(hasOwnSillage ? userSillage : (perfume.sillage || 0))}%; background: linear-gradient(to right, #10b981, #f97316);"></div></div>
-              <p style="font-size: 28px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">${getSillageLabel(hasOwnSillage ? userSillage : (perfume.sillage || 0))}</p>
-            </div>
-            <div style="background: white; border-radius: 18px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-              <p style="font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 14px 0; font-weight: 700; text-align: center;">LONGEVITY</p>
-              <div style="height: 14px; background: #e5e7eb; border-radius: 7px; overflow: hidden; margin-bottom: 12px;"><div style="height: 100%; width: ${getPosition(hasOwnLongevity ? userLongevity : (perfume.longevity || 0))}%; background: linear-gradient(to right, #10b981, #f97316);"></div></div>
-              <p style="font-size: 28px; font-weight: 900; color: #1f2937; margin: 0; text-align: center;">${getLongevityHrsLabel(hasOwnLongevity ? userLongevity : (perfume.longevity || 0))}</p>
+            <div style="background: #FFF9EF; border: 1px solid #ECE0CF; padding: 12px; border-radius: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); text-align: center;">
+              <img src="${qrCodeDataUrl}" style="width: 120px; height: 120px; display: block;" alt="QR Code" />
+              <p style="margin: 8px 0 0 0; font-size: 13px; color: #9ca3af; font-weight: 600; letter-spacing: 0.5px;">Scan to explore</p>
             </div>
           </div>
-          ${
-            transformedAccords.length > 0
-              ? `<div style="background: white; border-radius: 18px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0. 08);"><p style="font-size: 17px; font-weight: 800; color: #1f2937; margin: 0 0 18px 0; text-transform: uppercase; letter-spacing: 1.2px;">Main Accords</p><div style="display: flex; flex-wrap: wrap; gap: 10px;">${transformedAccords
-                  .slice(0, 6)
-                  .map(
-                    (a) =>
-                      `<span style="background: ${getAccordColor(a.name)}; color: white; padding: 10px 18px; border-radius: 20px; font-size: 15px; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">${a.name}</span>`,
-                  )
-                  .join("")}</div></div>`
-              : ""
-          }
-          <div style="margin-top: auto; padding-top: 24px; border-top: 4px solid #10b981; display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 17px; color: #4b5563; font-weight: 600; line-height: 1.6;">
-              <div style="margin-bottom: 8px;"><span style="font-weight: 800; color: #1f2937;">Gender:</span> ${perfume.gender || "—"}</div>
-              <div><span style="font-weight: 800; color: #1f2937;">Perfumer:</span> ${perfume.perfumers?.join(", ") || "—"}</div>
-            </div>
-            <div style="text-align: right; font-size: 15px; color: #9ca3af; font-weight: 600;">fragview.com/perfumes/${slug}</div>
+
+          <!-- BOTTLE IMAGE -->
+          <div style="background: #FFF9EF; border: 2px solid #ECE0CF; border-radius: 20px; padding: 30px; margin-bottom: 28px; box-shadow: 0 8px 30px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; min-height: 460px;">
+            ${imageDataUrl ? `<img src="${imageDataUrl}" style="max-width: 100%; max-height: 460px; object-fit: contain;" />` : `<div style="width: 100%; height: 460px; display: flex; align-items: center; justify-content: center; color: #B28845; font-size: 80px;">✨</div>`}
           </div>
+
+          <!-- NAME BANNER -->
+          <div style="background: #211F1C; border-radius: 16px; padding: 30px 44px; margin-bottom: 28px; text-align: center;">
+            <h1 style="font-size: 52px; font-weight: 900; color: #ffffff; margin: 0 0 10px 0; line-height: 1.15; letter-spacing: 0.5px;">${perfume.variant_name}</h1>
+            <p style="font-size: 30px; color: #B28845; font-weight: 700; margin: 0; letter-spacing: 0.5px;">${perfume.brand_name}</p>
+          </div>
+
+          <!-- STATS -->
+          <div style="display: flex; gap: 18px; margin-bottom: 28px;">
+            <div style="flex: 1; background: white; border-radius: 18px; padding: 24px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.07); border: 1px solid #ECE0CF;">
+              <p style="font-size: 13px; color: #9ca3af; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 12px 0; font-weight: 700; text-align: center;">RATING</p>
+              <div style="display: flex; gap: 4px; margin-bottom: 10px; justify-content: center;">${[1, 2, 3, 4, 5].map((star) => `<span style="color: ${star <= Math.round(userRating || rating) ? "#B28845" : "#e5e7eb"}; font-size: 28px;">★</span>`).join("")}</div>
+              <p style="font-size: 38px; font-weight: 900; color: #211F1C; margin: 0; text-align: center;">${(userRating || rating).toFixed(1)}</p>
+            </div>
+            <div style="flex: 1; background: white; border-radius: 18px; padding: 24px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.07); border: 1px solid #ECE0CF;">
+              <p style="font-size: 13px; color: #9ca3af; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 12px 0; font-weight: 700; text-align: center;">SILLAGE</p>
+              <div style="height: 12px; background: #f3f4f6; border-radius: 6px; overflow: hidden; margin-bottom: 10px;"><div style="height: 100%; width: ${getPosition(hasOwnSillage ? userSillage : (perfume.sillage || 0))}%; background: linear-gradient(to right, #B28845, #9E7127);"></div></div>
+              <p style="font-size: 26px; font-weight: 800; color: #211F1C; margin: 0; text-align: center;">${getSillageLabel(hasOwnSillage ? userSillage : (perfume.sillage || 0))}</p>
+            </div>
+            <div style="flex: 1; background: white; border-radius: 18px; padding: 24px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.07); border: 1px solid #ECE0CF;">
+              <p style="font-size: 13px; color: #9ca3af; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 12px 0; font-weight: 700; text-align: center;">LONGEVITY</p>
+              <div style="height: 12px; background: #f3f4f6; border-radius: 6px; overflow: hidden; margin-bottom: 10px;"><div style="height: 100%; width: ${getPosition(hasOwnLongevity ? userLongevity : (perfume.longevity || 0))}%; background: linear-gradient(to right, #B28845, #9E7127);"></div></div>
+              <p style="font-size: 26px; font-weight: 800; color: #211F1C; margin: 0; text-align: center;">${getLongevityHrsLabel(hasOwnLongevity ? userLongevity : (perfume.longevity || 0))}</p>
+            </div>
+          </div>
+
+          <!-- ACCORDS -->
+          ${transformedAccords.length > 0 ? `
+          <div style="background: white; border-radius: 18px; padding: 28px 32px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.07); border: 1px solid #ECE0CF;">
+            <p style="font-size: 15px; font-weight: 800; color: #211F1C; margin: 0 0 18px 0; text-transform: uppercase; letter-spacing: 2.5px;">Main Accords</p>
+            <div style="display: block; overflow: hidden;">
+              ${transformedAccords.slice(0, 6).map((a) => { const w = Math.max(110, a.name.length * 13 + 56); return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="52" style="display:inline-block;vertical-align:middle;margin:0 12px 12px 0;"><rect width="${w}" height="52" rx="26" ry="26" fill="${getAccordColor(a.name)}" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.15))"/><text x="${w / 2}" y="26" text-anchor="middle" dominant-baseline="central" font-family="system-ui,-apple-system,Arial,sans-serif" font-size="18" font-weight="700" fill="white">${a.name}</text></svg>`; }).join("")}
+            </div>
+          </div>` : ""}
+
+          <!-- FRAGRANCE NOTES -->
+          ${snapHasNotes ? `
+          <div style="background: white; border-radius: 18px; padding: 28px 32px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.07); border: 1px solid #ECE0CF;">
+            <p style="font-size: 15px; font-weight: 800; color: #211F1C; margin: 0 0 18px 0; text-transform: uppercase; letter-spacing: 2.5px;">Fragrance Notes</p>
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              ${snapTopNotes.length > 0 ? `<div style="display: flex; align-items: flex-start; gap: 20px;"><span style="font-size: 13px; font-weight: 800; color: #B28845; text-transform: uppercase; letter-spacing: 1.5px; min-width: 54px; padding-top: 3px;">Head</span><span style="color: #4b5563; font-size: 19px; line-height: 1.5; flex: 1;">${snapTopNotes.join(" · ")}</span></div>` : ""}
+              ${snapMiddleNotes.length > 0 ? `<div style="display: flex; align-items: flex-start; gap: 20px;"><span style="font-size: 13px; font-weight: 800; color: #B28845; text-transform: uppercase; letter-spacing: 1.5px; min-width: 54px; padding-top: 3px;">Heart</span><span style="color: #4b5563; font-size: 19px; line-height: 1.5; flex: 1;">${snapMiddleNotes.join(" · ")}</span></div>` : ""}
+              ${snapBaseNotes.length > 0 ? `<div style="display: flex; align-items: flex-start; gap: 20px;"><span style="font-size: 13px; font-weight: 800; color: #B28845; text-transform: uppercase; letter-spacing: 1.5px; min-width: 54px; padding-top: 3px;">Base</span><span style="color: #4b5563; font-size: 19px; line-height: 1.5; flex: 1;">${snapBaseNotes.join(" · ")}</span></div>` : ""}
+            </div>
+          </div>` : ""}
+
+          <!-- FOOTER -->
+          <div style="margin-top: auto; padding-top: 24px; border-top: 3px solid #B28845; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 18px; color: #4b5563; line-height: 1.9;">
+              <div><span style="font-weight: 800; color: #211F1C;">Gender</span>  <span style="color: #B28845; font-weight: 700;">|</span>  ${perfume.gender || "—"}</div>
+              <div><span style="font-weight: 800; color: #211F1C;">Perfumer</span>  <span style="color: #B28845; font-weight: 700;">|</span>  ${perfume.perfumers?.join(", ") || "—"}</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 17px; font-weight: 800; color: #211F1C;">fragview.com</div>
+              <div style="font-size: 13px; color: #9ca3af; margin-top: 4px; font-weight: 600;">Scan QR to explore</div>
+            </div>
+          </div>
+
         </div>`;
       document.body.appendChild(postcard);
       await new Promise((resolve) => setTimeout(resolve, 300));
       const canvas = await html2canvas(postcard, {
-        backgroundColor: "#FAFFF5",
+        backgroundColor: "#FFF9EF",
         scale: 2,
         logging: false,
         useCORS: true,
@@ -506,9 +552,12 @@ export default function PerfumeDetailClient({
     </button></button><button id="share-close" style="padding:12px 24px;background:white;color:#6b7280;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">Close</button></div>`;
           document.body.appendChild(overlay);
           document.body.appendChild(dialog);
+          let cleaned = false;
           const cleanup = () => {
-            document.body.removeChild(overlay);
-            document.body.removeChild(dialog);
+            if (cleaned) return;
+            cleaned = true;
+            overlay.remove();
+            dialog.remove();
             URL.revokeObjectURL(url);
           };
           document.getElementById("share-whatsapp")!.onclick = () => {

@@ -2,33 +2,28 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process. env.RESEND_API_KEY);
 
-// ✅ Use PNG logo with professional styling (OPTION 1 - LARGE)
 const BASE_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://fragview.com';
-const LOGO_URL = `${BASE_URL}/logo-white.png`;
+// Use the main Logo.png (full-colour) — same file as used in the share snapshot
+const LOGO_URL = `${BASE_URL}/Logo.png`;
 
-// Logo configuration (Option 1 - Large, Professional)
-const LOGO_CONFIG = {
-  width: 100,
-  height: 100,
-  containerWidth: 140,
-  containerHeight: 140,
-  containerMargin: 20
-};
+// Logo display width; height is kept auto so the logo scales proportionally
+const LOGO_WIDTH = 160;
 
 console.log('📧 Email configuration:');
 console.log('   Base URL:', BASE_URL);
 console.log('   Logo URL:', LOGO_URL);
-console. log('   Logo Size:', `${LOGO_CONFIG.width}x${LOGO_CONFIG.height}`);
 
 // ===================================
 // HELPER FUNCTION: Generate Logo HTML
 // ===================================
+// Renders the logo inside a cream (#FFF9EF) pill so it reads clearly against
+// the dark #211F1C header.  Width is fixed; height is auto (proportional).
 function getLogoHTML() {
   return `
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto 20px;">
       <tr>
-        <td align="center" style="width:${LOGO_CONFIG.containerWidth}px;height:${LOGO_CONFIG. containerHeight}px;margin:0 auto ${LOGO_CONFIG.containerMargin}px;background:rgba(255,255,255,0.25);border-radius:20px;">
-          <img src="${LOGO_URL}" alt="FragView" width="${LOGO_CONFIG.width}" height="${LOGO_CONFIG.height}" style="display:block;margin:${(LOGO_CONFIG.containerHeight - LOGO_CONFIG.height) / 2}px auto;border-radius:16px;" />
+        <td align="center" style="background:#FFF9EF;border-radius:16px;padding:14px 28px;">
+          <img src="${LOGO_URL}" alt="FragView" width="${LOGO_WIDTH}" style="display:block;width:${LOGO_WIDTH}px;height:auto;max-width:100%;" />
         </td>
       </tr>
     </table>
@@ -79,22 +74,22 @@ export async function sendVerificationEmail(
 
 function getVerificationEmailTemplate(username: string, verificationUrl: string) {
   return `
-<! DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verify your FragView account</title>
 </head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#f5f5f5;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f5f5f5;">
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#FFF9EF;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#FFF9EF;">
     <tr>
       <td align="center" style="padding:40px 20px;">
         <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color:#ffffff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);max-width:600px;">
           
           <!-- Header with Logo -->
           <tr>
-            <td align="center" style="padding:50px 40px 30px;background:linear-gradient(135deg,#10b981 0%,#f97316 100%);border-radius:16px 16px 0 0;">
+            <td align="center" style="padding:50px 40px 30px;background:#211F1C;border-radius:16px 16px 0 0;">
               ${getLogoHTML()}
               <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;text-align:center;">
                 Verify Your Email
@@ -116,7 +111,7 @@ function getVerificationEmailTemplate(username: string, verificationUrl: string)
               <!-- CTA Button -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:30px 0;">
                 <tr>
-                  <td align="center" style="border-radius:8px;background:linear-gradient(135deg,#10b981 0%,#f97316 100%);">
+                  <td align="center" style="border-radius:8px;background:#211F1C;">
                     <a href="${verificationUrl}" target="_blank" style="display:inline-block;padding:16px 40px;color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;border-radius:8px;">
                       Verify Email Address
                     </a>
@@ -127,7 +122,7 @@ function getVerificationEmailTemplate(username: string, verificationUrl: string)
               <p style="margin:30px 0 10px;color:#6b7280;font-size:14px;line-height:1.6;">
                 Or copy and paste this link into your browser:
               </p>
-              <p style="margin:0 0 30px;color:#10b981;font-size:13px;word-break:break-all;background:#f3f4f6;padding:12px;border-radius:6px;">
+              <p style="margin:0 0 30px;color:#B28845;font-size:13px;word-break:break-all;background:#f3f4f6;padding:12px;border-radius:6px;">
                 ${verificationUrl}
               </p>
               
@@ -144,7 +139,7 @@ function getVerificationEmailTemplate(username: string, verificationUrl: string)
           <tr>
             <td style="padding:24px 40px;text-align:center;background-color:#f9fafb;border-radius:0 0 16px 16px;">
               <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">
-                Need help? Contact us at <a href="mailto:support@fragview.com" style="color:#10b981;text-decoration:none;">support@fragview.com</a>
+                Need help? Contact us at <a href="mailto:support@fragview.com" style="color:#B28845;text-decoration:none;">support@fragview.com</a>
               </p>
               <p style="margin:0;color:#9ca3af;font-size:12px;">
                 © ${new Date().getFullYear()} FragView. All rights reserved. 
@@ -181,22 +176,22 @@ export async function sendWelcomeEmail(email: string, username: string) {
 
 function getWelcomeEmailTemplate(username: string) {
   return `
-<! DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Welcome to FragView</title>
 </head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#f5f5f5;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f5f5f5;">
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#FFF9EF;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#FFF9EF;">
     <tr>
       <td align="center" style="padding:40px 20px;">
         <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color:#ffffff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);max-width:600px;">
           
           <!-- Header -->
           <tr>
-            <td align="center" style="padding:50px 40px 30px;background:linear-gradient(135deg,#10b981 0%,#f97316 100%);border-radius:16px 16px 0 0;">
+            <td align="center" style="padding:50px 40px 30px;background:#211F1C;border-radius:16px 16px 0 0;">
               ${getLogoHTML()}
               <h1 style="margin:0;color:#ffffff;font-size:32px;font-weight:700;text-align:center;">
                 Welcome to FragView!
@@ -219,7 +214,7 @@ function getWelcomeEmailTemplate(username: string) {
               </p>
               
               <!-- Feature Cards -->
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:linear-gradient(135deg,#d1fae5 0%,#fed7aa 100%);border-radius:12px;padding:24px;margin:24px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#FFF9EF;border:1px solid #ECE0CF;border-radius:12px;padding:24px;margin:24px 0;">
                 <tr>
                   <td>
                     <h3 style="margin:0 0 16px;color:#1f2937;font-size:18px;font-weight:600;">Get Started:</h3>
@@ -262,7 +257,7 @@ function getWelcomeEmailTemplate(username: string) {
               <!-- CTA Button -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:32px 0;">
                 <tr>
-                  <td align="center" style="border-radius:8px;background:linear-gradient(135deg,#10b981 0%,#f97316 100%);">
+                  <td align="center" style="border-radius:8px;background:#211F1C;">
                     <a href="${BASE_URL}" style="display:inline-block;padding:16px 40px;color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;border-radius:8px;">
                       Start Exploring
                     </a>
@@ -272,7 +267,7 @@ function getWelcomeEmailTemplate(username: string) {
               
               <p style="margin:24px 0 0;color:#6b7280;font-size:14px;line-height:1.6;text-align:center;">
                 Happy fragrance hunting! 🌸<br>
-                <strong style="color:#10b981;">The FragView Team</strong>
+                <strong style="color:#B28845;">The FragView Team</strong>
               </p>
             </td>
           </tr>
@@ -281,7 +276,7 @@ function getWelcomeEmailTemplate(username: string) {
           <tr>
             <td style="padding:24px 40px;text-align:center;background-color:#f9fafb;border-radius:0 0 16px 16px;">
               <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">
-                Need help? Contact us at <a href="mailto:support@fragview.com" style="color:#10b981;text-decoration:none;">support@fragview.com</a>
+                Need help? Contact us at <a href="mailto:support@fragview.com" style="color:#B28845;text-decoration:none;">support@fragview.com</a>
               </p>
               <p style="margin:0;color:#9ca3af;font-size:12px;">
                 © ${new Date().getFullYear()} FragView. All rights reserved.
@@ -332,15 +327,15 @@ function getPasswordResetTemplate(username: string, resetUrl: string, resetCode:
   <meta name="viewport" content="width=device-width, initial-scale=1. 0">
   <title>Reset Your Password</title>
 </head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#f5f5f5;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f5f5f5;">
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#FFF9EF;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#FFF9EF;">
     <tr>
       <td align="center" style="padding:40px 20px;">
         <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color:#ffffff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);max-width:600px;">
           
           <!-- Header -->
           <tr>
-            <td align="center" style="padding:50px 40px 30px;background:linear-gradient(135deg,#10b981 0%,#f97316 100%);border-radius:16px 16px 0 0;">
+            <td align="center" style="padding:50px 40px 30px;background:#211F1C;border-radius:16px 16px 0 0;">
               ${getLogoHTML()}
               <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;text-align:center;">
                 Password Reset
@@ -362,7 +357,7 @@ function getPasswordResetTemplate(username: string, resetUrl: string, resetCode:
               <!-- CTA Button -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:30px 0;">
                 <tr>
-                  <td align="center" style="border-radius:8px;background:linear-gradient(135deg,#10b981 0%,#f97316 100%);">
+                  <td align="center" style="border-radius:8px;background:#211F1C;">
                     <a href="${resetUrl}" target="_blank" style="display:inline-block;padding:16px 40px;color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;border-radius:8px;">
                       Reset Password
                     </a>
@@ -377,7 +372,7 @@ function getPasswordResetTemplate(username: string, resetUrl: string, resetCode:
                     <p style="margin:0 0 8px;color:#374151;font-size:14px;font-weight:600;">
                       Or use this code:
                     </p>
-                    <p style="margin:0;color:#10b981;font-size:28px;font-weight:700;letter-spacing:6px;">
+                    <p style="margin:0;color:#B28845;font-size:28px;font-weight:700;letter-spacing:6px;">
                       ${resetCode}
                     </p>
                   </td>
@@ -387,7 +382,7 @@ function getPasswordResetTemplate(username: string, resetUrl: string, resetCode:
               <p style="margin:20px 0 10px;color:#6b7280;font-size:14px;line-height:1.6;">
                 Or copy and paste this link:
               </p>
-              <p style="margin:0 0 30px;color:#10b981;font-size:13px;word-break:break-all;background:#f3f4f6;padding:12px;border-radius:6px;">
+              <p style="margin:0 0 30px;color:#B28845;font-size:13px;word-break:break-all;background:#f3f4f6;padding:12px;border-radius:6px;">
                 ${resetUrl}
               </p>
               
@@ -413,7 +408,7 @@ function getPasswordResetTemplate(username: string, resetUrl: string, resetCode:
           <tr>
             <td style="padding:24px 40px;text-align:center;background-color:#f9fafb;border-radius:0 0 16px 16px;">
               <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">
-                Need help? Contact us at <a href="mailto:support@fragview. com" style="color:#10b981;text-decoration:none;">support@fragview.com</a>
+                Need help? Contact us at <a href="mailto:support@fragview.com" style="color:#B28845;text-decoration:none;">support@fragview.com</a>
               </p>
               <p style="margin:0;color:#9ca3af;font-size:12px;">
                 © ${new Date().getFullYear()} FragView. All rights reserved.
@@ -445,19 +440,19 @@ export async function sendSubmissionApprovedEmail(
 ) {
   const subject = `✅ Your ${type} suggestion was approved! `;
   const html = `
-<! DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #FAFFF5 0%, #F0FDF4 100%);">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #FFF9EF;">
   <table role="presentation" style="width: 100%; border-collapse: collapse; padding: 40px 20px;">
     <tr>
       <td align="center">
         <table role="presentation" style="max-width: 600px; width: 100%; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden;">
           <tr>
-            <td style="background: linear-gradient(135deg, #10b981 0%, #f97316 100%); padding: 40px 30px; text-align: center;">
+            <td style="background: #211F1C; padding: 40px 30px; text-align: center;">
               ${getLogoHTML()}
               <h1 style="margin: 0; color: white; font-size: 24px;">Submission Approved! </h1>
             </td>
@@ -465,9 +460,9 @@ export async function sendSubmissionApprovedEmail(
           <tr>
             <td style="padding: 40px 30px;">
               <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">
-                Hi <strong style="color: #10b981;">${username}</strong>,
+                Hi <strong style="color: #211F1C;">${username}</strong>,
               </p>
-              <div style="background: linear-gradient(135deg, #d1fae5 0%, #fed7aa 100%); border-radius: 12px; padding: 24px; margin: 24px 0;">
+              <div style="background: #FFF9EF; border: 1px solid #ECE0CF; border-radius: 12px; padding: 24px; margin: 24px 0;">
                 <p style="margin: 0; color: #1f2937; font-size: 15px; line-height: 1.6;">
                   🎉 Great news! Your ${type. toLowerCase()} suggestion <strong>"${itemName}"</strong> has been approved and added to FragView!
                 </p>
@@ -477,7 +472,7 @@ export async function sendSubmissionApprovedEmail(
               </div>
               <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">
                 Thank you for helping us build the best fragrance community!  🌸<br>
-                <strong style="color: #10b981;">The FragView Team</strong>
+                <strong style="color: #B28845;">The FragView Team</strong>
               </p>
             </td>
           </tr>
@@ -525,13 +520,13 @@ export async function sendSubmissionRejectedEmail(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #FAFFF5 0%, #F0FDF4 100%);">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #FFF9EF;">
   <table role="presentation" style="width: 100%; border-collapse: collapse; padding: 40px 20px;">
     <tr>
       <td align="center">
         <table role="presentation" style="max-width: 600px; width: 100%; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0. 08); overflow: hidden;">
           <tr>
-            <td style="background: linear-gradient(135deg, #10b981 0%, #f97316 100%); padding: 40px 30px; text-align: center;">
+            <td style="background: #211F1C; padding: 40px 30px; text-align: center;">
               ${getLogoHTML()}
               <h1 style="margin: 0; color: white; font-size: 24px;">Submission Update</h1>
             </td>
@@ -539,7 +534,7 @@ export async function sendSubmissionRejectedEmail(
           <tr>
             <td style="padding: 40px 30px;">
               <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">
-                Hi <strong style="color: #10b981;">${username}</strong>,
+                Hi <strong style="color: #211F1C;">${username}</strong>,
               </p>
               <div style="background: #fef3c7; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #f59e0b;">
                 <p style="margin: 0; color: #92400e; font-size: 15px; line-height: 1.6;">
@@ -551,7 +546,7 @@ export async function sendSubmissionRejectedEmail(
               </div>
               <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">
                 Feel free to submit again with updated information!  We appreciate your contribution. <br>
-                <strong style="color: #10b981;">The FragView Team</strong>
+                <strong style="color: #B28845;">The FragView Team</strong>
               </p>
             </td>
           </tr>
@@ -598,13 +593,13 @@ export async function sendBrandApplicationApprovedEmail(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #FAFFF5 0%, #F0FDF4 100%);">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #FFF9EF;">
   <table role="presentation" style="width: 100%; border-collapse: collapse; padding: 40px 20px;">
     <tr>
       <td align="center">
         <table role="presentation" style="max-width: 600px; width: 100%; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0. 08); overflow: hidden;">
           <tr>
-            <td style="background: linear-gradient(135deg, #10b981 0%, #f97316 100%); padding: 40px 30px; text-align: center;">
+            <td style="background: #211F1C; padding: 40px 30px; text-align: center;">
               ${getLogoHTML()}
               <h1 style="margin: 0; color: white; font-size: 24px;">Welcome to FragView!</h1>
             </td>
@@ -612,9 +607,9 @@ export async function sendBrandApplicationApprovedEmail(
           <tr>
             <td style="padding: 40px 30px;">
               <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">
-                Dear <strong style="color: #10b981;">${contactName}</strong>,
+                Dear <strong style="color: #211F1C;">${contactName}</strong>,
               </p>
-              <div style="background: linear-gradient(135deg, #d1fae5 0%, #fed7aa 100%); border-radius: 12px; padding: 24px; margin: 24px 0;">
+              <div style="background: #FFF9EF; border: 1px solid #ECE0CF; border-radius: 12px; padding: 24px; margin: 24px 0;">
                 <p style="margin: 0; color: #1f2937; font-size: 15px; line-height: 1.6;">
                   🎉 Congratulations! Your brand <strong>"${brandName}"</strong> has been verified and added to FragView!
                 </p>
@@ -623,13 +618,13 @@ export async function sendBrandApplicationApprovedEmail(
                 </p>
               </div>
               <div style="text-align: center; margin: 32px 0;">
-                <a href="${BASE_URL}/brands/${brandName. toLowerCase(). replace(/ /g, '-')}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #f97316 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">
+                <a href="${BASE_URL}/brands/${brandName. toLowerCase(). replace(/ /g, '-')}" style="display: inline-block; background: #211F1C; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">
                   View Your Brand Page
                 </a>
               </div>
               <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">
                 Thank you for joining FragView! <br>
-                <strong style="color: #10b981;">The FragView Team</strong>
+                <strong style="color: #B28845;">The FragView Team</strong>
               </p>
             </td>
           </tr>
@@ -671,19 +666,19 @@ export async function sendBrandApplicationRejectedEmail(
 ) {
   const subject = `${brandName} - Brand Application Update`;
   const html = `
-<! DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #FAFFF5 0%, #F0FDF4 100%);">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #FFF9EF;">
   <table role="presentation" style="width: 100%; border-collapse: collapse; padding: 40px 20px;">
     <tr>
       <td align="center">
         <table role="presentation" style="max-width: 600px; width: 100%; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden;">
           <tr>
-            <td style="background: linear-gradient(135deg, #10b981 0%, #f97316 100%); padding: 40px 30px; text-align: center;">
+            <td style="background: #211F1C; padding: 40px 30px; text-align: center;">
               ${getLogoHTML()}
               <h1 style="margin: 0; color: white; font-size: 24px;">Application Update</h1>
             </td>
@@ -691,7 +686,7 @@ export async function sendBrandApplicationRejectedEmail(
           <tr>
             <td style="padding: 40px 30px;">
               <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">
-                Dear <strong style="color: #10b981;">${contactName}</strong>,
+                Dear <strong style="color: #211F1C;">${contactName}</strong>,
               </p>
               <div style="background: #fef3c7; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #f59e0b;">
                 <p style="margin: 0; color: #92400e; font-size: 15px; line-height: 1.6;">
@@ -703,7 +698,7 @@ export async function sendBrandApplicationRejectedEmail(
               </div>
               <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">
                 Please feel free to resubmit your application with the requested information.  We're here to help!<br>
-                <strong style="color: #10b981;">The FragView Team</strong>
+                <strong style="color: #B28845;">The FragView Team</strong>
               </p>
             </td>
           </tr>

@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(git diff:*)",
+      "Bash(python3:*)",
+      "Bash(echo:*)",
+      "Bash(cygpath:*)",
+      "Bash(git -C \"C:/Users/Admin/Desktop/fragview\" diff HEAD -- src/lib/email.ts)",
+      "Bash(git -C \"C:/Users/Admin/Desktop/fragview\" diff HEAD -- src/app/api/cron/weekly-digest/route.ts)",
+      "Bash(ls:*)",
+      "Bash(npx tsc:*)",
+      "Bash(dir:*)",
+      "Bash(command -v:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

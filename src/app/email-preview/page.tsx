@@ -351,12 +351,13 @@ const labels: Record<string, string> = {
   weekly: "Weekly Digest",
 };
 
-export default function EmailPreviewPage({
+export default async function EmailPreviewPage({
   searchParams,
 }: {
-  searchParams: { type?: string };
+  searchParams: Promise<{ type?: string }>;
 }) {
-  const type = searchParams.type ?? "verification";
+  const { type: typeParam } = await searchParams;
+  const type = typeParam ?? "verification";
   const builder = templates[type] ?? templates.verification;
   const html = builder();
 

@@ -3,8 +3,8 @@ import { Resend } from 'resend';
 const resend = new Resend(process. env.RESEND_API_KEY);
 
 const BASE_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://fragview.com';
-// Use the main Logo.png (full-colour) — same file as used in the share snapshot
-const LOGO_URL = `${BASE_URL}/Logo.png`;
+// Use the main logo.png (full-colour) — same file as used in the share snapshot
+const LOGO_URL = `${BASE_URL}/logo.png`;
 
 // Logo display width; height is kept auto so the logo scales proportionally
 const LOGO_WIDTH = 160;

@@ -384,7 +384,7 @@ export default function PerfumeDetailClient({
       // Fetch logo as base64 so html2canvas can render it reliably
       let logoDataUrl = "";
       try {
-        const logoResp = await fetch("/Logo.png");
+        const logoResp = await fetch("/logo.png");
         const logoBlob = await logoResp.blob();
         logoDataUrl = await new Promise<string>((resolve) => {
           const reader = new FileReader();

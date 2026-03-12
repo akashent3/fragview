@@ -5,6 +5,7 @@ import { Sparkles } from 'lucide-react';
 import { getArticleBySlug } from '@/app/actions/drydown';
 import { getArticleComments } from '@/app/actions/drydown-comments';
 import ArticleComments from '@/components/drydown/ArticleComments';
+import ShareButtons from '@/components/drydown/ShareButtons';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -207,72 +208,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 </div>
 
                 {/* Share Buttons */}
-                <div className="flex items-center gap-3 lg:gap-4">
-                  <span 
-                    className="text-[18px] leading-[28px] lg:text-[20px] lg:leading-[30px]"
-                    style={{ 
-                      fontFamily: "'Inter', sans-serif", 
-                      fontWeight: 400, 
-                      color: '#211F1C' 
-                    }}
-                  >
-                    Share
-                  </span>
-                  <div className="flex items-center gap-4">
-                    {/* Facebook */}
-                    <a 
-                      href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-50 transition-colors"
-                      style={{ borderColor: '#211F1C' }}
-                    >
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M18 2H15C13.6739 2 12.4021 2.52678 11.4645 3.46447C10.5268 4.40215 10 5.67392 10 7V10H7V14H10V22H14V14H17L18 10H14V7C14 6.73478 14.1054 6.48043 14.2929 6.29289C14.4804 6.10536 14.7348 6 15 6H18V2Z" stroke="#211F1C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </a>
-                    {/* Instagram */}
-                    <a 
-                      href="https://www.instagram.com/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-50 transition-colors"
-                      style={{ borderColor: '#211F1C' }}
-                    >
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="2" y="2" width="20" height="20" rx="5" stroke="#211F1C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <circle cx="12" cy="12" r="4" stroke="#211F1C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <circle cx="18" cy="6" r="1" fill="#211F1C"/>
-                      </svg>
-                    </a>
-                    {/* X/Twitter */}
-                    <a 
-                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-50 transition-colors"
-                      style={{ borderColor: '#211F1C' }}
-                    >
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 4L10.5 12.5M20 20L13.5 11.5M10.5 12.5L4 20H8L13.5 11.5M10.5 12.5L16 4H20L13.5 11.5" stroke="#211F1C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </a>
-                    {/* LinkedIn */}
-                    <a 
-                      href={`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&title=${encodeURIComponent(article.title)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-50 transition-colors"
-                      style={{ borderColor: '#211F1C' }}
-                    >
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M16 8C17.5913 8 19.1174 8.63214 20.2426 9.75736C21.3679 10.8826 22 12.4087 22 14V21H18V14C18 13.4696 17.7893 12.9609 17.4142 12.5858C17.0391 12.2107 16.5304 12 16 12C15.4696 12 14.9609 12.2107 14.5858 12.5858C14.2107 12.9609 14 13.4696 14 14V21H10V14C10 12.4087 10.6321 10.8826 11.7574 9.75736C12.8826 8.63214 14.4087 8 16 8Z" stroke="#211F1C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <rect x="2" y="9" width="4" height="12" stroke="#211F1C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <circle cx="4" cy="4" r="2" stroke="#211F1C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </a>
-                  </div>
-                </div>
+                <ShareButtons title={article.title} />
               </div>
             </div>
 

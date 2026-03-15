@@ -16,7 +16,7 @@ export default function ImageUpload({
   onUploadComplete,
   folder = "misc",
   currentImage,
-  maxSizeMB = 5,
+  maxSizeMB = 10,
   label = "Image",
 }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);

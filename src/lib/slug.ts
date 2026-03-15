@@ -10,7 +10,9 @@ export function toKebab(input: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-// Perfume slug pattern: brand-slug + '-' + variant slug
+// Perfume slug pattern: brand-slug + '-' + variant slug (variant omitted when empty)
 export function perfumeSlug(brandName: string, variantName: string) {
-  return `${toKebab(brandName)}-${toKebab(variantName)}`;
+  const brand = toKebab(brandName);
+  const variant = toKebab(variantName);
+  return variant ? `${brand}-${variant}` : brand;
 }

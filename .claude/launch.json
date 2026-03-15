@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "email-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["marketing/serve.cjs"],
+      "port": 4000
     }
   ]
 }

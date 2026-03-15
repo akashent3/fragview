@@ -72,9 +72,10 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
   // 🚀 STEP 2: Fetch reviews and thread status in parallel
   const [prismaReviews, isFollowingThread] = await Promise.all([
     prisma.review.findMany({
-      where: { 
+      where: {
         OR: perfumeIdCandidates.map((v) => ({ perfumeId: v })),
         parentId: null,
+        isDeleted: false,
       },
       select: { 
         id: true,

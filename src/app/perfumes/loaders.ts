@@ -3,6 +3,7 @@ import { listPerfumes } from '@/lib/data/perfumes';
 import { pageMeta } from '@/lib/pagination';
 import { sanitizePerfumeDocs } from '@/lib/sanitize';
 import { safeTypesenseSearch } from '@/lib/typesense';
+import { perfumeSlug } from '@/lib/slug';
 
 export type PerfumeSort = 'new' | 'rating' | 'az' | 'za';
 const PAGE_SIZE = 25;
@@ -69,7 +70,11 @@ const accords = typeof searchParams.accords === 'string'
 
     const resp = await safeTypesenseSearch('perfumes', searchParamsTs);
     if (resp) {
-      const items = resp.hits.map(d => ({ ...d, _id: d.id }));
+      const items = resp.hits.map(d => ({
+        ...d,
+        _id: d.id,
+        slug: d.slug || perfumeSlug(d.brand_name, d.variant_name),
+      }));
       const sanitized = sanitizePerfumeDocs(items);
       const meta = pageMeta(resp.found, page, PAGE_SIZE);
       return {

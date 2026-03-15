@@ -34,6 +34,10 @@ export default function ModerationQueueClient() {
     setLoading(true);
     try {
       const res = await fetch('/api/admin/moderation');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server error (${res.status})`);
+      }
       const data = await res.json();
       setReviews(data.reviews || []);
     } catch (error) {
@@ -73,7 +77,7 @@ export default function ModerationQueueClient() {
 
     setActioningId(reviewId);
     try {
-      const res = await fetch(`/api/admin/moderation? reviewId=${reviewId}`, {
+      const res = await fetch(`/api/admin/moderation?reviewId=${reviewId}`, {
         method: 'DELETE'
       });
 

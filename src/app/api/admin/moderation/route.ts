@@ -3,12 +3,23 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
+// Helper: verify caller is ADMIN or MODERATOR by re-checking the DB
+// (avoids stale JWT token issues where role change after login isn't reflected)
+async function verifyModerator(session: any): Promise<boolean> {
+  if (!session?.user?.id) return false;
+  const caller = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+  return caller?.role === 'ADMIN' || caller?.role === 'MODERATOR';
+}
+
 // GET flagged reviews
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'MODERATOR')) {
+
+    if (!(await verifyModerator(session))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -44,8 +55,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'MODERATOR')) {
+
+    if (!(await verifyModerator(session))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -70,12 +81,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// DELETE remove review
+// DELETE remove review (soft delete — keeps record for audit, hides from public)
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'MODERATOR')) {
+
+    if (!(await verifyModerator(session))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -86,7 +97,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Review ID is required' }, { status: 400 });
     }
 
-    // Soft delete
+    // Soft delete by admin — hides from public (isDeleted: false filter in loader)
     await prisma.review.update({
       where: { id: reviewId },
       data: {

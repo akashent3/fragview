@@ -83,7 +83,7 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// DELETE Review (Soft Delete)
+// DELETE Review (Hard Delete)
 export async function DELETE(req: NextRequest) {
   try {
     // Check rate limit
@@ -126,13 +126,9 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
-    // Soft delete
-    await prisma.review.update({
+    // Hard delete — cascades to ReviewHelpful votes and replies (onDelete: Cascade in schema)
+    await prisma.review.delete({
       where: { id: reviewId! },
-      data: {
-        isDeleted: true,
-        deletedAt: new Date(),
-      },
     });
 
     // Revalidate perfume page

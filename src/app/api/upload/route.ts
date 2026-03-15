@@ -3,6 +3,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
+import sharp from 'sharp';
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'ap-south-1' });
 
@@ -65,11 +66,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 🔒 VALIDATE FILE SIZE (3MB max - reduced from 5MB for better performance)
-    const maxSize = 3 * 1024 * 1024; // 3MB
+    // 🔒 VALIDATE FILE SIZE (10MB max input — sharp will compress output to ≤1MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'File too large. Maximum size is 3MB.' },
+        { error: 'File too large. Maximum size is 10MB.' },
         { status: 400 }
       );
     }
@@ -89,20 +90,34 @@ export async function POST(req: NextRequest) {
     // Generate filename
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);
-    
+
     // 🔒 STRICT FOLDER SANITIZATION - only allow specific folders
     const allowedFolders = ['reviews', 'avatars', 'articles', 'misc'];
     const safeFolder = allowedFolders.includes(folder) ? folder : 'misc';
-    
-    const filename = `${safeFolder}/${session.user.id}/${timestamp}-${randomString}.${extension}`;
 
-    // Upload to Vercel Blob
+    // 🗜️ COMPRESS with sharp — iteratively reduce quality until output ≤ 1MB
+    const TARGET_BYTES = 1 * 1024 * 1024; // 1MB
+    let finalBuffer: Buffer;
+    let finalExtension = 'jpg'; // always output JPEG for max compression
+
+    const sharpBase = sharp(Buffer.from(buffer)).rotate(); // auto-rotate from EXIF
+    let quality = 82;
+    let compressed = await sharpBase.clone().jpeg({ quality, mozjpeg: true }).toBuffer();
+
+    while (compressed.length > TARGET_BYTES && quality > 20) {
+      quality -= 10;
+      compressed = await sharpBase.clone().jpeg({ quality, mozjpeg: true }).toBuffer();
+    }
+    finalBuffer = compressed;
+
+    const filename = `${safeFolder}/${session.user.id}/${timestamp}-${randomString}.${finalExtension}`;
+
     // Upload to AWS S3
     await s3Client.send(new PutObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET!,
       Key: filename,
-      Body: Buffer.from(buffer),   // buffer is already in scope from line 76
-      ContentType: file.type,
+      Body: finalBuffer,
+      ContentType: 'image/jpeg',
     }));
 
     const url = `https://${process.env.AWS_CLOUDFRONT_DOMAIN}/${filename}`;

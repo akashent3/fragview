@@ -2,6 +2,21 @@ import 'dotenv/config';
 import Typesense from 'typesense';
 import { MongoClient } from 'mongodb';
 
+function toKebab(input = '') {
+  return String(input)
+    .trim()
+    .toLowerCase()
+    .replace(/['"]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function generatePerfumeSlug(brandName = '', variantName = '') {
+  const brand = toKebab(brandName);
+  const variant = toKebab(variantName);
+  return variant ? `${brand}-${variant}` : brand;
+}
+
 function getEnv(name, fallback) {
   const v = process.env[name];
   if (!v && fallback === undefined) {
@@ -86,7 +101,7 @@ async function main() {
   const nowSec = Math.floor(Date.now() / 1000);
   const mapped = docs.map((p) => ({
     id: String(p._id),
-    slug: p.slug,
+    slug: generatePerfumeSlug(p.brand_name, p.variant_name),
     brand_name: p.brand_name,
     variant_name: p.variant_name,
     gender: p.gender || '',

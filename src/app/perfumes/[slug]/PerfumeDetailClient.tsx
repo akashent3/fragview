@@ -1,10 +1,9 @@
 "use client";
-import React, { useState, useTransition, useRef, useCallback } from "react";
+import React, { useState, useTransition, useRef, useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { LogIn, Sparkles, X, Clock } from "lucide-react";
 import SimilarFragrances from "@/components/ui/SimilarFragrances";
-import ImageUpload from "@/components/upload/ImageUpload";
 import ReviewActionButtons from "@/components/reviews/ReviewActionButtons";
 import MentionTextarea from "@/components/ui/MentionTextarea";
 import { useAuthModal } from "@/components/auth/AuthModal";
@@ -220,6 +219,14 @@ export default function PerfumeDetailClient({
 
   const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
+
+  // Photo upload state (inline, replaces ImageUpload component)
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [isPhotoUploading, setIsPhotoUploading] = useState(false);
+  const [photoUploadError, setPhotoUploadError] = useState('');
+
+  // Lightbox state for enlarging review photos
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   const [pending, startTransition] = useTransition();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -634,6 +641,44 @@ export default function PerfumeDetailClient({
 
   const removePhoto = (index: number) => {
     setUploadedPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Escape key closes lightbox
+  useEffect(() => {
+    if (!lightboxSrc) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxSrc(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightboxSrc]);
+
+  // Inline photo upload handler — avoids ImageUpload component state conflicts
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type)) {
+      setPhotoUploadError('Only JPEG, PNG, or WebP allowed');
+      return;
+    }
+    setPhotoUploadError('');
+    setIsPhotoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('folder', 'reviews');
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      addPhoto(data.url);
+    } catch (err: any) {
+      setPhotoUploadError(err.message || 'Upload failed');
+    } finally {
+      setIsPhotoUploading(false);
+      // Reset so same file can be re-selected after removal
+      e.target.value = '';
+    }
   };
 
   const similarPerfumes = React.useMemo(() => {
@@ -1636,12 +1681,14 @@ export default function PerfumeDetailClient({
                               <div
                                 key={idx}
                                 className="relative w-[100px] h-[100px] lg:w-[150px] lg:h-[150px] shrink-0"
+                                onClick={() => setLightboxSrc(p)}
+                                style={{ cursor: 'zoom-in' }}
                               >
                                 <Image
                                   src={p}
                                   alt={`Photo ${idx + 1}`}
                                   fill
-                                  className="object-cover rounded-xl border border-[#E2E1E1] cursor-pointer hover:scale-105 transition-transform"
+                                  className="object-cover rounded-xl border border-[#E2E1E1] hover:scale-105 transition-transform"
                                   sizes="150px"
                                 />
                               </div>
@@ -1677,29 +1724,6 @@ export default function PerfumeDetailClient({
                               isLoggedIn={isSignedIn}
                             />
                           </div>
-
-                          {/* Divider */}
-                          <div className="w-px h-6 bg-[#E2E1E1]" />
-
-                          {/* Report */}
-                          <button className="flex items-center gap-2 font-inter font-normal text-[18px] leading-[26px] text-[#737270] hover:text-[#211F1C] transition-colors">
-                            <svg
-                              width="24"
-                              height="24"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M4 15V21M4 15L12 9L14.5 11L21 5M4 15V6C4 5.44772 4.44772 5 5 5H7"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                            Report
-                          </button>
 
                           {/* Edit/Delete for own reviews */}
                           {isSignedIn &&
@@ -1901,14 +1925,27 @@ export default function PerfumeDetailClient({
                           </button>
                         </div>
                       ))}
-                      {uploadedPhotos.length < 3 && (
-                        <div className="w-full sm:w-auto min-w-[160px] max-w-xs">
-                          <ImageUpload
-                            onUploadComplete={addPhoto}
-                            folder="reviews"
-                            label="Upload"
-                            maxSizeMB={5}
+                      {uploadedPhotos.length < 1 && (
+                        <div className="flex flex-col gap-1">
+                          <input
+                            ref={photoInputRef}
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png,image/webp"
+                            className="hidden"
+                            disabled={isPhotoUploading}
+                            onChange={handlePhotoSelect}
                           />
+                          <button
+                            type="button"
+                            onClick={() => photoInputRef.current?.click()}
+                            disabled={isPhotoUploading}
+                            className="inline-flex items-center gap-2 px-4 py-2 border border-[#C4C4C3] rounded-xl font-inter font-medium text-[16px] leading-[24px] text-[#211F1C] hover:bg-[#FFF4E3] transition-colors disabled:opacity-50"
+                          >
+                            {isPhotoUploading ? 'Uploading…' : 'Add Photo'}
+                          </button>
+                          {photoUploadError && (
+                            <p className="text-xs text-red-600">{photoUploadError}</p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1961,6 +1998,32 @@ export default function PerfumeDetailClient({
           </div>
         </div>
       </section>
+
+      {/* Lightbox — enlarges review photos on click */}
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={lightboxSrc}
+              alt="Review photo enlarged"
+              className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
+            />
+            <button
+              onClick={() => setLightboxSrc(null)}
+              className="absolute -top-4 -right-4 bg-white text-[#211F1C] rounded-full w-9 h-9 flex items-center justify-center shadow-lg hover:bg-[#FFF4E3] transition-colors"
+              aria-label="Close photo"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {editingReviewId && (

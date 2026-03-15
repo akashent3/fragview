@@ -1,6 +1,19 @@
 "use client";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
+
+function generateSlug(brand: string, variant: string): string {
+  const toKebab = (s: string) =>
+    s
+      .trim()
+      .toLowerCase()
+      .replace(/['"]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  const b = toKebab(brand);
+  const v = toKebab(variant);
+  return v ? `${b}-${v}` : b;
+}
 import {
   Search,
   X,
@@ -651,7 +664,7 @@ export default function PerfumesClient({
 
                 return (
                   <Link
-                    href={`/perfumes/${item.slug || item._id}`}
+                    href={`/perfumes/${item.slug || generateSlug(item.brand_name, item.variant_name)}`}
                     key={item._id}
                     className="flex flex-col bg-[#FFF9EF] rounded-2xl overflow-hidden group cursor-pointer hover:shadow-md"
                   >

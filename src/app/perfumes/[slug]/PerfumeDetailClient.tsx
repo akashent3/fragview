@@ -6,11 +6,13 @@ import { LogIn, Sparkles, X, Clock } from "lucide-react";
 import SimilarFragrances from "@/components/ui/SimilarFragrances";
 import ReviewActionButtons from "@/components/reviews/ReviewActionButtons";
 import MentionTextarea from "@/components/ui/MentionTextarea";
+import { useRouter } from "next/navigation";
 import { useAuthModal } from "@/components/auth/AuthModal";
 import { submitReview } from "./actions";
 import EditReviewModal from "@/components/reviews/EditReviewModal";
 import { parseReviewMentions } from "@/lib/parseMentions";
 import AddToWardrobeModal from "@/components/perfumes/AddToWardrobeModal";
+import AskFragviewPanel from "@/components/reviews/AskFragviewPanel";
 
 // INLINE DEBOUNCE HELPER
 function debounceFunc<T extends (...args: any[]) => any>(
@@ -54,6 +56,22 @@ interface PerfumeDoc {
   } | null;
 }
 
+interface ReviewReply {
+  id: string;
+  text?: string | null;
+  createdAt: string;
+  user: { id: string; username: string };
+}
+
+interface AiPanelState {
+  question: string;
+  reviewId: string;
+  streamedText: string;
+  isStreaming: boolean;
+  isDone: boolean;
+  error: string | null;
+}
+
 interface ReviewLite {
   id: string;
   rating: number;
@@ -73,6 +91,7 @@ interface ReviewLite {
     level: string;
     badges: string[];
   };
+  replies?: ReviewReply[];
 }
 
 interface Props {
@@ -228,6 +247,7 @@ export default function PerfumeDetailClient({
   // Lightbox state for enlarging review photos
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -238,6 +258,8 @@ export default function PerfumeDetailClient({
 
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [editingReviewText, setEditingReviewText] = useState("");
+
+  const [aiPanel, setAiPanel] = useState<AiPanelState | null>(null);
 
   // --- COOLING PERIOD LOGIC ---
   const isCoolingPeriodActive = React.useMemo(() => {
@@ -626,15 +648,77 @@ export default function PerfumeDetailClient({
       }
 
       const result = await submitReview(slug, formData);
-      if (!result.ok)
+      if (!result.ok) {
         setErrorMessage(result.error || "Failed to submit review.");
-      else {
+      } else {
         setSuccessMessage("Review submitted successfully!");
         setReviewText("");
         setUploadedPhotos([]);
+
+        // Detection is done server-side — result carries botQuestion and reviewId
+        const reviewId = (result as any).reviewId as string | undefined;
+        const botQuestion = (result as any).botQuestion as string | null;
+
+        if (botQuestion && reviewId) {
+          // @askfragview review — show streaming panel immediately.
+          // revalidatePath was skipped server-side; router.refresh() fires after streaming.
+          setAiPanel({
+            question: botQuestion,
+            reviewId,
+            streamedText: "",
+            isStreaming: true,
+            isDone: false,
+            error: null,
+          });
+          streamAiResponse(reviewId, botQuestion);
+        }
+        // Normal reviews: revalidatePath already fired server-side — no extra refresh needed.
       }
     });
   }
+  async function streamAiResponse(reviewId: string, question: string) {
+    try {
+      const res = await fetch("/api/ai/askfragview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviewId, question, perfumeSlug: slug }),
+      });
+
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        setAiPanel((prev) =>
+          prev ? { ...prev, isStreaming: false, error: data.error || "Failed to get AI response." } : null,
+        );
+        // Refresh so the review still appears in the list
+        router.refresh();
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        setAiPanel((prev) =>
+          prev ? { ...prev, streamedText: prev.streamedText + chunk } : null,
+        );
+      }
+
+      setAiPanel((prev) =>
+        prev ? { ...prev, isStreaming: false, isDone: true } : null,
+      );
+      // Streaming done — now it's safe to refresh to show the AI reply in the thread
+      router.refresh();
+    } catch {
+      setAiPanel((prev) =>
+        prev ? { ...prev, isStreaming: false, error: "Network error. Please try again." } : null,
+      );
+      router.refresh();
+    }
+  }
+
   const addPhoto = (url: string) => {
     setUploadedPhotos((prev) => [...prev, url]);
   };
@@ -1607,8 +1691,8 @@ export default function PerfumeDetailClient({
               ) : (
                 <>
                   {reviews.map((r) => (
+                    <React.Fragment key={r.id}>
                     <div
-                      key={r.id}
                       className="bg-white border border-[#C4C4C3] rounded-xl p-6 flex flex-col gap-8"
                     >
                       {/* Review Content */}
@@ -1652,15 +1736,6 @@ export default function PerfumeDetailClient({
                               .replace(/\//g, "-")}
                           </span>
                         </div>
-
-                        {/* Title - Use first sentence or first 50 chars as title */}
-                        {r.text && (
-                          <h4 className="font-inter font-medium text-[24px] lg:text-[28px] leading-[32px] lg:leading-[36px] text-[#211F1C]">
-                            {r.text.split(".")[0].length > 60
-                              ? r.text.substring(0, 60) + "..."
-                              : r.text.split(".")[0]}
-                          </h4>
-                        )}
 
                         {/* Review Body */}
                         {r.isDeleted ? (
@@ -1814,6 +1889,31 @@ export default function PerfumeDetailClient({
                         </div>
                       </div>
                     </div>
+
+                    {/* Render persisted AI replies (visible after page reload) */}
+                    {r.replies
+                      ?.filter((reply) => reply.user.username === 'askfragview')
+                      .map((reply) => (
+                        <div
+                          key={reply.id}
+                          className="ml-6 rounded-xl border border-indigo-200 bg-white overflow-hidden"
+                        >
+                          <div className="flex items-center gap-2 px-5 py-3 bg-indigo-50 border-b border-indigo-100">
+                            <div className="w-6 h-6 rounded-md bg-indigo-600 flex items-center justify-center shrink-0">
+                              <Sparkles className="w-3.5 h-3.5 text-white" />
+                            </div>
+                            <span className="font-inter font-semibold text-[14px] text-indigo-700">
+                              FragView AI
+                            </span>
+                          </div>
+                          <div className="px-5 py-4">
+                            <p className="font-inter text-[15px] leading-[26px] text-[#4A4946] whitespace-pre-wrap">
+                              {reply.text}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </React.Fragment>
                   ))}
 
                   {/* Load More Button */}
@@ -1891,6 +1991,7 @@ export default function PerfumeDetailClient({
                   </p>
 
                   <MentionTextarea
+                    name="text"
                     value={reviewText}
                     onChange={setReviewText}
                     placeholder="Share your experience... Type @ to mention users and # to reference perfumes."
@@ -1995,6 +2096,18 @@ export default function PerfumeDetailClient({
                     </button>
                   </div>
                 </form>
+              )}
+
+              {/* AI streaming panel — shown after @askfragview review submission */}
+              {aiPanel && (
+                <AskFragviewPanel
+                  question={aiPanel.question}
+                  streamedText={aiPanel.streamedText}
+                  isStreaming={aiPanel.isStreaming}
+                  isDone={aiPanel.isDone}
+                  error={aiPanel.error}
+                  onDismiss={() => setAiPanel(null)}
+                />
               )}
             </div>
           </div>

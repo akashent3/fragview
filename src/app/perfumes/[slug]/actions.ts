@@ -124,6 +124,9 @@ export async function submitReview(slug: string, formData: FormData) {
       const mentions = extractMentions(reviewText);
       
       for (const mentionedUsername of mentions) {
+        // Skip the bot user — it doesn't need mention notifications
+        if (mentionedUsername.toLowerCase() === 'askfragview') continue;
+
         // Find mentioned user
         const mentionedUser = await prisma.user.findUnique({
           where: { username: mentionedUsername },
@@ -162,8 +165,18 @@ export async function submitReview(slug: string, formData: FormData) {
       }
     }
 
-    revalidatePath(`/perfumes/${slug}`);
-    return { ok: true };
+    // Detect @askfragview trigger server-side — we already have the exact text here.
+    const botMatch = submittedText.match(/^@askfragview\s+(.+)/i);
+    const botQuestion = botMatch ? botMatch[1].trim() : null;
+
+    // For normal reviews: revalidate immediately so the list updates instantly.
+    // For @askfragview reviews: skip revalidatePath — the client refreshes AFTER
+    // streaming so the aiPanel state is never interrupted by a page re-fetch.
+    if (!botQuestion) {
+      revalidatePath(`/perfumes/${slug}`);
+    }
+
+    return { ok: true, reviewId, botQuestion };
   } catch (e) {
     console.error("Review submission error:", e);
     return { ok: false, error: "Failed to save review." };

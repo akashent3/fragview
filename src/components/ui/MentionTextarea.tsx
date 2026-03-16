@@ -10,13 +10,14 @@ interface Props {
   placeholder?: string;
   className?: string;
   minHeight?: string;
+  name?: string;
 }
 
-type MentionResult = 
+type MentionResult =
   | { type: 'user'; data: UserSearchResult }
   | { type: 'perfume'; data: PerfumeSearchResult };
 
-export default function MentionTextarea({ value, onChange, placeholder, className, minHeight = '100px' }: Props) {
+export default function MentionTextarea({ value, onChange, placeholder, className, minHeight = '100px', name }: Props) {
   const [suggestions, setSuggestions] = useState<MentionResult[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
@@ -144,6 +145,8 @@ export default function MentionTextarea({ value, onChange, placeholder, classNam
     <div className="relative w-full">
       <textarea
         ref={textareaRef}
+        name={name}
+        suppressHydrationWarning
         value={value}
         onChange={handleInput}
         placeholder={placeholder || "Share your experience...  Type @ for users, # for perfumes"}

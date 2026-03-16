@@ -187,7 +187,10 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
   const allUserIds = new Set<string>();
   prismaReviews.forEach(r => {
     allUserIds.add(r.userId);
-    r.replies?.forEach(reply => allUserIds.add(reply.userId));
+    // Skip the bot user — it doesn't need XP/badge calculations
+    r.replies?.forEach(reply => {
+      if (reply.user.username !== 'askfragview') allUserIds.add(reply.userId);
+    });
   });
 
   // 🚀 OPTIMIZATION: Batch fetch ALL user stats at once
@@ -291,9 +294,11 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
   const reviews = prismaReviews.map((r) => {
     const { totalXP, levelInfo, badges } = processUserData(r.userId, r.user);
 
-    // Process replies (also no DB calls now!)
-    const processedReplies = r.replies ?  r.replies.map((reply) => {
-      const replyStats = processUserData(reply.userId, reply.user);
+    // Process replies — skip XP/badge pipeline entirely for bot replies
+    const processedReplies = r.replies ? r.replies.map((reply) => {
+      const isBot = reply.user.username === 'askfragview';
+      // Only run the expensive processUserData for real human replies
+      const replyStats = isBot ? null : processUserData(reply.userId, reply.user);
 
       return {
         id: reply.id,
@@ -308,9 +313,9 @@ export async function loadPerfumeDetail(slug: string, currentUserId?: string) {
           id: reply.user.id,
           username: reply.user.username || 'User',
           image: reply.user.image,
-          xp: replyStats.totalXP,
-          level: replyStats.levelInfo.title,
-          badges: replyStats.badges
+          xp: replyStats?.totalXP ?? 0,
+          level: replyStats?.levelInfo.title ?? null,
+          badges: replyStats?.badges ?? [],
         }
       };
     }) : [];

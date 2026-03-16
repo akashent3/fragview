@@ -1788,10 +1788,10 @@ export default function PerfumeDetailClient({
                         </a>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                           {/* Helpful Actions */}
-                          <div className="flex items-center gap-4">
-                            <span className="font-inter font-normal text-[18px] leading-[26px] text-[#737270]">
+                          <div className="flex items-center gap-3">
+                            <span className="font-inter font-normal text-[15px] sm:text-[18px] leading-[26px] text-[#737270]">
                               Helpful?
                             </span>
                             <ReviewActionButtons
@@ -1806,18 +1806,18 @@ export default function PerfumeDetailClient({
                           {isSignedIn &&
                             session?.user?.id === r.user.id &&
                             !r.isDeleted && (
-                              <>
+                              <div className="flex items-center gap-3">
                                 <div className="w-px h-6 bg-[#E2E1E1]" />
                                 <button
                                   onClick={() => {
                                     setEditingReviewId(r.id);
                                     setEditingReviewText(r.text || "");
                                   }}
-                                  className="flex items-center gap-2 font-inter font-normal text-[18px] leading-[26px] text-[#737270] hover:text-[#211F1C] transition-colors"
+                                  className="flex items-center gap-1.5 font-inter font-normal text-[15px] sm:text-[18px] leading-[26px] text-[#737270] hover:text-[#211F1C] transition-colors"
                                 >
                                   <svg
-                                    width="24"
-                                    height="24"
+                                    width="20"
+                                    height="20"
                                     viewBox="0 0 24 24"
                                     fill="none"
                                     xmlns="http://www.w3.org/2000/svg"
@@ -1858,11 +1858,11 @@ export default function PerfumeDetailClient({
                                       alert("Network error");
                                     }
                                   }}
-                                  className="flex items-center gap-2 font-inter font-normal text-[18px] leading-[26px] text-[#737270] hover:text-red-600 transition-colors"
+                                  className="flex items-center gap-1.5 font-inter font-normal text-[15px] sm:text-[18px] leading-[26px] text-[#737270] hover:text-red-600 transition-colors"
                                 >
                                   <svg
-                                    width="24"
-                                    height="24"
+                                    width="20"
+                                    height="20"
                                     viewBox="0 0 24 24"
                                     fill="none"
                                     xmlns="http://www.w3.org/2000/svg"
@@ -1884,7 +1884,7 @@ export default function PerfumeDetailClient({
                                   </svg>
                                   Delete
                                 </button>
-                              </>
+                              </div>
                             )}
                         </div>
                       </div>

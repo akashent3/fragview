@@ -32,10 +32,10 @@ export default function ImageUploadComponent({
       return;
     }
 
-    // Validate file size (API has 3MB limit)
-    const maxSizeBytes = Math.min(maxSizeMB * 1024 * 1024, 3 * 1024 * 1024);
+    // Validate file size (server accepts up to 10MB and auto-compresses output to ≤1MB)
+    const maxSizeBytes = 10 * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      setError(`File size must be less than ${Math.min(maxSizeMB, 3)}MB`);
+      setError(`File size must be less than 10MB`);
       return;
     }
 
@@ -146,7 +146,7 @@ export default function ImageUploadComponent({
 
       {/* Help Text */}
       <p className="text-xs text-gray-500">
-        Accepted formats: JPG, PNG, WebP • Max size: {maxSizeMB}MB
+        Accepted formats: JPG, PNG, WebP • Max size: 10MB (auto-compressed)
       </p>
     </div>
   );

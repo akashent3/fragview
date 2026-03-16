@@ -51,17 +51,26 @@ export default function ArticleEditor({ mode, article }: Props) {
     }
   }, [formData.title, mode]);
 
-  // Search perfumes for sidebar
-  const handlePerfumeSearch = async () => {
-    if (!perfumeSearch.trim()) return;
+  // Debounced autocomplete — fires 300ms after the user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchPerfumes(perfumeSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [perfumeSearch]);
 
+  const searchPerfumes = async (query: string) => {
+    if (!query.trim()) {
+      setPerfumeResults([]);
+      return;
+    }
     setSearchingPerfumes(true);
     try {
-      const response = await fetch(`/api/search? q=${encodeURIComponent(perfumeSearch)}&limit=10`);
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
       const data = await response.json();
-      setPerfumeResults(data. results || []);
+      setPerfumeResults(data.perfumes || []);
     } catch (error) {
-      console. error('Perfume search failed:', error);
+      console.error('Perfume search failed:', error);
     } finally {
       setSearchingPerfumes(false);
     }
@@ -256,26 +265,21 @@ export default function ArticleEditor({ mode, article }: Props) {
               </p>
 
               {/* Search */}
-              <div className="flex gap-2 mb-4">
+              <div className="relative mb-4">
                 <input
                   type="text"
                   value={perfumeSearch}
                   onChange={(e) => setPerfumeSearch(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handlePerfumeSearch()}
-                  placeholder="Search perfumes..."
-                  className="flex-1 px-3 py-2 bg-white text-black border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+                  placeholder="Search by brand or name..."
+                  className="w-full px-3 py-2 pr-8 bg-white text-black border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                 />
-                <button
-                  onClick={handlePerfumeSearch}
-                  disabled={searchingPerfumes}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
-                >
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400">
                   {searchingPerfumes ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <Search className="w-4 h-4" />
                   )}
-                </button>
+                </div>
               </div>
 
               {/* Search Results */}
@@ -296,9 +300,9 @@ export default function ArticleEditor({ mode, article }: Props) {
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">
-                          {perfume.name}
+                          {perfume.variant_name}
                         </p>
-                        <p className="text-xs text-gray-500 truncate">{perfume.brand}</p>
+                        <p className="text-xs text-gray-500 truncate">{perfume.brand_name}</p>
                       </div>
                       <Plus className="w-4 h-4 text-gray-600" />
                     </div>

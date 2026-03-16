@@ -669,8 +669,10 @@ export default function PerfumeDetailClient({
       fd.append('file', file);
       fd.append('folder', 'reviews');
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      const text = await res.text();
+      let data: any = {};
+      try { data = JSON.parse(text); } catch { /* non-JSON response handled below */ }
+      if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
       addPhoto(data.url);
     } catch (err: any) {
       setPhotoUploadError(err.message || 'Upload failed');

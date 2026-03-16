@@ -52,10 +52,12 @@ export default function ImageUploadComponent({
         credentials: 'include',
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = {};
+      try { data = JSON.parse(text); } catch { /* non-JSON response handled below */ }
 
       if (!res.ok) {
-        throw new Error(data.error || 'Upload failed');
+        throw new Error(data.error || `Upload failed (${res.status})`);
       }
 
       if (!data.success || !data.url) {

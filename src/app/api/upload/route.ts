@@ -100,13 +100,23 @@ export async function POST(req: NextRequest) {
     let finalBuffer: Buffer;
     let finalExtension = 'jpg'; // always output JPEG for max compression
 
-    const sharpBase = sharp(Buffer.from(buffer)).rotate(); // auto-rotate from EXIF
+    const inputBuffer = Buffer.from(buffer);
     let quality = 82;
-    let compressed = await sharpBase.clone().jpeg({ quality, mozjpeg: true }).toBuffer();
+    // Create a fresh sharp instance each iteration to avoid stream state issues
+    // with certain image types (CMYK, alpha channel, complex EXIF/ICC profiles)
+    let compressed = await sharp(inputBuffer)
+      .rotate()                   // auto-rotate from EXIF
+      .resize({ width: 4096, height: 4096, fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality })
+      .toBuffer();
 
     while (compressed.length > TARGET_BYTES && quality > 20) {
       quality -= 10;
-      compressed = await sharpBase.clone().jpeg({ quality, mozjpeg: true }).toBuffer();
+      compressed = await sharp(inputBuffer)
+        .rotate()
+        .resize({ width: 4096, height: 4096, fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality })
+        .toBuffer();
     }
     finalBuffer = compressed;
 

@@ -83,7 +83,15 @@ export async function generateMetadata({
         description,
         url,
         type: 'website',
-        images: (perfume as any).image ?  [(perfume as any).image] : undefined,
+        images: (perfume as any).image
+          ? [{ url: (perfume as any).image, width: 800, height: 800, alt: (perfume as any).variant_name }]
+          : undefined,
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: (perfume as any).image ? [(perfume as any).image] : [],
       },
     };
   } catch (error) {
@@ -121,31 +129,62 @@ export default async function PerfumeDetailPage({
   const { perfume, rating, reviewCount, reviews, isFollowingThread, userReview } = data;
   const url = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.fragview.com'}/perfumes/${slug}`;
   
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.fragview.com';
+
+  // ── Product JSON-LD (enhanced) ───────────────────────────────────────────
   const jsonLd: any = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: perfume.variant_name,
-    brand: perfume.brand_name,
+    brand: {
+      '@type': 'Brand',
+      name: perfume.brand_name,
+      url: perfume.brand_slug ? `${BASE_URL}/brands/${perfume.brand_slug}` : undefined,
+    },
     description:
       perfume.description ||
       `${perfume.variant_name} by ${perfume.brand_name} fragrance profile on FragView.`,
     image: perfume.image || perfume.perfume_image || undefined,
     url,
+    offers: {
+      '@type': 'Offer',
+      availability: 'https://schema.org/InStock',
+      priceCurrency: 'USD',
+      url,
+    },
   };
-  
+
   if (reviewCount > 0) {
     jsonLd.aggregateRating = {
       '@type': 'AggregateRating',
       ratingValue: rating.toFixed(2),
       ratingCount: reviewCount,
+      bestRating: '5',
+      worstRating: '1',
     };
   }
+
+  // ── BreadcrumbList JSON-LD (helps Google show breadcrumbs in search results) ──
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home',     item: BASE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Perfumes', item: `${BASE_URL}/perfumes` },
+      { '@type': 'ListItem', position: 3, name: perfume.brand_name, item: perfume.brand_slug ? `${BASE_URL}/brands/${perfume.brand_slug}` : `${BASE_URL}/brands` },
+      { '@type': 'ListItem', position: 4, name: perfume.variant_name, item: url },
+    ],
+  };
 
   return (
     <div className="min-h-screen bg-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       <PerfumeDetailClient
         perfume={data.perfume}

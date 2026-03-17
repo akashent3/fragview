@@ -9,14 +9,35 @@ import ShareButtons from '@/components/drydown/ShareButtons';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.fragview.com';
   const data = await getArticleBySlug(slug);
   if (!data) return { title: 'Article Not Found • The Drydown' };
-  
+
+  const { article } = data;
+  const url = `${BASE_URL}/drydown/${slug}`;
+  const title = `${article.title} — The Drydown | FragView`;
+  const description = article.excerpt || `Read "${article.title}" on The Drydown — FragView's fragrance editorial.`;
+
   return {
-    title: `${data.article.title} • The Drydown`,
-    description: data.article.excerpt,
+    title,
+    description,
+    alternates: { canonical: url },
     openGraph: {
-      images: [data.article.coverImage || ''],
+      title,
+      description,
+      url,
+      type: 'article',
+      publishedTime: article.publishedAt || article.createdAt,
+      authors: [article.author?.name || 'FragView'],
+      images: article.coverImage
+        ? [{ url: article.coverImage, width: 1200, height: 630, alt: article.title }]
+        : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: article.coverImage ? [article.coverImage] : [],
     },
   };
 }
@@ -42,8 +63,39 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     year: 'numeric' 
   });
 
+  // ── Article JSON-LD Schema (helps Google index articles + AI citations) ──
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.fragview.com';
+  const articleJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.title,
+    description: article.excerpt || '',
+    image: article.coverImage || undefined,
+    datePublished: article.publishedAt || article.createdAt,
+    dateModified: article.updatedAt || article.publishedAt || article.createdAt,
+    author: {
+      '@type': 'Person',
+      name: article.author?.name || 'FragView',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'FragView',
+      url: BASE_URL,
+      logo: { '@type': 'ImageObject', url: `${BASE_URL}/logo.svg` },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `${BASE_URL}/drydown/${slug}`,
+    },
+  };
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FFF9EF' }}>
+      {/* SEO: Article structured data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
       {/* Hero Section */}
       <section 
         className="relative w-full py-9"

@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -10,23 +11,24 @@ const faqs = [
   },
   {
     q: "2. Can I submit a perfume or brand suggestion?",
-    a: "Yes. If you think we’re missing something, you can submit a perfume and we’ll review it before adding it to the collection."
+    a: "Yes. If you think we're missing something, you can submit a perfume and we'll review it before adding it to the collection.",
+    link: { label: "Submit Perfume →", href: "/submit" }
   },
   {
     q: "3. Are the perfumes on Fragview for sale?",
-    a: "No. Fragview doesn’t sell perfumes. We help you discover and learn about them, so you can decide where and how you want to buy."
+    a: "No. Fragview doesn't sell perfumes. We help you discover and learn about them, so you can decide where and how you want to buy."
   },
   {
     q: "4. How do I find perfumes that suit me?",
-    a: "You can explore by brand, notes, mood, season, or personal preference. There’s no right path—just start with what feels familiar or interesting."
+    a: "You can explore by brand, notes, mood, season, or personal preference. There's no right path—just start with what feels familiar or interesting."
   },
   {
     q: "5. Is Fragview beginner-friendly?",
-    a: "Yes. You don’t need to know perfume terms or categories. Everything is written to be simple, human, and easy to understand—even if you’re just starting out."
+    a: "Yes. You don't need to know perfume terms or categories. Everything is written to be simple, human, and easy to understand—even if you're just starting out."
   },
   {
-    q: "6. What is “My Wardrobe”?",
-    a: "It’s your personal space to save perfumes you like, want to try, or want to remember. Think of it as a quiet shelf for your scent ideas."
+    q: '6. What is "My Wardrobe"?',
+    a: "It's your personal space to save perfumes you like, want to try, or want to remember. Think of it as a quiet shelf for your scent ideas."
   },
   {
     q: "7. How often is the perfume information updated?",
@@ -84,7 +86,7 @@ export default function ContactPage() {
                 style={{ fontFamily: 'Inter' }}
               >
                 We read, test, and talk about fragrances, so whether you have a question,
-                feedback, or just want to say hello, we’re always happy to hear from you.
+                feedback, or just want to say hello, we're always happy to hear from you.
               </p>
 
             </div>
@@ -133,11 +135,12 @@ export default function ContactPage() {
                     <div className="mt-3 text-lg text-fv-text-muted max-w-3xl">
                       {faq.a}
 
-                      {/* OPTIONAL LINK (like screenshot) */}
-                      <div className="mt-2 text-left">
-                        <a
-                          // href={faq.link}
-                          className="
+                      {/* OPTIONAL LINK — only renders when this FAQ has a link defined */}
+                      {faq.link && (
+                        <div className="mt-2 text-left">
+                          <Link
+                            href={faq.link.href}
+                            className="
         inline-block
         font-inter
         font-medium
@@ -145,14 +148,14 @@ export default function ContactPage() {
         text-[20px]
         leading-[28px]
         underline
-        underline-offset-1 cursor-pointer
+        underline-offset-1
       "
-                        >
-                          Submit Perfume →
-                        </a>
-                      </div>
+                          >
+                            {faq.link.label}
+                          </Link>
+                        </div>
+                      )}
                     </div>
-
                   )}
                 </div>
               );

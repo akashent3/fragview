@@ -1,6 +1,28 @@
+import type { Metadata } from 'next';
 import Link from "next/link";
 import { ArrowRight, Droplets, MapPin } from "lucide-react";
 import { ObjectId } from "mongodb";
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.fragview.com';
+
+// ── SEO Metadata ──────────────────────────────────────────────────────────────
+export const metadata: Metadata = {
+  title: 'Perfume Brands — Browse All Fragrance Houses | FragView',
+  description:
+    'Explore 500+ perfume brands on FragView — from niche houses like Byredo, Le Labo, and Maison Margiela to heritage brands like Chanel, Dior, and Creed. Discover each brand\'s full fragrance collection.',
+  alternates: { canonical: `${BASE_URL}/brands` },
+  openGraph: {
+    title: 'Perfume Brands — Browse All Fragrance Houses | FragView',
+    description: 'Explore 500+ fragrance houses on FragView — niche, mainstream, and luxury perfume brands with their full collections.',
+    url: `${BASE_URL}/brands`,
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Perfume Brands | FragView',
+    description: 'Browse 500+ perfume brands and explore their full fragrance collections on FragView.',
+  },
+};
 
 import BrandsClient from "./BrandsClient";
 import { loadBrands } from "./loaders";

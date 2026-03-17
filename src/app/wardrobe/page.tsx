@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Trash2,
@@ -134,6 +135,7 @@ const getAccordColor = (accordName: string): string => {
 const WardrobePage = () => {
   const { data: session, status } = useSession();
   const { open } = useAuthModal();
+  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<WardrobeEntryHydrated[]>([]);
@@ -169,11 +171,14 @@ const WardrobePage = () => {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      open({ mode: "signin", reason: "Access your wardrobe" });
+      // Redirect to homepage first so the user is never left on a blank page,
+      // then open the sign-in modal on top of the homepage.
+      router.replace("/");
+      open({ mode: "signin", reason: "Sign in to access your wardrobe" });
     } else if (status === "authenticated") {
       fetchData();
     }
-  }, [status, open]);
+  }, [status, open, router]);
 
   const getDbStatusForTab = (tab: string) => {
     const map: Record<string, string[]> = {

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Star,
   Calendar,
@@ -41,6 +42,7 @@ type TabId = "overview" | "reviews" | "achievements";
 const ProfilePage = () => {
   const { data: session, status } = useSession();
   const { open } = useAuthModal();
+  const router = useRouter();
   const [imgError, setImgError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -86,9 +88,12 @@ const ProfilePage = () => {
   // --- AUTH & FETCH ---
   useEffect(() => {
     if (status === "unauthenticated") {
+      // Redirect to homepage first so the user is never left on a blank page,
+      // then open the sign-in modal on top of the homepage.
+      router.replace("/");
       open({ mode: "signin", reason: "Sign in to view your profile" });
     }
-  }, [status, open]);
+  }, [status, open, router]);
   useEffect(() => {
     setVisibleActivityCount(5);
   }, [activityFilter]);

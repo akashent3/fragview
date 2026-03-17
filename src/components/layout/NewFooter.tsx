@@ -3,9 +3,23 @@
 import React from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useAuthModal } from "@/components/auth/AuthModal";
 
 const NewFooter = () => {
   const { data: session } = useSession();
+  const { open } = useAuthModal();
+
+  /**
+   * Guard for auth-required footer links.
+   * If the user is NOT signed in: block navigation and open the sign-in modal.
+   * If the user IS signed in: do nothing — Next.js Link handles navigation normally.
+   */
+  const requireAuth = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!session) {
+      e.preventDefault();
+      open({ mode: "signin", reason: "Sign in to access your account" });
+    }
+  };
 
   const scrollerTexts = [
     "Find your next scent",
@@ -162,24 +176,21 @@ const NewFooter = () => {
                 <div className="flex flex-col gap-4">
                   <Link
                     href="/profile"
+                    onClick={requireAuth}
                     className="font-[var(--font-inter)] font-normal text-base leading-6 text-white hover:text-white/80 transition-colors"
                   >
                     My Profile
                   </Link>
                   <Link
                     href="/wardrobe"
+                    onClick={requireAuth}
                     className="font-[var(--font-inter)] font-normal text-base leading-6 text-white hover:text-white/80 transition-colors"
                   >
                     My Wardrobe
                   </Link>
                   <Link
-                    href="/profile/reviews"
-                    className="font-[var(--font-inter)] font-normal text-base leading-6 text-white hover:text-white/80 transition-colors"
-                  >
-                    My Reviews
-                  </Link>
-                  <Link
                     href="/settings"
+                    onClick={requireAuth}
                     className="font-[var(--font-inter)] font-normal text-base leading-6 text-white hover:text-white/80 transition-colors"
                   >
                     Settings

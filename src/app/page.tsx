@@ -235,6 +235,26 @@ async function getHomePageData() {
   }
 }
 
+// ── SEO: Explicit home-page metadata (overrides root layout defaults) ─────────
+export const metadata = {
+  title: 'FragView — Perfume Reviews & Discovery',
+  description:
+    'Discover, review, and explore the world of fragrances with FragView — 10,000+ perfumes from 500+ brands, honest community reviews, scent notes, accords, and a personal fragrance wardrobe.',
+  alternates: { canonical: process.env.NEXT_PUBLIC_BASE_URL || 'https://www.fragview.com' },
+  openGraph: {
+    title: 'FragView — Perfume Reviews & Discovery',
+    description:
+      'Your modern fragrance discovery platform. Browse 10,000+ perfumes, read honest reviews, and build your personal scent wardrobe.',
+    url: process.env.NEXT_PUBLIC_BASE_URL || 'https://www.fragview.com',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'FragView — Perfume Reviews & Discovery',
+    description: 'Browse 10,000+ perfumes, read honest community reviews, and build your personal scent wardrobe.',
+  },
+};
+
 export const revalidate = 600; // ✅ PERF: 10 minutes — featured/trending are admin-managed, stale for 10 min is fine
 
 export default async function HomePage() {

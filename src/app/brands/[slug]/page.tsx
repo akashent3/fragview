@@ -6,11 +6,48 @@ export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const url = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.fragview.com'}/brands/${slug}`;
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.fragview.com';
+  const url = `${BASE_URL}/brands/${slug}`;
+
+  // Load brand data for richer metadata
+  let brandName = slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  let perfumeCount = 0;
+  let brandDescription = '';
+
+  try {
+    const { getMongoDb } = await import('@/lib/mongodb');
+    const db = await getMongoDb();
+    const brand = await db.collection('brands').findOne(
+      { slug },
+      { projection: { name: 1, perfumes_count: 1, description: 1 } }
+    );
+    if (brand) {
+      brandName = brand.name || brandName;
+      perfumeCount = brand.perfumes_count || 0;
+      brandDescription = brand.description || '';
+    }
+  } catch { /* non-blocking — fallback to slug-derived name */ }
+
+  const title = `${brandName} Perfumes — Fragrance Collection | FragView`;
+  const description = brandDescription
+    ? `${brandDescription.slice(0, 140)} | FragView`
+    : `Explore all ${perfumeCount > 0 ? `${perfumeCount}+ ` : ''}${brandName} fragrances on FragView — detailed reviews, notes, accords, and ratings for every ${brandName} perfume.`;
+
   return {
-    title: `Brand: ${slug} | FragView`,
-    description: `Explore perfumes by ${slug} on FragView: fragrance listings, filters and more.`,
+    title,
+    description,
     alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
   };
 }
 

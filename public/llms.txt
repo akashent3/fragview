@@ -1,0 +1,37 @@
+# FragView — Perfume Reviews & Discovery
+> FragView is a modern fragrance discovery and review platform where users can explore thousands of perfumes, read detailed reviews, discover new scents, and manage a personal fragrance wardrobe.
+
+## What is FragView?
+FragView is a community-driven perfume review website. It provides detailed fragrance profiles including scent notes, accords, longevity, sillage, ratings, and user reviews. Users can build a personal wardrobe of fragrances they own, love, or want to try.
+
+## Core Features
+- **Perfume Discovery**: Browse and search 10,000+ fragrances from 500+ brands
+- **Fragrance Reviews**: Read and write honest community reviews with star ratings
+- **Personal Wardrobe**: Save and organize fragrances into personal collections
+- **Brand Explorer**: Explore fragrance houses and their complete collections
+- **The Drydown**: Editorial fragrance content — articles, stories, and industry news
+- **Discover**: Trending, top-rated, and seasonal fragrance recommendations
+- **Smart Search**: Filter by brand, gender, accord, rating, longevity, and sillage
+
+## Key Pages
+- [Home](https://www.fragview.com): Main hub with featured and trending fragrances
+- [All Perfumes](https://www.fragview.com/perfumes): Browse and filter the full fragrance catalog
+- [Brands](https://www.fragview.com/brands): Browse all fragrance brands and houses
+- [The Drydown](https://www.fragview.com/drydown): Editorial fragrance articles and stories
+- [Discover](https://www.fragview.com/discover): Trending and curated fragrance recommendations
+- [Search](https://www.fragview.com/search): Advanced fragrance search with filters
+- [Contact](https://www.fragview.com/contact): Contact the FragView team
+
+## Data & Content
+FragView contains:
+- 10,000+ fragrance listings with notes, accords, concentration, gender, and descriptions
+- 500+ perfume brands including niche houses and heritage classics
+- Community reviews with detailed ratings on longevity, sillage, and scent profile
+- Editorial articles on fragrance culture, style, and how to wear scent
+- Structured product data with Schema.org markup (Product, AggregateRating)
+
+## About
+FragView is a fragrance-focused web application built with Next.js. It is designed to help perfume enthusiasts make informed purchasing decisions without advertising pressure. All content is community-generated or editorially curated.
+
+## Optional: Full Documentation
+- [Full API/Content reference](https://www.fragview.com/llms-full.txt)

@@ -14,15 +14,24 @@ import ApplyButton from "@/components/drydown/ApplyButton";
 import CatagoryTabs from "@/components/drydown/CatagoryTabs";
 import Image from "next/image";
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.fragview.com';
+
 export const metadata = {
-  title: "The Drydown • Editorial | Fragview",
+  title: "The Drydown — Fragrance Editorial & Stories | FragView",
   description:
-    "Curated fragrance stories, reviews, and industry news from expert editors.",
+    "Read curated fragrance stories, expert reviews, brand deep-dives, and industry news on The Drydown — FragView's editorial section. Discover how perfumes are made, worn, and experienced.",
+  alternates: { canonical: `${BASE_URL}/drydown` },
   openGraph: {
-    title: "The Drydown - FragView Editorial",
+    title: "The Drydown — Fragrance Editorial & Stories | FragView",
     description:
-      "Deep dives, industry news, and curated stories from the world of fragrance.",
+      "Curated fragrance articles, brand stories, and expert reviews. Explore The Drydown — FragView's editorial section.",
+    url: `${BASE_URL}/drydown`,
     type: "website",
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "The Drydown — Fragrance Editorial | FragView",
+    description: "Fragrance stories, brand deep-dives, and expert reviews on The Drydown by FragView.",
   },
 };
 

@@ -72,7 +72,9 @@ export default withAuth(
           pathname === '/sitemap.xml' ||
           pathname === '/robots.txt' ||
           pathname === '/llms.txt' ||
-          pathname === '/llms-full.txt'
+          pathname === '/llms-full.txt' ||
+          pathname === '/sitemap-index' ||
+          pathname.startsWith('/sitemap-perfumes/')
         ) {
           return true;
         }

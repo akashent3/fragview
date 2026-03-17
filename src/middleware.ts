@@ -68,7 +68,11 @@ export default withAuth(
           pathname.startsWith('/drydown') ||
           pathname.startsWith('/_next') ||
           pathname.startsWith('/static') ||
-          pathname.startsWith('/contact')
+          pathname.startsWith('/contact') ||
+          pathname === '/sitemap.xml' ||
+          pathname === '/robots.txt' ||
+          pathname === '/llms.txt' ||
+          pathname === '/llms-full.txt'
         ) {
           return true;
         }

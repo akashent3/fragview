@@ -86,7 +86,7 @@ export default function ContactPage() {
                 style={{ fontFamily: 'Inter' }}
               >
                 We read, test, and talk about fragrances, so whether you have a question,
-                feedback, or just want to say hello, we're always happy to hear from you.
+                feedback, or just want to say hello, we&apos;re always happy to hear from you.
               </p>
 
             </div>

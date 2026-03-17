@@ -4,8 +4,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.fragview.com';
-const CHUNK_SIZE = 45000;
-const MAX_CHUNK  = 9999; // sanity cap — supports up to ~450 million perfumes
+const CHUNK_SIZE = 2000;
+const MAX_CHUNK  = 9999; // sanity cap — supports up to ~90 million perfumes
 
 /**
  * Convert any MongoDB date value to YYYY-MM-DD (W3C date format required by Google sitemaps).

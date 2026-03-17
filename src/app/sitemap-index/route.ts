@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const BASE_URL   = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.fragview.com';
-const CHUNK_SIZE = 45000;
+const CHUNK_SIZE = 2000;
 
 export async function GET() {
   // Compute today's date fresh on every request (not stale from module init)

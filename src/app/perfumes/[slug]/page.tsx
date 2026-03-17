@@ -139,7 +139,7 @@ export default async function PerfumeDetailPage({
     brand: {
       '@type': 'Brand',
       name: perfume.brand_name,
-      url: perfume.brand_slug ? `${BASE_URL}/brands/${perfume.brand_slug}` : undefined,
+      url: (perfume as any).brand_slug ? `${BASE_URL}/brands/${(perfume as any).brand_slug}` : undefined,
     },
     description:
       perfume.description ||
@@ -171,7 +171,7 @@ export default async function PerfumeDetailPage({
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home',     item: BASE_URL },
       { '@type': 'ListItem', position: 2, name: 'Perfumes', item: `${BASE_URL}/perfumes` },
-      { '@type': 'ListItem', position: 3, name: perfume.brand_name, item: perfume.brand_slug ? `${BASE_URL}/brands/${perfume.brand_slug}` : `${BASE_URL}/brands` },
+      { '@type': 'ListItem', position: 3, name: perfume.brand_name, item: (perfume as any).brand_slug ? `${BASE_URL}/brands/${(perfume as any).brand_slug}` : `${BASE_URL}/brands` },
       { '@type': 'ListItem', position: 4, name: perfume.variant_name, item: url },
     ],
   };

@@ -406,7 +406,7 @@ function AuthModalUI({
                         color: "#211F1C",
                       }}
                     >
-                      Full Name
+                      Username
                     </label>
                     <input
                       value={name}

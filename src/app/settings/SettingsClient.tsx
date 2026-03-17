@@ -64,7 +64,7 @@ export default function SettingsClient({ user }: Props) {
     setMessage(null);
 
     try {
-      const res = await fetch("/api/settings/privacy", {
+      const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

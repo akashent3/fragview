@@ -122,8 +122,7 @@ export default function RichTextEditor({ content, onChange }: Props) {
 
   const addVideo = () => {
     const url = prompt('Enter YouTube or Vimeo URL:');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (url) (editor.chain().focus() as any).setYoutubeVideo({ src: url }).run();
+    if (url) (editor.chain().focus() as any).setYoutubeVideo({ src: url }).run(); // any: Youtube cmd not in TipTap chain types
   };
 
   const insertTable = () => {
@@ -131,8 +130,7 @@ export default function RichTextEditor({ content, onChange }: Props) {
   };
 
   const toggleCallout = () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const chain = editor.chain().focus() as any;
+    const chain = editor.chain().focus() as any; // any: lift/wrapIn not in TipTap chain types
     if (editor.isActive('callout')) {
       chain.lift('callout').run();
     } else {

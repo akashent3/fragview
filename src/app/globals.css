@@ -225,4 +225,122 @@ a {
   background: transparent;
 }
 
+/* ── Drydown Article Editor — Rich Content Styles ───────────────────────────
+   These styles apply both inside the TipTap editor (admin) and on the public
+   article page where content is rendered via dangerouslySetInnerHTML.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Pull Quote / Callout Block */
+.callout-block {
+  border-left: 4px solid #B28845;
+  background-color: #FFF9EF;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+  color: #4A4946;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+/* Tables */
+.prose table,
+[class*="prose"] table,
+.tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.5rem 0;
+  font-size: 0.95rem;
+}
+.prose table th,
+[class*="prose"] table th,
+.tiptap table th {
+  background-color: #ECE0CF;
+  color: #211F1C;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border: 1px solid #D9CDB9;
+  text-align: left;
+}
+.prose table td,
+[class*="prose"] table td,
+.tiptap table td {
+  padding: 0.65rem 1rem;
+  border: 1px solid #E2E1E1;
+  color: #4A4946;
+  vertical-align: top;
+}
+.prose table tr:nth-child(even),
+[class*="prose"] table tr:nth-child(even),
+.tiptap table tr:nth-child(even) {
+  background-color: #FFF9EF;
+}
+
+/* Inline Code — styled as a fragrance note tag */
+.prose code:not(pre > code),
+[class*="prose"] code:not(pre > code),
+.tiptap code:not(pre > code) {
+  background-color: #ECE0CF;
+  color: #695129;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+/* Code Block */
+.prose pre,
+[class*="prose"] pre,
+.tiptap pre {
+  background-color: #211F1C;
+  color: #FFF9EF;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Horizontal Rule */
+.prose hr,
+[class*="prose"] hr,
+.tiptap hr {
+  border: none;
+  border-top: 2px solid #E2E1E1;
+  margin: 2rem 0;
+}
+
+/* YouTube / Video Embed — responsive wrapper */
+.tiptap-youtube-wrapper,
+.ProseMirror div[data-youtube-video],
+iframe[src*="youtube.com"],
+iframe[src*="youtu.be"],
+iframe[src*="vimeo.com"] {
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+  display: block;
+}
+
+/* TipTap selected cell highlight (editor only) */
+.tiptap .selectedCell::after {
+  z-index: 2;
+  position: absolute;
+  content: '';
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(178, 136, 69, 0.15);
+  pointer-events: none;
+}
+.tiptap table td,
+.tiptap table th {
+  position: relative;
+}
+
 

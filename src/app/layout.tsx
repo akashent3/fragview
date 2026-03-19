@@ -141,8 +141,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               logo: `${BASE_URL}/logo.svg`,
               sameAs: [
                 // Add your social profiles here
-                // 'https://twitter.com/fragview',
-                // 'https://instagram.com/fragview',
+                'https://x.com/fragview',
+                'https://www.instagram.com/fragviewofficial',
               ],
               contactPoint: {
                 '@type': 'ContactPoint',

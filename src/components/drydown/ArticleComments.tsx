@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useAuthModal } from '@/components/auth/AuthModal';
 import { postArticleComment, deleteArticleComment } from '@/app/actions/drydown-comments';
 import { formatDistanceToNow } from 'date-fns';
-import { Trash2, Loader2, ThumbsUp, ThumbsDown, ChevronDown, ArrowRight } from 'lucide-react';
+import { Trash2, Loader2, ChevronDown, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Comment {
@@ -251,35 +251,6 @@ export default function ArticleComments({ articleId, initialComments }: Props) {
                     {comment.content}
                   </p>
 
-                  {/* Footer - Helpful */}
-                  <div className="flex items-center gap-4">
-                    <span 
-                      className="text-[16px] leading-[24px] lg:text-[18px] lg:leading-[26px]"
-                      style={{ fontFamily: "'Inter', sans-serif", color: '#737270' }}
-                    >
-                      Helpful?
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button className="flex items-center gap-1 hover:opacity-70 transition-opacity">
-                        <ThumbsUp className="w-5 h-5 lg:w-6 lg:h-6" style={{ color: '#737270' }} />
-                        <span 
-                          className="text-[16px] leading-[24px] lg:text-[18px] lg:leading-[26px]"
-                          style={{ fontFamily: "'Inter', sans-serif", color: '#737270' }}
-                        >
-                          12
-                        </span>
-                      </button>
-                      <button className="flex items-center gap-1 hover:opacity-70 transition-opacity">
-                        <ThumbsDown className="w-5 h-5 lg:w-6 lg:h-6" style={{ color: '#737270' }} />
-                        <span 
-                          className="text-[16px] leading-[24px] lg:text-[18px] lg:leading-[26px]"
-                          style={{ fontFamily: "'Inter', sans-serif", color: '#737270' }}
-                        >
-                          0
-                        </span>
-                      </button>
-                    </div>
-                  </div>
                 </div>
               </div>
             ))

@@ -62,9 +62,10 @@ const calculateBadges = (user: any, stats: { reviewCount: number, photoReviewCou
 
 export async function loadPublicProfile(username: string, currentUserId?: string) {
   try {
-    // 1. Fetch user by username
-    const userRecord = await prisma.user.findUnique({ 
-      where: { username: username },
+    // 1. Fetch user by username (trim to handle DB entries with trailing spaces)
+    const trimmed = username.trim();
+    const userRecord = await prisma.user.findFirst({
+      where: { username: { in: [username, trimmed, trimmed + ' ', trimmed + '  '] } },
       select: {
         id: true,
         username: true,

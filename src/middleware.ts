@@ -46,6 +46,7 @@ export default withAuth(
           '/api/similar-fragrances',            // ✅ ADDED (GET only - view similar)
           '/api/notifications/count',           // ✅ ADDED (for bell icon)
           '/api/brands/by-letter',              // ✅ ADDED (brands pagination)
+          '/api/cron',                          // ✅ ADDED (cron jobs - auth handled internally)
         ];
 
         // Check if pathname starts with any public API route

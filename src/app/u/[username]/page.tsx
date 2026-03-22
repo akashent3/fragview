@@ -7,7 +7,8 @@ import PublicProfileClient from './PublicProfileClient';
 export const revalidate = 60; // Revalidate every minute
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
-  const { username } = await params;
+  const { username: rawUsername } = await params;
+  const username = decodeURIComponent(rawUsername);
   const data = await loadPublicProfile(username);
   if (!data) return {};
   
@@ -21,7 +22,8 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   const session = await getServerSession(authOptions);
   const currentUserId = session?.user?. id;
   
-  const { username } = await params;
+  const { username: rawUsername } = await params;
+  const username = decodeURIComponent(rawUsername);
   const data = await loadPublicProfile(username, currentUserId);
   
   if (!data) {

@@ -214,7 +214,7 @@ export default async function DrydownPage({
                     <div className="w-full h-px bg-[#E2E1E1]" />
                     <div className="flex items-center justify-between gap-4 lg:gap-6 flex-wrap">
                       {/* Author */}
-                      <div className="flex items-center gap-[3px] ">
+                      <div className="flex items-center gap-[3px]">
                         <svg
                           width="24"
                           height="24"
@@ -238,9 +238,18 @@ export default async function DrydownPage({
                             strokeLinecap="round"
                           />
                         </svg>
-                        <span className="font-inter font-normal text-sm lg:text-base leading-5 lg:leading-6 text-[#4A4946]">
-                          {featured.author?.name || "Fragview"}
-                        </span>
+                        {featured.author?.username ? (
+                          <Link
+                            href={`/u/${featured.author.username}`}
+                            className="font-inter font-normal text-sm lg:text-base leading-5 lg:leading-6 text-[#4A4946] hover:underline"
+                          >
+                            {featured.author.name}
+                          </Link>
+                        ) : (
+                          <span className="font-inter font-normal text-sm lg:text-base leading-5 lg:leading-6 text-[#4A4946]">
+                            Fragview
+                          </span>
+                        )}
                       </div>
                       {/* Read Time */}
                       <div className="flex items-center gap-[3px]">
@@ -306,87 +315,97 @@ export default async function DrydownPage({
           <div className="mx-auto max-w-[1296px]">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recent.map((article) => (
-                <Link
-                  href={`/drydown/${article.slug}`}
-                  key={article.id}
-                  className="group"
-                >
+                <div key={article.id} className="group">
                   <div className="bg-[#FFF4E3] rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-300 h-full flex flex-col">
-                    {/* Image */}
-                    <div className="relative h-[200px] lg:h-[240px] overflow-hidden">
-                      {article.coverImage ? (
-                        <img
-                          src={article.coverImage}
-                          alt={article.title}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-[#ECE0CF] flex items-center justify-center">
-                          <span className="font-hedvig text-xl text-[#695129]">
-                            Fragview
+                    {/* Article link wraps image + title + excerpt */}
+                    <Link href={`/drydown/${article.slug}`} className="flex flex-col flex-1">
+                      {/* Image */}
+                      <div className="relative h-[200px] lg:h-[240px] overflow-hidden flex-shrink-0">
+                        {article.coverImage ? (
+                          <img
+                            src={article.coverImage}
+                            alt={article.title}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-[#ECE0CF] flex items-center justify-center">
+                            <span className="font-hedvig text-xl text-[#695129]">
+                              Fragview
+                            </span>
+                          </div>
+                        )}
+                        {/* Badges */}
+                        <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+                          <span className="px-[10px] py-1 bg-[#ECE0CF] rounded-[24px] font-inter font-medium text-sm leading-5 text-[#695129]">
+                            {article.category}
+                          </span>
+                          <span className="px-[10px] py-1 bg-[#ECE0CF] rounded-[24px] font-inter font-medium text-sm leading-5 text-[#695129]">
+                            {new Date(
+                              article.publishedAt || article.createdAt
+                            ).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
                           </span>
                         </div>
-                      )}
-                      {/* Badges */}
-                      <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-                        <span className="px-[10px] py-1 bg-[#ECE0CF] rounded-[24px] font-inter font-medium text-sm leading-5 text-[#695129]">
-                          {article.category}
-                        </span>
-                        <span className="px-[10px] py-1 bg-[#ECE0CF] rounded-[24px] font-inter font-medium text-sm leading-5 text-[#695129]">
-                          {new Date(
-                            article.publishedAt || article.createdAt
-                          ).toLocaleDateString("en-GB", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </span>
                       </div>
-                    </div>
 
-                    {/* Content */}
-                    <div className="p-6 flex-1 flex flex-col gap-4">
-                      <h3 className="font-averia font-normal text-xl lg:text-2xl leading-8 text-[#211F1C] group-hover:text-[#8A6A35] transition-colors line-clamp-2">
-                        {article.title}
-                      </h3>
+                      {/* Title + Excerpt */}
+                      <div className="px-6 pt-6 flex flex-col gap-4 flex-1">
+                        <h3 className="font-averia font-normal text-xl lg:text-2xl leading-8 text-[#211F1C] group-hover:text-[#8A6A35] transition-colors line-clamp-2">
+                          {article.title}
+                        </h3>
+                        <p className="font-inter font-normal text-base leading-6 text-[#4A4946] line-clamp-3 flex-1">
+                          {article.excerpt}
+                        </p>
+                      </div>
+                    </Link>
 
-                      <p className="font-inter font-normal text-base leading-6 text-[#4A4946] line-clamp-3 flex-1">
-                        {article.excerpt}
-                      </p>
-
-                      {/* Divider + Meta */}
-                      <div className="mt-auto flex flex-col gap-4">
+                    {/* Meta — outside the article link to allow author link */}
+                    <div className="px-6 pb-6 pt-4">
+                      <div className="flex flex-col gap-4">
                         <div className="w-full h-px bg-[#E2E1E1]" />
                         <div className="flex items-center justify-between">
                           {/* Author */}
-                          <div className="flex items-center gap-[3px]">
-                            <svg
-                              width="24"
-                              height="24"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                              aria-hidden="true"
+                          {article.author?.username ? (
+                            <Link
+                              href={`/u/${article.author.username}`}
+                              className="flex items-center gap-[3px] hover:underline"
                             >
-                              <circle
-                                cx="12"
-                                cy="8"
-                                r="4"
-                                stroke="#4A4946"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                              />
-                              <path
-                                d="M4 20C4 17 8 14 12 14C16 14 20 17 20 20"
-                                stroke="#4A4946"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                              />
-                            </svg>
-                            <span className="font-inter font-normal text-base leading-6 text-[#4A4946]">
-                              {article.author?.name || "Fragview"}
-                            </span>
-                          </div>
+                              <svg
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                aria-hidden="true"
+                              >
+                                <circle cx="12" cy="8" r="4" stroke="#4A4946" strokeWidth="2" strokeLinecap="round" />
+                                <path d="M4 20C4 17 8 14 12 14C16 14 20 17 20 20" stroke="#4A4946" strokeWidth="2" strokeLinecap="round" />
+                              </svg>
+                              <span className="font-inter font-normal text-base leading-6 text-[#4A4946]">
+                                {article.author.name}
+                              </span>
+                            </Link>
+                          ) : (
+                            <div className="flex items-center gap-[3px]">
+                              <svg
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                aria-hidden="true"
+                              >
+                                <circle cx="12" cy="8" r="4" stroke="#4A4946" strokeWidth="2" strokeLinecap="round" />
+                                <path d="M4 20C4 17 8 14 12 14C16 14 20 17 20 20" stroke="#4A4946" strokeWidth="2" strokeLinecap="round" />
+                              </svg>
+                              <span className="font-inter font-normal text-base leading-6 text-[#4A4946]">
+                                Fragview
+                              </span>
+                            </div>
+                          )}
                           {/* Read Time */}
                           <div className="flex items-center gap-[3px]">
                             <svg
@@ -397,20 +416,8 @@ export default async function DrydownPage({
                               xmlns="http://www.w3.org/2000/svg"
                               aria-hidden="true"
                             >
-                              <circle
-                                cx="12"
-                                cy="12"
-                                r="9"
-                                stroke="#4A4946"
-                                strokeWidth="2"
-                              />
-                              <path
-                                d="M12 7V12L15 15"
-                                stroke="#4A4946"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
+                              <circle cx="12" cy="12" r="9" stroke="#4A4946" strokeWidth="2" />
+                              <path d="M12 7V12L15 15" stroke="#4A4946" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                             <span className="font-inter font-normal text-base leading-6 text-[#4A4946]">
                               {article.readTime || "5 min read"}
@@ -420,7 +427,7 @@ export default async function DrydownPage({
                       </div>
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
 

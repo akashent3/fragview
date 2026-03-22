@@ -5,6 +5,7 @@ import './globals.css';
 import RootProviders from './providers';
 import Navbar from '@/components/layout/Navbar';
 import NewFooter from '@/components/layout/NewFooter';
+import ScrollToTopButton from '@/components/ui/ScrollToTopButton';
 // Old Footer commented out, using NewFooter with Pre-Footer section
 // import Footer from '@/components/layout/Footer';
 
@@ -181,6 +182,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Navbar />
             <main className="pt-[108px] lg:pt-[119px]">{children}</main>
             <NewFooter />
+            <ScrollToTopButton />
           </div>
         </RootProviders>
       </body>

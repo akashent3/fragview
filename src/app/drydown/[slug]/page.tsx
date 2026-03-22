@@ -2,6 +2,7 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
+import { toKebab } from '@/lib/slug';
 import { getArticleBySlug } from '@/app/actions/drydown';
 import { getArticleComments } from '@/app/actions/drydown-comments';
 import ArticleComments from '@/components/drydown/ArticleComments';
@@ -124,21 +125,22 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             {/* Badges Row */}
             <div className="flex items-center gap-4 lg:gap-6">
               {/* Category Badge */}
-              <div 
-                className="inline-flex items-center justify-center px-2.5 py-1 rounded-3xl"
+              <Link
+                href={`/drydown?category=${encodeURIComponent(article.category)}`}
+                className="inline-flex items-center justify-center px-2.5 py-1 rounded-3xl hover:opacity-80 transition-opacity"
                 style={{ backgroundColor: '#ECE0CF' }}
               >
-                <span 
+                <span
                   className="text-[12px] leading-[18px] lg:text-[14px] lg:leading-[20px]"
-                  style={{ 
-                    fontFamily: "'Inter', sans-serif", 
-                    fontWeight: 500, 
-                    color: '#695129' 
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontWeight: 500,
+                    color: '#695129'
                   }}
                 >
                   {article.category}
                 </span>
-              </div>
+              </Link>
               
               {/* Date Badge */}
               <div 
@@ -173,15 +175,21 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </h1>
               
               {/* Author and Read Time */}
-              <p 
+              <p
                 className="text-[14px] leading-[20px] sm:text-[16px] sm:leading-[24px] lg:text-[20px] lg:leading-[28px]"
-                style={{ 
-                  fontFamily: "'Inter', sans-serif", 
-                  fontWeight: 400, 
-                  color: '#FFFFFF' 
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontWeight: 400,
+                  color: '#FFFFFF'
                 }}
               >
-                {article.author.name} • {article.readTime}
+                <Link
+                  href={`/u/${article.author.username}`}
+                  className="hover:underline"
+                  style={{ color: '#FFFFFF' }}
+                >
+                  {article.author.name}
+                </Link>{' '}• {article.readTime}
               </p>
             </div>
           </div>
@@ -232,31 +240,32 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 lg:gap-12">
                 {/* Tagged In */}
                 <div className="flex items-center gap-3">
-                  <span 
+                  <span
                     className="text-[18px] leading-[28px] lg:text-[20px] lg:leading-[30px]"
-                    style={{ 
-                      fontFamily: "'Inter', sans-serif", 
-                      fontWeight: 400, 
-                      color: '#211F1C' 
+                    style={{
+                      fontFamily: "'Inter', sans-serif",
+                      fontWeight: 400,
+                      color: '#211F1C'
                     }}
                   >
                     Tagged in
                   </span>
-                  <div 
-                    className="inline-flex items-center justify-center px-2.5 py-1 rounded-3xl"
+                  <Link
+                    href={`/drydown?category=${encodeURIComponent(article.category)}`}
+                    className="inline-flex items-center justify-center px-2.5 py-1 rounded-3xl hover:opacity-80 transition-opacity"
                     style={{ backgroundColor: '#ECE0CF' }}
                   >
-                    <span 
+                    <span
                       className="text-[14px] leading-[20px]"
-                      style={{ 
-                        fontFamily: "'Inter', sans-serif", 
-                        fontWeight: 500, 
-                        color: '#695129' 
+                      style={{
+                        fontFamily: "'Inter', sans-serif",
+                        fontWeight: 500,
+                        color: '#695129'
                       }}
                     >
                       {article.category}
                     </span>
-                  </div>
+                  </Link>
                 </div>
 
                 {/* Share Buttons */}
@@ -286,15 +295,21 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                       >
                         About the author
                       </span>
-                      <h3 
+                      <h3
                         className="text-[28px] leading-[36px] lg:text-[40px] lg:leading-[48px]"
-                        style={{ 
-                          fontFamily: "'Hedvig Letters Serif', serif", 
-                          fontWeight: 400, 
-                          color: '#211F1C' 
+                        style={{
+                          fontFamily: "'Hedvig Letters Serif', serif",
+                          fontWeight: 400,
+                          color: '#211F1C'
                         }}
                       >
-                        {article.author.name}
+                        <Link
+                          href={`/u/${article.author.username}`}
+                          className="hover:underline"
+                          style={{ color: '#211F1C' }}
+                        >
+                          {article.author.name}
+                        </Link>
                       </h3>
                     </div>
                     {/* Bio */}
@@ -375,16 +390,17 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                           >
                             {mentionedPerfumes[0].variant_name}
                           </h4>
-                          <p 
-                            className="text-[14px] leading-[20px] lg:text-[16px] lg:leading-[24px]"
-                            style={{ 
-                              fontFamily: "'Inter', sans-serif", 
-                              fontWeight: 400, 
-                              color: '#4A4946' 
+                          <Link
+                            href={`/brands/${toKebab(mentionedPerfumes[0].brand_name)}`}
+                            className="text-[14px] leading-[20px] lg:text-[16px] lg:leading-[24px] hover:underline"
+                            style={{
+                              fontFamily: "'Inter', sans-serif",
+                              fontWeight: 400,
+                              color: '#4A4946'
                             }}
                           >
                             {mentionedPerfumes[0].brand_name}
-                          </p>
+                          </Link>
                         </div>
                         {/* Accords */}
                         {mentionedPerfumes[0].accords && mentionedPerfumes[0].accords.length > 0 && (

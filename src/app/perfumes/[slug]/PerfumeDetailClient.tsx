@@ -2,7 +2,7 @@
 import React, { useState, useTransition, useRef, useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
-import { LogIn, Sparkles, X, Clock } from "lucide-react";
+import { LogIn, Sparkles, X, Clock, AtSign } from "lucide-react";
 import SimilarFragrances from "@/components/ui/SimilarFragrances";
 import ReviewActionButtons from "@/components/reviews/ReviewActionButtons";
 import MentionTextarea from "@/components/ui/MentionTextarea";
@@ -13,6 +13,7 @@ import EditReviewModal from "@/components/reviews/EditReviewModal";
 import { parseReviewMentions } from "@/lib/parseMentions";
 import AddToWardrobeModal from "@/components/perfumes/AddToWardrobeModal";
 import AskFragviewPanel from "@/components/reviews/AskFragviewPanel";
+import FeatureDiscoveryBanner from "@/components/ui/FeatureDiscoveryBanner";
 
 // INLINE DEBOUNCE HELPER
 function debounceFunc<T extends (...args: any[]) => any>(
@@ -1552,6 +1553,21 @@ export default function PerfumeDetailClient({
       <section className="bg-white ">
         <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-8 md:px-12 lg:px-[72px] py-6">
           <div className="flex flex-col gap-8">
+            {/* AskFragview AI discovery hint */}
+            <FeatureDiscoveryBanner
+              storageKey="fv_hint_askfragview"
+              icon={<Sparkles className="h-5 w-5" />}
+              heading="Ask our AI anything about this fragrance."
+              description="Use AskFragview to get instant AI answers — longevity, occasions, comparisons, and more."
+              steps={[
+                "Scroll down to the Write a Review box below.",
+                "Start your text with @askfragview",
+                "Type your question — e.g. @askfragview how does this wear in summer?",
+                "Submit the form. The AI answer streams in instantly.",
+              ]}
+              ctaText="Learn more →"
+              ctaHref="/features#askfragview-ai"
+            />
             {/* Header Row */}
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
               {/* Title Block */}
@@ -1990,6 +2006,19 @@ export default function PerfumeDetailClient({
                     Use the sliders above to rate. Write your review below:
                   </p>
 
+                  <FeatureDiscoveryBanner
+                    storageKey="fv_hint_review_tags"
+                    icon={<AtSign className="h-5 w-5" />}
+                    heading="Tip: Tag members and perfumes in your review."
+                    description="Mention people and reference fragrances directly in your review text."
+                    steps={[
+                      "Type @ to mention a member — a dropdown appears as you type.",
+                      "Type # to reference another perfume — another dropdown appears.",
+                      "Select from the list and continue writing.",
+                      "They receive a notification when you post.",
+                    ]}
+                  />
+
                   <MentionTextarea
                     name="text"
                     value={reviewText}
@@ -1997,6 +2026,19 @@ export default function PerfumeDetailClient({
                     placeholder="Share your experience... Type @ to mention users and # to reference perfumes."
                     className="w-full min-h-[176px] rounded-xl border border-[#C4C4C3] px-4 py-4 focus:ring-2 focus:ring-[#8A6A35] focus:border-transparent outline-none bg-white font-inter text-[16px] leading-[24px] text-[#211F1C] placeholder:text-[#737270]"
                   />
+
+                  {/* AskFragview inline hint */}
+                  <div className="flex items-center gap-3 rounded-xl border border-[#ECE0CF] bg-[#FFF9EF] px-4 py-3">
+                    <Sparkles className="h-5 w-5 shrink-0 text-[#8A6A35]" aria-hidden="true" />
+                    <p className="font-inter text-[13px] sm:text-[14px] leading-[20px] text-[#4A4946]">
+                      <span className="font-semibold text-[#211F1C]">AI tip:</span>{" "}
+                      Type{" "}
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-white border border-[#E2E1E1] font-inter text-[12px] font-medium text-[#211F1C]">
+                        @askfragview
+                      </span>{" "}
+                      followed by your question in the review box above to get an AI-powered answer about this perfume.
+                    </p>
+                  </div>
 
                   <div className="flex flex-col gap-3">
                     <label className="font-inter font-medium text-[16px] leading-[24px] text-[#211F1C]">

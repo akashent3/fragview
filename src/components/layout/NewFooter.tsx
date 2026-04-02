@@ -23,9 +23,13 @@ const NewFooter = () => {
 
   const scrollerTexts = [
     "Find your next scent",
+    "Ask AI about any fragrance",
     "100% honest reviews",
+    "Export your wardrobe to PDF or CSV",
     "Discover range of scents",
+    "Follow brands you love",
     "Backed by real experience",
+    "Read The Drydown editorials",
     "Choose with context",
   ];
 
@@ -221,6 +225,12 @@ const NewFooter = () => {
                     className="font-[var(--font-inter)] font-normal text-base leading-6 text-white hover:text-white/80 transition-colors"
                   >
                     Drydown
+                  </Link>
+                  <Link
+                    href="/features"
+                    className="font-[var(--font-inter)] font-normal text-base leading-6 text-white hover:text-white/80 transition-colors"
+                  >
+                    Features
                   </Link>
                 </div>
               </div>

@@ -8,6 +8,7 @@ import { ObjectId } from "mongodb";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { getArticles } from "@/app/actions/drydown";
+import FeatureSpotlightSection from "@/components/home/FeatureSpotlightSection";
 
 const PopularPicksSection = dynamic(
   () => import("@/components/home/PopularPicksSection"),
@@ -481,6 +482,9 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Feature Spotlight */}
+      <FeatureSpotlightSection />
 
       {/* Popular picks (Figma-style tabs + grid) */}
       <PopularPicksSection perfumes={data.featuredPerfumes} />

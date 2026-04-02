@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useAuthModal } from "@/components/auth/AuthModal";
 import Image from "next/image";
+import FeatureDiscoveryBanner from "@/components/ui/FeatureDiscoveryBanner";
 
 interface ProfileData {
   user: {
@@ -294,6 +295,25 @@ const filteredActivity = recentActivity.filter((activity) => {
 
   return (
     <div className=" ">
+      {/* Follow feature discovery hint — shown to signed-in users viewing someone else's profile */}
+      {isSignedIn && !privacy.isOwnProfile && (
+        <div className="mx-auto w-full max-w-[1440px] px-2 sm:px-8 md:px-12 lg:px-[72px] pt-4">
+          <FeatureDiscoveryBanner
+            storageKey="fv_hint_follow_user"
+            icon={<Users className="h-5 w-5" />}
+            heading="You can follow this collector."
+            description="Stay updated on their reviews, wardrobe activity, and discussions."
+            steps={[
+              "Click the Follow button below their profile name.",
+              "If their profile is private, your request is sent for approval.",
+              "Once approved, their activity appears in your feed.",
+              "You'll get notified when they post a review or update their collection.",
+            ]}
+            ctaText="Learn more →"
+            ctaHref="/features#follow-brands-users"
+          />
+        </div>
+      )}
       <div className="bg-fv-parchment">
       <div className="mx-auto w-full max-w-[1440px] px-2 sm:px-8 md:px-12 lg:px-[72px] py-6 relative z-10  overflow-hidden ">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10 max-lg:flex max-lg:flex-col max-lg:items-center max-lg:justify-center">

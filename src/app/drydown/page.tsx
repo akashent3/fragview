@@ -74,6 +74,19 @@ export default async function DrydownPage({
             The Drydown
           </h1>
 
+          {/* What is The Drydown — static editorial callout */}
+          <div className="w-full max-w-[720px] flex items-start gap-4 rounded-xl border border-[#ECE0CF] bg-white px-5 py-4">
+            <div className="mt-0.5 h-auto w-1 self-stretch rounded-full bg-[#8A6A35] shrink-0" />
+            <div className="flex flex-col gap-1">
+              <p className="font-hedvig text-[16px] leading-[24px] text-[#211F1C]">
+                Editorial fragrance writing — not listings, not ads.
+              </p>
+              <p className="font-inter text-[13px] leading-[20px] text-[#4A4946]">
+                The Drydown is FragView&apos;s editorial section. Curated stories about fragrances, brands, trends, and how we wear scent — written by the community, for the community.
+              </p>
+            </div>
+          </div>
+
           {/* Admin/Editor Manage Link */}
           {canManage && (
             <Link

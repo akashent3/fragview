@@ -20,7 +20,9 @@ import {
   Tag,
   ArrowRight,
   XIcon,
+  FolderOpen,
 } from "lucide-react";
+import FeatureDiscoveryBanner from "@/components/ui/FeatureDiscoveryBanner";
 import { useSession } from "next-auth/react";
 import { useAuthModal } from "@/components/auth/AuthModal";
 import WardrobeSearch from "@/components/wardrobe/WardrobeSearch";
@@ -315,6 +317,36 @@ const WardrobePage = () => {
         <div className="mx-auto max-w-[1440px]">
           {/* Featured brands (Trending Brands) */}
           <div className="px-2 sm:px-6 lg:px-[72px] py-5 flex flex-col sm:gap-12 gap-6">
+            {/* Discovery banners */}
+            <div className="flex flex-col gap-3">
+              <FeatureDiscoveryBanner
+                storageKey="fv_hint_wardrobe_export"
+                icon={<Download className="h-5 w-5" />}
+                heading="Export your entire collection to PDF or CSV."
+                description="Download your wardrobe for travel, gifting, or record-keeping in two steps."
+                steps={[
+                  "Click the Download button near the top of your collection.",
+                  "Choose PDF (formatted printable) or CSV (raw spreadsheet).",
+                  "Your file downloads to your device instantly.",
+                ]}
+                ctaText="Learn more →"
+                ctaHref="/features#export-wardrobe"
+              />
+              <FeatureDiscoveryBanner
+                storageKey="fv_hint_wardrobe_organise"
+                icon={<FolderOpen className="h-5 w-5" />}
+                heading="Organise your collection your way."
+                description="Use built-in subcategories or create your own — name them however you think."
+                steps={[
+                  "Pick a tab: My Bottles, Wishlist, or Past Bottles.",
+                  "Select a subcategory (Daily Wear, Date Night, Gift Idea, etc.).",
+                  "Long-press or hover any subcategory name to rename it.",
+                ]}
+                ctaText="Learn more →"
+                ctaHref="/features#organise-wardrobe"
+              />
+            </div>
+
             <div className="flex flex-col lg:flex-row lg:items-end gap-6 lg:gap-10">
               <div className="flex flex-col gap-1 flex-1">
                 <span className="font-hedvig text-[20px] leading-[28px] lg:text-[24px] lg:leading-[32px] text-[#8A6A35]">

@@ -17,13 +17,29 @@ import { useSession, signOut } from "next-auth/react";
 import SearchAutocomplete from "@/components/common/SearchAutocomplete";
 import TopbarActions from "./TopbarActions";
 
+const topMessages = [
+  "Explore the best of perfumes, all for free",
+  "Ask our AI anything about any fragrance — try AskFragview",
+  "Organise and export your scent collection with My Wardrobe",
+  "Follow brands and collectors to stay in the loop",
+  "Read The Drydown — editorial fragrance stories",
+];
+
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [messageIndex, setMessageIndex] = useState(0);
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const { open } = useAuthModal();
 
   const user = session?.user;
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setMessageIndex((prev) => (prev + 1) % topMessages.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <header className="fixed top-0 z-50 w-full">
@@ -44,8 +60,8 @@ const Navbar = () => {
                 fill="white"
               />
             </svg>
-            <span className="leading-6">
-              Explore the best of perfumes, all for free
+            <span className="leading-6 transition-opacity duration-500">
+              {topMessages[messageIndex]}
             </span>
             <svg
               width="24"

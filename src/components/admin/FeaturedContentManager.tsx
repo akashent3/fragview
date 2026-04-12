@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Package, Building2, Plus, X, Search, Loader2, Save, GripVertical } from 'lucide-react';
 import { setFeaturedPerfumes, setTrendingBrands, searchPerfumes, searchBrands } from '@/app/actions/admin/featured';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -29,21 +29,32 @@ export default function FeaturedContentManager({ initialData }: Props) {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-    
+  const runSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
     setSearching(true);
     try {
-      const results = activeTab === 'perfumes' 
-        ? await searchPerfumes(searchQuery)
-        : await searchBrands(searchQuery);
+      const results = activeTab === 'perfumes'
+        ? await searchPerfumes(query)
+        : await searchBrands(query);
       setSearchResults(results);
     } catch (error) {
-      console. error('Search failed:', error);
+      console.error('Search failed:', error);
     } finally {
       setSearching(false);
     }
+  };
+
+  const handleSearch = () => runSearch(searchQuery);
+
+  const handleSearchInput = (value: string) => {
+    setSearchQuery(value);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => runSearch(value), 300);
   };
 
   const addItem = (item: any) => {
@@ -59,7 +70,7 @@ export default function FeaturedContentManager({ initialData }: Props) {
         {
           id: `temp-${Date.now()}`,
           mongoId: item._id,
-          name: item.name,
+          name: item.variant_name || item.name,
           brandName: item.brand_name,
           image: item. image,
           position: featuredPerfumes.length,
@@ -190,7 +201,7 @@ export default function FeaturedContentManager({ initialData }: Props) {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               placeholder={`Search ${activeTab === 'perfumes' ? 'perfumes' : 'brands'}...`}
               className="w-full pl-10 pr-4 py-3 border border-[#E2E1E1] rounded-xl font-[var(--font-inter)] text-[#211F1C] bg-white focus:ring-2 focus:ring-lime-500 focus:border-lime-500"
@@ -230,7 +241,7 @@ export default function FeaturedContentManager({ initialData }: Props) {
                     </div>
                   )}
                   <div>
-                    <p className="font-[var(--font-inter)] font-semibold text-[#211F1C]">{result.name}</p>
+                    <p className="font-[var(--font-inter)] font-semibold text-[#211F1C]">{result.variant_name || result.name}</p>
                     {result.brand_name && (
                       <p className="text-sm font-[var(--font-inter)] text-[#4A4946] mt-0.5">{result.brand_name}</p>
                     )}

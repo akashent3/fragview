@@ -144,17 +144,22 @@ export async function setTrendingBrandsAction(brandIds: string[], adminId: strin
  */
 export async function searchPerfumesForFeatured(query: string) {
   try {
-    const { db } = await connectMongoDB(); // ✅ FIXED FUNCTION NAME
-    
+    const { db } = await connectMongoDB();
+
+    const tokens = query.trim().split(/\s+/).filter(Boolean);
+
+    // Each token must match at least one of the name fields (AND across tokens, OR across fields)
+    const tokenConditions = tokens.map(token => ({
+      $or: [
+        { variant_name: { $regex: token, $options: 'i' } },
+        { name: { $regex: token, $options: 'i' } },
+        { brand_name: { $regex: token, $options: 'i' } },
+      ],
+    }));
+
     const perfumes = await db
       .collection('perfumes')
-      .find({
-        $or: [
-          { variant_name: { $regex: query, $options: 'i' } }, // ✅ FIXED FIELD NAME
-          { name: { $regex: query, $options: 'i' } },
-          { brand_name: { $regex: query, $options: 'i' } },
-        ],
-      })
+      .find({ $and: tokenConditions })
       .limit(20)
       .toArray();
 
